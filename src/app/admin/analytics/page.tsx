@@ -1,0 +1,7 @@
+import { Banknote, ShoppingBag, TrendingUp } from "lucide-react";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { SalesChart } from "@/components/admin/sales-chart";
+import { getAdminOrders, getAdminOverview } from "@/lib/admin/queries";
+
+const money = new Intl.NumberFormat("ru-KZ");
+export default async function AdminAnalyticsPage() { const [data, orders] = await Promise.all([getAdminOverview(), getAdminOrders()]); const completed = orders.filter((order) => order.status !== "cancelled"); const average = completed.length ? data.salesTotal / completed.length : 0; return <><DashboardHeader title="Продажи" description="Динамика выручки и ключевые показатели" /><section className="admin-stats admin-stats--three"><article><span><Banknote size={20} /></span><div><small>Выручка</small><strong>{money.format(data.salesTotal)} ₸</strong><p>за выбранный период</p></div></article><article><span><ShoppingBag size={20} /></span><div><small>Заказы</small><strong>{completed.length}</strong><p>без отменённых</p></div></article><article><span><TrendingUp size={20} /></span><div><small>Средний чек</small><strong>{money.format(average)} ₸</strong><p className="positive">+{data.salesChange}% динамика</p></div></article></section><section className="admin-card admin-analytics-chart"><header><div><p className="eyebrow">Выручка</p><h2>Продажи по месяцам</h2></div><select aria-label="Период"><option>Последние 7 месяцев</option><option>Этот год</option></select></header><SalesChart data={data.sales} /></section></>; }

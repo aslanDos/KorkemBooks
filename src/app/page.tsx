@@ -1,0 +1,123 @@
+import { LandingFooter } from "@/components/landing/landing-footer";
+import { ArrowRight } from "lucide-react";
+import { LandingHeader } from "@/components/landing/landing-header";
+import { ScrollTimeline } from "@/components/landing/scroll-timeline";
+import { LandingSectionHeading } from "@/components/landing/landing-section-heading";
+import { LandingFaq, type FaqItem } from "@/components/landing/landing-faq";
+import "./landing.css";
+
+const whatsappUrl = `https://wa.me/77004617342?text=${encodeURIComponent("Здравствуйте. Хочу создать свою книгу!")}`;
+const managerUrl = "https://wa.me/77004617342";
+
+const steps = [
+  { title: "Начните с воспоминаний", text: "Откройте книгу и отвечайте на вопросы о детстве, семье и важных моментах. Они помогут вспомнить детали и найти первые слова." },
+  { title: "Добавьте то, что дорого", text: "Возвращайтесь к ответам, дополняйте истории и добавляйте фотографии. Пишите в своём темпе — по одной истории за раз." },
+  { title: "Соберите свою книгу", text: "Выберите обложку, укажите название и посмотрите готовые страницы в предпросмотре. Все ваши истории теперь вместе." },
+];
+
+const questions: FaqItem[] = [
+  { question: "Нужно ли уметь красиво писать?", answer: "Нет. Отвечайте так, как рассказывали бы близкому человеку. Вопросы помогут вспомнить детали, а ваши слова сохранят индивидуальность истории." },
+  { question: "Нужно ли заполнять всю книгу сразу?", answer: "Нет. Можно начать с одного вопроса и возвращаться к книге в удобное время. Ответы сохраняются автоматически: перед выходом дождитесь подтверждения сохранения в редакторе." },
+  { question: "Можно ли изменить уже написанное?", answer: "Да. Вы можете возвращаться к вопросам, редактировать ответы и дополнять их новыми подробностями." },
+  { question: "Можно ли добавлять фотографии?", answer: "Да. В предпросмотре можно добавить фотографии к ответам, выбрать расположение на странице и изменить их порядок." },
+  { question: "Как будет выглядеть моя книга?", answer: "Вы сможете выбрать обложку, добавить название и посмотреть развороты в предпросмотре. Он показывает, как ответы и фотографии складываются в страницы книги." },
+  { question: "Как получить доступ к сервису?", answer: "Для входа нужны номер телефона и пароль, полученные от администратора KorkemBooks. Если данные уже есть, нажмите «Войти». Если пока нет — обратитесь к администратору сервиса." },
+];
+
+export default function LandingPage() {
+  return (
+    <div className="landing" lang="ru">
+      <a className="landing-skip" href="#main">Перейти к содержимому</a>
+      <LandingHeader />
+      <main id="main" tabIndex={-1}>
+        <section className="landing-hero" aria-labelledby="hero-title">
+          <h1 id="hero-title">Соберите истории своей жизни в&nbsp;книгу</h1>
+          <p className="landing-description">Отвечайте на простые вопросы, добавляйте фотографии и сохраняйте то, чем хочется поделиться с близкими.</p>
+          <a href={whatsappUrl} className="landing-button">Начать свою книгу <ArrowRight size={19} aria-hidden="true" /></a>
+          <p className="landing-hero-note">В своём темпе. Своими словами.</p>
+          <figure className="landing-book-preview">
+            <div className="landing-spread">
+              <div className="landing-book-page landing-book-page-left">
+                <span className="landing-page-kicker">Глава первая</span>
+                <span className="landing-page-title">Там, где<br />всё началось</span>
+                <span className="landing-page-subtitle">Детство и первые воспоминания</span>
+                <span className="landing-page-number">01</span>
+              </div>
+              <div className="landing-book-page landing-book-page-right">
+                <span className="landing-page-kicker">Моя история</span>
+                <h2>Каким вы помните<br />дом своего детства?</h2>
+                <p>По утрам на кухне пахло свежим хлебом. За окном росла яблоня, а на подоконнике всегда лежала раскрытая книга.</p>
+                <p>Кажется, именно оттуда я запомнил это чувство: когда все рядом и никуда не нужно спешить.</p>
+                <span className="landing-page-number">02</span>
+              </div>
+            </div>
+            <figcaption>Пример разворота · внутри будут ваши истории</figcaption>
+          </figure>
+        </section>
+
+        <section className="landing-about landing-section" id="about" tabIndex={-1} aria-labelledby="about-title">
+          <LandingSectionHeading id="about-title" eyebrow="О книге" title={<>Важное складывается<br className="landing-desktop-break" /> из простых моментов</>}>
+            Семейные привычки, первые встречи, слова родителей. KorkemBooks помогает сохранить эти воспоминания — постепенно, через вопросы о вашей жизни.
+          </LandingSectionHeading>
+          <div className="landing-features">
+            <div><span>01 / Вопросы</span><h3>Есть с чего начать</h3><p>Темы и вопросы помогают вспомнить то, что трудно рассказать с чистого листа.</p></div>
+            <div><span>02 / Истории</span><h3>Остаётся ваш голос</h3><p>Вы сами выбираете слова, добавляете детали и рассказываете так, как чувствуете.</p></div>
+            <div><span>03 / Книга</span><h3>Всё в одном месте</h3><p>Ответы, фотографии и выбранная обложка собираются в личную книгу.</p></div>
+          </div>
+        </section>
+
+        <section className="landing-how landing-section" id="how" tabIndex={-1} aria-labelledby="how-title">
+          <LandingSectionHeading id="how-title" eyebrow="Как это работает" title={<>От первого ответа<br className="landing-desktop-break" /> до вашей книги</>}>
+            Три простых шага. Начать можно с одного воспоминания.
+          </LandingSectionHeading>
+          <ScrollTimeline>
+            {steps.map((step, index) => (
+              <li key={step.title}>
+                <span className="landing-step-number" aria-hidden="true">0{index + 1}</span>
+                <div className="landing-step-card"><h3>{step.title}</h3><p>{step.text}</p></div>
+              </li>
+            ))}
+          </ScrollTimeline>
+        </section>
+
+        <section className="landing-timing landing-section" id="timing" aria-labelledby="timing-title">
+          <div className="landing-timing-intro">
+            <p className="landing-eyebrow">Сколько времени нужно</p>
+            <h2 id="timing-title">Истории — в вашем темпе. Дальше — по шагам.</h2>
+            <p>Кто-то заполняет книгу за несколько вечеров, кто-то возвращается к ней неделями. Не торопитесь: время на воспоминания выбираете вы.</p>
+          </div>
+          <div>
+            <dl className="landing-timing-list">
+              <div className="landing-timing-row"><dt>Редактура и печать<small>После завершения и согласования книги</small></dt><dd>3–4 дня</dd></div>
+              <div className="landing-timing-row"><dt>Доставка по СНГ<small>В зависимости от города получения</small></dt><dd>1–7 дней</dd></div>
+              <div className="landing-timing-row landing-timing-total"><dt>До книги в ваших руках<small>Без учёта времени на заполнение</small></dt><dd>4–11 дней</dd></div>
+            </dl>
+            <p className="landing-timing-note">Сроки ориентировочные. Точную дату готовности и возможность доставки в ваш город уточните у менеджера.</p>
+          </div>
+        </section>
+
+        <section className="landing-faq landing-section" id="questions" tabIndex={-1} aria-labelledby="faq-title">
+          <LandingSectionHeading id="faq-title" eyebrow="Частые вопросы" title="Перед первой страницей">
+            Всё, что хочется узнать, прежде чем начать свою книгу.
+          </LandingSectionHeading>
+          <LandingFaq items={questions} />
+          <div className="landing-faq-contact">
+            <div className="landing-faq-contact-copy">
+              <p className="landing-eyebrow">Остались вопросы?</p>
+              <h3>Напишите нам — поможем разобраться<br className="landing-desktop-break" /> и начать свою книгу.</h3>
+            </div>
+            <a href={managerUrl} className="landing-button">Написать в WhatsApp <ArrowRight size={18} aria-hidden="true" /></a>
+          </div>
+        </section>
+
+        <section className="landing-final landing-section" aria-labelledby="final-title">
+          <p className="landing-eyebrow">Начните с малого</p>
+          <h2 id="final-title">Какую историю<br />вы расскажете первой?</h2>
+          <p className="landing-description">Один вопрос, несколько строк — начало вашей книги.</p>
+          <a href={whatsappUrl} className="landing-button">Начать свою книгу <ArrowRight size={18} aria-hidden="true" /></a>
+        </section>
+      </main>
+      <LandingFooter />
+    </div>
+  );
+}

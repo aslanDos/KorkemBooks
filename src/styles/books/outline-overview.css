@@ -1,0 +1,46 @@
+.writer-drawer__header button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; font: inherit; font-size: 13px; cursor: pointer; }
+.writer-drawer__header button:hover { background: var(--background); }
+.writer-drawer { position: fixed; inset: 0 0 0 auto; width: min(420px, 100%); max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; color: var(--ink); background: var(--surface); border: 0; border-left: 1px solid var(--line); box-shadow: -16px 0 60px rgb(0 0 0 / 12%); }
+.writer-drawer[open] { animation: writer-drawer-enter 200ms ease-out; }
+.writer-drawer::backdrop { background: rgb(0 0 0 / 30%); }
+body:has(.writer-drawer[open]) { overflow: hidden; }
+.writer-drawer__panel { display: flex; flex-direction: column; height: 100%; }
+.writer-drawer__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px; border-bottom: 1px solid var(--line); }
+.writer-drawer__header h2 { margin: 0; font-family: var(--font-forum), serif; font-size: 28px; font-weight: 400; }
+.writer-drawer__header button { width: 40px; padding: 0; }
+.writer-drawer .writer-outline { flex: 1; min-height: 0; border: 0; overscroll-behavior: contain; }
+.writer-drawer .writer-outline button strong { font-size: 14px; }
+.writer-drawer .writer-outline button small { font-size: 11px; }
+.writer-drawer .writer-outline__question-text { display: block; overflow: visible; font-size: 13px; }
+.writer-drawer .writer-outline__question-number { font-size: 10px; }
+.writer-drawer button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+@keyframes writer-drawer-enter { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .writer-drawer[open] { animation: none; } }
+
+.book-overview { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.book-overview > div { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.book-overview .book-overview__identity { color: var(--hero-text); background: linear-gradient(125deg, var(--hero-start), var(--hero-end)); border-color: transparent; }
+.book-overview__topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.book-overview__topline > span { display: inline-flex; align-items: center; gap: 8px; color: var(--hero-muted); font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.book-overview__topline .book-hero__edit { position: static; flex-shrink: 0; }
+.book-overview h1 { margin: 20px 0 10px; overflow-wrap: anywhere; font-family: var(--font-forum), serif; font-size: clamp(30px, 3vw, 42px); line-height: 1.12; font-weight: 400; }
+.book-overview__identity > p { margin: 0; color: var(--hero-muted); font-family: var(--font-forum), serif; font-size: 19px; overflow-wrap: anywhere; }
+.book-overview__label { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; font-weight: 750; }
+.book-overview__author { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.book-overview__author > strong { margin-top: auto; font-family: var(--font-forum), serif; font-size: 27px; line-height: 1.2; font-weight: 400; overflow-wrap: anywhere; }
+.book-overview__author-note { color: var(--muted); font-size: 11px; }
+.book-overview__progress { display: flex; flex-direction: column; justify-content: space-between; gap: 20px; }
+.book-overview__progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.book-overview__progress-heading > strong { font-family: var(--font-forum), serif; font-size: 36px; font-weight: 400; }
+.book-overview__progress-heading small { margin-left: 3px; color: var(--muted); font-family: var(--font-forum), serif; font-size: 22px; }
+.book-overview progress { display: block; width: 100%; height: 6px; overflow: hidden; appearance: none; border: 0; border-radius: 99px; background: var(--line); }
+.book-overview progress::-webkit-progress-bar { background: var(--line); border-radius: 99px; }
+.book-overview progress::-webkit-progress-value { background: var(--primary); border-radius: 99px; }
+.book-overview progress::-moz-progress-bar { background: var(--primary); border-radius: 99px; }
+.book-overview__counts { display: flex; flex-wrap: wrap; gap: 12px 20px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.book-overview__counts b { color: var(--ink); font-weight: 750; }
+@media (max-width: 1100px) { .book-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); } .book-overview__identity { grid-column: 1 / -1; } }
+@media (max-width: 540px) { .book-overview { grid-template-columns: minmax(0, 1fr); gap: 12px; } .book-overview > div { padding: 20px; } }
+
+.skeleton-book-overview > div { display: grid; align-content: space-between; gap: 20px; min-height: 190px; }
+@media (min-width: 541px) and (max-width: 1100px) { .skeleton-book-overview > div:first-child { grid-column: 1 / -1; } }

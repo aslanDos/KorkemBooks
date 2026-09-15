@@ -1,0 +1,91 @@
+.print-book { --print-bleed: 2mm; width: 152mm; margin: 0 auto; color: #151515; background: white; }
+.print-book-sheet { --print-bleed: 2mm; position: relative; width: 152mm; height: 214mm; overflow: hidden; break-inside: avoid; break-after: page; box-shadow: 0 5px 24px rgb(44 35 23 / 12%); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.print-book-sheet:last-child { break-after: auto; }
+.print-book-sheet > .print-preview-page.preview-page { position: absolute; top: var(--print-bleed); left: var(--print-bleed); overflow: visible; background: transparent; break-after: auto; box-shadow: none; }
+.print-book-sheet .preview-photo-page { overflow: visible; }
+.print-book-sheet .preview-photo-page--full .preview-photo-page__frame { inset: calc(-1 * var(--print-bleed)); }
+.print-book-workspace { min-width: 0; }
+.print-book-stage { overflow: auto; padding: 24px; background: var(--workspace-tint, #e2e9df); border-radius: var(--workspace-radius, 20px); }
+.print-book-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; margin: 0 0 24px; padding: 24px; align-items: start; gap: 20px 28px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--workspace-radius, 20px); }
+.print-book-toolbar h1 { margin: 0 0 8px; font-size: 24px; font-weight: 650; line-height: 1.3; }
+.print-book-toolbar p { max-width: 90ch; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.book-print-stats { margin-top: 20px; padding: 20px 24px; color: var(--ink, #25231f); background: var(--surface, #fcfaf5); border: 1px solid var(--line, #d9ded4); border-radius: var(--workspace-radius, 20px); }
+.book-print-stats dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 0; }
+.book-print-stats dl > div { display: flex; flex-direction: column; }
+.book-print-stats dt { flex: 1; color: var(--muted, #66675f); font-size: 12px; }
+.book-print-stats dd { margin: 4px 0 0; font-size: 24px; font-weight: 650; }
+.book-print-stats p { margin: 14px 0 0; color: var(--muted, #66675f); font-size: 12px; line-height: 1.6; }
+.book-print-stats details { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line, #d9ded4); }
+.book-print-stats summary { cursor: pointer; font-size: 12px; font-weight: 600; }
+.book-print-stats [data-print-ranges] { color: var(--ink, #25231f); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.print-book-toolbar > div { min-width: 0; }
+.print-book-toolbar .book-print-stats { grid-column: 1 / -1; margin: 0; padding: 20px 0 0; background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.print-book-toolbar .book-print-stats p { margin-top: 10px; }
+@media (max-width: 600px) {
+  .print-book-toolbar { grid-template-columns: minmax(0, 1fr); padding: 18px 14px; gap: 18px; }
+  .print-book-toolbar .print-book-button { justify-content: center; }
+  .print-book-stage { padding: 16px; }
+  .book-print-stats { padding: 18px 14px; }
+  .book-print-stats dl { gap: 12px; }
+  .book-print-stats dt { font-size: 11px; }
+}
+.print-preview-page.preview-page { width: 148mm; height: 210mm; aspect-ratio: auto; padding: 0 8.88mm 15.58mm; break-after: page; box-shadow: 0 5px 24px rgb(44 35 23 / 12%); }
+.print-preview-page.preview-page--title { padding: 0; }
+.print-preview-page.preview-page--chapter { padding: 0; }
+.print-preview-page .preview-page__content { inset: 15.58mm 8.88mm; }
+.print-preview-page .preview-page__body { gap: 4.44mm; }
+.print-preview-page .preview-page__question { font-size:var(--question-print-size, 12.6pt); line-height:var(--question-print-line-height, 6.66mm); }
+.print-preview-page .preview-page__answer { font-size:var(--answer-print-size, 18.9pt); line-height:1.42; }
+.print-preview-page .preview-page__footer { right: 8.88mm; bottom: 8.9mm; left: 8.88mm; gap: 5.92mm; font-size: 7.35pt; }
+.print-preview-page .preview-title-page { padding: 16.3mm 6.66mm 9.25mm; }
+.print-preview-page .preview-title-page__author { font-size: 7.35pt; }
+.print-preview-page .preview-title-page h1 { width: calc(100% - 13.32mm); font-size: var(--title-page-title-print-size, 21pt); }
+.print-preview-page .preview-title-page__imprint { gap: .74mm; font-size: 7.35pt; }
+.print-preview-page .preview-title-page__imprint time { font-size: 6.3pt; }
+.print-preview-page .preview-preface-page { padding: 21.46mm 6.66mm 10.36mm; }
+.print-preview-page .preview-preface-page h2 { margin-bottom: 12.6mm; font-size: 27.3pt; }
+.print-preview-page .preview-preface-page__text { gap: 4.81mm; }
+.print-preview-page .preview-preface-page__text p { font-size: 11pt; line-height: 1.58; }
+.print-preview-page .preview-preface-page__signature { margin-bottom: 2.2mm; padding-top: 8.9mm; font-size: 11.55pt; }
+.print-preview-page .preview-contents-page { padding: 21.46mm 6.66mm 10.36mm; }
+.print-preview-page .preview-contents-page h2 { margin-bottom: 12.6mm; font-size: 27.3pt; }
+.print-preview-page .preview-contents-page ol { gap: 4.81mm; }
+.print-preview-page .preview-contents-page li { gap: 2.96mm; font-size: 11pt; line-height: 1.58; }
+.print-preview-page .preview-contents-page__chapter-number { flex-basis: 6.66mm; font-size: 7.35pt; }
+.print-preview-page .preview-contents-page li b { font-size: 9.45pt; }
+.print-preview-page .preview-chapter-page { padding-inline: 10.36mm; }
+.print-preview-page .preview-chapter-page span { margin-bottom: 4.07mm; font-size: 13.65pt; }
+.print-preview-page .preview-chapter-page h2 { max-width: 107.3mm; font-size:calc(var(--chapter-title-print-size, 33.6pt) * var(--chapter-title-scale, 1)); }
+.print-preview-page .preview-chapter-page--numeral { padding-inline: 13.32mm; }
+.print-preview-page .preview-chapter-page--numeral::before { font-size: 235.2pt; }
+.print-preview-page .preview-chapter-page--numeral span { margin-bottom: 4.44mm; font-size: 10.5pt; }
+.print-preview-page .preview-chapter-page--numeral h2 { max-width: 103.6mm; }
+.print-preview-page .preview-chapter-page--vertical { padding: 0 14.8mm 0 37.74mm; }
+.print-preview-page .preview-chapter-page--vertical::before { top: 35.15mm; bottom: 35.15mm; left: 27.01mm; }
+.print-preview-page .preview-chapter-page--vertical span { top: 50%; left: 17.76mm; margin: 0; font-size: 25.2pt; letter-spacing: .76em; }
+.print-preview-page .preview-chapter-page--vertical h2 { max-width: 85.1mm; text-align: left; }
+.print-preview-page.preview-page--photo { padding: 0; }
+.print-preview-page .preview-photo-page--contain .preview-photo-page__frame { inset:8.9mm 8.9mm 15.58mm; }
+.print-preview-page .preview-photo-page--text-below .preview-photo-page__frame { bottom:44.4mm; }
+.print-preview-page .preview-photo-page--text-below:has(.preview-photo-text--medium) .preview-photo-page__frame { bottom:70.3mm; }
+.print-preview-page .preview-photo-page--text-below:has(.preview-photo-text--long) .preview-photo-page__frame { bottom:107.3mm; }
+.print-preview-page .preview-photo-text { inset:13.32mm 11.84mm 21.46mm; }
+.print-preview-page .preview-photo-text--below { inset:auto 8.9mm 17.76mm; height:25.16mm; }
+.print-preview-page .preview-photo-text--below.preview-photo-text--medium { height:47.36mm; }
+.print-preview-page .preview-photo-text--below.preview-photo-text--long { height:84.36mm; }
+.print-preview-page .preview-photo-text__content { font-size:var(--photo-text-print-size, 12.6pt); }
+.print-preview-page .preview-photo-text--below .preview-photo-text__content { max-height:25.16mm; }
+.print-preview-page.preview-page--photo .preview-page__footer { padding: 0; background: transparent; color: #252525; text-shadow: none; }
+.print-preview-page.preview-page--photo:has(.preview-photo-page--contain.preview-page-background--colored) .preview-page__footer { color: #fffaf3; }
+.print-preview-page.preview-page--photo:has(.preview-photo-page--full) .preview-page__footer { color: #fff; text-shadow: none; }
+@media print {
+  @page { size: 152mm 214mm; margin: 0; }
+  html, body { margin: 0 !important; padding: 0 !important; background: white !important; }
+  .dashboard-sidebar, .mobile-menu-button, .sidebar-backdrop, .workspace-topbar, .print-book-toolbar, next-route-announcer, nextjs-portal { display: none !important; }
+  .dashboard-shell, .dashboard-main, .workspace-content { display: block !important; width: auto !important; margin: 0 !important; padding: 0 !important; background: white !important; }
+  .print-book { width: 152mm; margin: 0; }
+  .print-book-stage { overflow: visible !important; margin: 0; padding: 0; background: transparent; border-radius: 0; }
+  .print-preview-page.preview-page, .print-book-sheet { box-shadow: none; }
+  .print-book * { transition: none !important; }
+  .dashboard-main { transition: none !important; }
+}

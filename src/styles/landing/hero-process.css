@@ -1,0 +1,64 @@
+.landing-hero { display: flex; flex-direction: column; align-items: center; padding: 152px 24px 72px; text-align: center; }
+.landing-hero .landing-description { margin-top: 26px; }
+.landing-hero > .landing-button { margin-top: 34px; }
+.landing .landing-hero-note { margin-top: 18px; color: var(--landing-muted); font-size: 12px; }
+.landing .landing-book-preview { width: min(820px, 100%); margin-top: 72px; }
+.landing-spread { display: grid; grid-template-columns: 1fr 1fr; position: relative; border: 1px solid #cdbda6; border-radius: 5px 9px 9px 5px; background: #fcf9f1; box-shadow: 0 4px 0 #e5dccd, 0 7px 0 #cfc3b1, 0 20px 44px rgb(66 46 28 / 10%); overflow: hidden; text-align: left; }
+.landing-book-page { position: relative; min-height: 380px; padding: 42px 42px 62px; }
+.landing-book-page-left { display: flex; flex-direction: column; justify-content: center; background: linear-gradient(90deg, #ece5d7 0%, #f2ecdf 90%, #dfd5c4 100%); }
+.landing-book-page-right { background: linear-gradient(90deg, #e8e0d0, #fffcf5 6%, #fffcf5 100%); }
+.landing-page-kicker { font-size: 9px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: #766b5d; }
+.landing-page-title { display: block; margin-top: 32px; font-size: 38px; line-height: 1.18; letter-spacing: -.04em; font-weight: 600; }
+.landing-page-subtitle { margin-top: 22px; font-size: 11px; line-height: 1.6; color: #756b5d; }
+.landing-page-number { position: absolute; bottom: 24px; left: 42px; color: #857764; font-size: 10px; }
+.landing-book-page-right .landing-page-number { left: auto; right: 42px; }
+.landing .landing-book-page h2 { margin-top: 32px; font-size: 22px; letter-spacing: -.025em; line-height: 1.4; font-weight: 650; text-wrap: initial; }
+.landing .landing-book-page p { margin-top: 18px; color: #726655; font-size: 12px; line-height: 1.85; }
+.landing-book-preview figcaption { margin-top: 24px; color: var(--landing-muted); font-size: 11px; }
+.landing-section { width: min(var(--landing-width), calc(100% - 48px)); margin-inline: auto; padding-block: 100px; }
+.landing-eyebrow { color: var(--landing-primary); font-size: 12px; line-height: 1.6; font-weight: 650; letter-spacing: .11em; text-transform: uppercase; }
+.landing-section-heading { text-align: center; margin-bottom: 56px; }
+.landing-section-heading h2 { margin: 16px auto 0; max-width: 840px; }
+.landing-section-heading > p:last-child:not(.landing-eyebrow) { max-width: 630px; margin: 20px auto 0; font-size: 17px; line-height: 1.8; color: var(--landing-muted); text-wrap: pretty; }
+.landing-about { padding-top: 62px; }
+.landing-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 44px; padding-top: 12px; }
+.landing-features > div { border-top: 1px solid var(--landing-line); padding-top: 24px; }
+.landing-features span { color: var(--landing-primary); font-size: 11px; }
+.landing-features h3 { margin-top: 18px; }
+.landing-features p { margin-top: 12px; color: var(--landing-muted); font-size: 14px; line-height: 1.8; }
+.landing-steps { position: relative; max-width: 850px; margin: 0 auto; padding: 0; list-style: none; }
+.landing-steps::before, .landing-steps::after { content: ""; position: absolute; left: calc(50% - 1px); top: 30px; bottom: 60px; width: 2px; background: var(--landing-line); pointer-events: none; }
+.landing-steps::after { background: var(--landing-accent); transform: scaleY(var(--timeline-progress, 0)); transform-origin: top; }
+.landing-step-number { z-index: 1; }
+.landing-steps li { position: relative; display: grid; grid-template-columns: 1fr 96px 1fr; padding-bottom: 36px; }
+.landing-steps li:last-child { padding-bottom: 0; }
+.landing-step-number { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); display: grid; place-items: center; width: 46px; height: 46px; border: 1.5px solid var(--landing-accent); border-radius: 50%; background: #faf8f3; color: var(--landing-accent); box-shadow: 0 0 0 5px #eeece6; font-size: 13px; font-weight: 700; }
+:root[data-theme="dark"] .landing-step-number { color: #f3efe6; background: #244a3d; box-shadow: 0 0 0 5px #142820; }
+.landing-step-card { grid-column: 1; text-align: right; padding: 26px; border-radius: var(--landing-radius); border-right: 2px solid var(--landing-accent); background: var(--landing-surface); }
+.landing-steps li:nth-child(even) .landing-step-card { grid-column: 3; text-align: left; border-right: 0; border-left: 2px solid var(--landing-accent); }
+.landing-step-card h3 { font-size: 19px; }
+.landing-step-card p { margin-top: 10px; font-size: 14px; line-height: 1.8; color: var(--landing-muted); }
+.landing-timing { display: grid; grid-template-columns: .9fr 1.1fr; align-items: start; gap: 80px; }
+.landing-timing-intro h2 { margin-top: 16px; max-width: 420px; }
+.landing-timing-intro > p:last-child { margin-top: 22px; max-width: 380px; color: var(--landing-muted); font-size: 16px; line-height: 1.8; }
+.landing-timing-list { margin: 0; }
+.landing-timing-row { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 24px 0; border-top: 1px solid var(--landing-line); }
+.landing-timing-row dt { font-size: 15px; line-height: 1.6; }
+.landing-timing-row dt small { display: block; margin-top: 5px; color: var(--landing-muted); font-size: 12px; font-weight: 400; }
+.landing-timing-row dd { margin: 0; flex-shrink: 0; font-size: 19px; font-weight: 650; letter-spacing: -.03em; }
+.landing-timing-total { padding: 24px; background: var(--landing-surface); border: 1px solid var(--landing-line); border-radius: var(--landing-radius); }
+.landing-timing-total dt { font-weight: 650; }
+.landing-timing-total dd { font-size: 28px; }
+.landing .landing-timing-note { margin-top: 18px; color: var(--landing-muted); font-size: 12px; line-height: 1.8; }
+@media (max-width: 820px) {
+  .landing-timing { grid-template-columns: 1fr; gap: 36px; }
+  .landing-timing-intro h2, .landing-timing-intro > p:last-child { max-width: 580px; }
+}
+@media (max-width: 600px) {
+  .landing-timing-row { gap: 16px; padding-block: 20px; }
+  .landing-timing-row dt { font-size: 14px; }
+  .landing-timing-row dd { font-size: 17px; }
+  .landing-timing-total { padding: 20px 16px; }
+  .landing-timing-total dd { font-size: 24px; }
+  .landing-timing-intro > p:last-child { font-size: 15px; }
+}

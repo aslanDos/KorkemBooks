@@ -1,0 +1,37 @@
+{
+  "name": "korkembooks",
+  "version": "1.0.0",
+  "description": "Сервис создания персональных книг через последовательные вопросы",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "node --test tests/book-loading.mjs tests/book-delivery.mjs tests/chapter-title-text.mjs tests/print-layout.mjs tests/spine-text-fit.mjs tests/question-bank.mjs",
+    "test:question-bank": "node tests/question-bank.mjs",
+    "test:browser": "node tests/cover-spine-browser.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
+    "lucide-react": "^1.34.0",
+    "next": "^16.3.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^26.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.3",
+    "typescript": "^6.0.3"
+  }
+}
