@@ -4,6 +4,7 @@ import { LandingHeader } from "@/components/landing/landing-header";
 import { ScrollTimeline } from "@/components/landing/scroll-timeline";
 import { LandingSectionHeading } from "@/components/landing/landing-section-heading";
 import { LandingFaq, type FaqItem } from "@/components/landing/landing-faq";
+import { LandingEditorDemo } from "@/components/landing/landing-editor-demo";
 import "./landing.css";
 
 const whatsappUrl = `https://wa.me/77004617342?text=${encodeURIComponent("Здравствуйте. Хочу создать свою книгу!")}`;
@@ -35,24 +36,7 @@ export default function LandingPage() {
           <p className="landing-description">Отвечайте на простые вопросы, добавляйте фотографии и сохраняйте то, чем хочется поделиться с близкими.</p>
           <a href={whatsappUrl} className="landing-button">Начать свою книгу <ArrowRight size={19} aria-hidden="true" /></a>
           <p className="landing-hero-note">В своём темпе. Своими словами.</p>
-          <figure className="landing-book-preview">
-            <div className="landing-spread">
-              <div className="landing-book-page landing-book-page-left">
-                <span className="landing-page-kicker">Глава первая</span>
-                <span className="landing-page-title">Там, где<br />всё началось</span>
-                <span className="landing-page-subtitle">Детство и первые воспоминания</span>
-                <span className="landing-page-number">01</span>
-              </div>
-              <div className="landing-book-page landing-book-page-right">
-                <span className="landing-page-kicker">Моя история</span>
-                <h2>Каким вы помните<br />дом своего детства?</h2>
-                <p>По утрам на кухне пахло свежим хлебом. За окном росла яблоня, а на подоконнике всегда лежала раскрытая книга.</p>
-                <p>Кажется, именно оттуда я запомнил это чувство: когда все рядом и никуда не нужно спешить.</p>
-                <span className="landing-page-number">02</span>
-              </div>
-            </div>
-            <figcaption>Пример разворота · внутри будут ваши истории</figcaption>
-          </figure>
+          <LandingEditorDemo />
         </section>
 
         <section className="landing-about landing-section" id="about" tabIndex={-1} aria-labelledby="about-title">
@@ -110,12 +94,12 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="landing-final landing-section" aria-labelledby="final-title">
+        {/* <section className="landing-final landing-section" aria-labelledby="final-title">
           <p className="landing-eyebrow">Начните с малого</p>
           <h2 id="final-title">Какую историю<br />вы расскажете первой?</h2>
           <p className="landing-description">Один вопрос, несколько строк — начало вашей книги.</p>
           <a href={whatsappUrl} className="landing-button">Начать свою книгу <ArrowRight size={18} aria-hidden="true" /></a>
-        </section>
+        </section> */}
       </main>
       <LandingFooter />
     </div>

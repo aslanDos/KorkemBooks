@@ -2,19 +2,35 @@
 .landing-hero .landing-description { margin-top: 26px; }
 .landing-hero > .landing-button { margin-top: 34px; }
 .landing .landing-hero-note { margin-top: 18px; color: var(--landing-muted); font-size: 12px; }
-.landing .landing-book-preview { width: min(820px, 100%); margin-top: 72px; }
-.landing-spread { display: grid; grid-template-columns: 1fr 1fr; position: relative; border: 1px solid #cdbda6; border-radius: 5px 9px 9px 5px; background: #fcf9f1; box-shadow: 0 4px 0 #e5dccd, 0 7px 0 #cfc3b1, 0 20px 44px rgb(66 46 28 / 10%); overflow: hidden; text-align: left; }
-.landing-book-page { position: relative; min-height: 380px; padding: 42px 42px 62px; }
-.landing-book-page-left { display: flex; flex-direction: column; justify-content: center; background: linear-gradient(90deg, #ece5d7 0%, #f2ecdf 90%, #dfd5c4 100%); }
-.landing-book-page-right { background: linear-gradient(90deg, #e8e0d0, #fffcf5 6%, #fffcf5 100%); }
-.landing-page-kicker { font-size: 9px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: #766b5d; }
-.landing-page-title { display: block; margin-top: 32px; font-size: 38px; line-height: 1.18; letter-spacing: -.04em; font-weight: 600; }
-.landing-page-subtitle { margin-top: 22px; font-size: 11px; line-height: 1.6; color: #756b5d; }
-.landing-page-number { position: absolute; bottom: 24px; left: 42px; color: #857764; font-size: 10px; }
-.landing-book-page-right .landing-page-number { left: auto; right: 42px; }
-.landing .landing-book-page h2 { margin-top: 32px; font-size: 22px; letter-spacing: -.025em; line-height: 1.4; font-weight: 650; text-wrap: initial; }
-.landing .landing-book-page p { margin-top: 18px; color: #726655; font-size: 12px; line-height: 1.85; }
-.landing-book-preview figcaption { margin-top: 24px; color: var(--landing-muted); font-size: 11px; }
+.landing-editor-demo { width: min(1080px, 100%); margin-top: 72px; overflow: hidden; color: var(--landing-ink); text-align: left; background: rgb(255 253 248 / 76%); border: 1px solid var(--landing-line); border-radius: 24px; box-shadow: 0 26px 70px rgb(36 74 61 / 13%); }
+.landing-editor-demo__workspace { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr); min-height: 510px; }
+.landing-editor-demo__editor { display: grid; min-width: 0; padding: 24px 30px 30px; align-content: start; gap: 22px; background: rgb(255 253 248 / 48%); border: 0; border-right: 1px solid var(--landing-line); border-radius: 0; }
+.landing-editor-demo__prompt { display: grid; }
+.landing .landing-editor-demo__prompt h2 { max-width: 470px; font-size: 22px; line-height: 1.4; letter-spacing: -.025em; text-wrap: pretty; }
+.landing-editor-demo .rich-answer-editor { background: rgb(255 253 248 / 64%); border-color: var(--landing-line); }
+.landing-editor-demo .rich-answer-toolbar { min-height: 44px; background: rgb(255 253 248 / 76%); border-color: var(--landing-line); }
+.landing-editor-demo .rich-answer-toolbar button { display: grid; width: 34px; height: 32px; padding: 0; place-items: center; color: var(--landing-muted); background: transparent; border: 0; border-radius: 7px; cursor: pointer; }
+.landing-editor-demo .rich-answer-toolbar button:hover { color: var(--landing-ink); background: rgb(36 74 61 / 7%); }
+.landing-editor-demo .rich-answer-toolbar__divider { background: var(--landing-line); }
+.landing-editor-demo .rich-answer-editor__field { min-height: 205px; max-height: 205px; padding: 16px; color: var(--landing-ink); font-size: 12px; line-height: 1.75; }
+.landing-editor-demo__preview { display: grid; min-width: 0; padding: 24px 28px 22px; grid-template-rows: auto 1fr auto; gap: 18px; background: rgb(36 74 61 / 5%); }
+.landing-editor-demo__preview-heading { display: flex; align-items: baseline; justify-content: space-between; color: var(--landing-muted); }
+.landing-editor-demo__preview-heading span { color: var(--landing-ink); font-size: 11px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+.landing-editor-demo__preview-heading small { font-size: 9px; }
+.landing-editor-demo__stage { display: grid; min-height: 430px; padding: 24px; place-items: center; background: rgb(36 74 61 / 7%); border-radius: 15px; }
+.landing-editor-demo__page { position: relative; width: min(100%, 274px); aspect-ratio: .707; padding: 30px 21px 38px; overflow: hidden; color: #25231f; background: #fff; box-shadow: 0 18px 36px rgb(44 35 23 / 15%); font-family: var(--font-literata), serif; }
+.landing-editor-demo__page-body { display: grid; align-content: start; gap: 17px; }
+.landing .landing-editor-demo__page-question { color: #25231f; font-size: 9px; line-height: 1.55; }
+.landing .landing-editor-demo__page-answer { color: #25231f; font-size: 12px; font-weight: 500; line-height: 1.58; white-space: pre-wrap; overflow-wrap: anywhere; }
+.landing-editor-demo__empty { color: #a7a197; font-style: italic; }
+.landing-editor-demo__page footer { position: absolute; right: 21px; bottom: 18px; left: 21px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; color: #716a61; font-size: 5px; letter-spacing: .08em; text-transform: uppercase; }
+.landing-editor-demo__page footer b { font-size: 7px; font-weight: 400; }
+.landing .landing-editor-demo__hint { color: var(--landing-muted); font-size: 9px; line-height: 1.6; text-align: center; }
+:root[data-theme="dark"] .landing-editor-demo { background: rgb(23 36 31 / 84%); box-shadow: 0 26px 70px rgb(0 0 0 / 26%); }
+:root[data-theme="dark"] .landing-editor-demo .rich-answer-toolbar { background: rgb(32 49 41 / 82%); }
+:root[data-theme="dark"] .landing-editor-demo__editor { background: rgb(23 36 31 / 48%); }
+:root[data-theme="dark"] .landing-editor-demo .rich-answer-editor { background: rgb(16 27 23 / 74%); }
+:root[data-theme="dark"] .landing-editor-demo__preview { background: rgb(0 0 0 / 9%); }
 .landing-section { width: min(var(--landing-width), calc(100% - 48px)); margin-inline: auto; padding-block: 100px; }
 .landing-eyebrow { color: var(--landing-primary); font-size: 12px; line-height: 1.6; font-weight: 650; letter-spacing: .11em; text-transform: uppercase; }
 .landing-section-heading { text-align: center; margin-bottom: 56px; }

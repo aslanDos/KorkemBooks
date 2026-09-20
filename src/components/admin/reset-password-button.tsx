@@ -12,13 +12,12 @@ export function ResetPasswordButton({ userId, phone }: { userId: string; phone: 
 
   if (!phone) return <span className="admin-muted-action">Нет телефона</span>;
 
-  if (state.credentials) {
-    const credentials = `Логин: ${state.credentials.login}\nПароль: ${state.credentials.password}`;
+  if (state.resetLink) {
     return (
       <div className="admin-reset-result">
-        <span><Check size={13} />Новый пароль: <code>{state.credentials.password}</code></span>
-        <button type="button" onClick={async () => { await navigator.clipboard.writeText(credentials); setCopied(true); }}>
-          <Copy size={13} />{copied ? "Скопировано" : "Копировать"}
+        <span><Check size={13} />Ссылка готова</span>
+        <button type="button" onClick={async () => { await navigator.clipboard.writeText(state.resetLink?.url ?? ""); setCopied(true); }}>
+          <Copy size={13} />{copied ? "Скопировано" : "Копировать ссылку"}
         </button>
       </div>
     );
@@ -27,7 +26,7 @@ export function ResetPasswordButton({ userId, phone }: { userId: string; phone: 
   return (
     <form action={action} className="admin-reset-form">
       <input type="hidden" name="userId" value={userId} />
-      <button type="submit" disabled={pending}><KeyRound size={14} />{pending ? "Сбрасываем…" : "Сбросить пароль"}</button>
+      <button type="submit" disabled={pending}><KeyRound size={14} />{pending ? "Создаём ссылку…" : "Сбросить пароль"}</button>
       {state.error && <small>{state.error}</small>}
     </form>
   );

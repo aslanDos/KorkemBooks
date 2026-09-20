@@ -4,7 +4,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 
 export default function SignInPage() {
   return (
-    <AuthShell eyebrow="С возвращением" title="Войдите в аккаунт" description="Используйте номер телефона и пароль, полученные от администратора.">
+    <AuthShell eyebrow="С возвращением" title="Войдите в аккаунт" description="Используйте номер телефона и пароль, который вы создали по ссылке-приглашению.">
       <AuthForm />
     </AuthShell>
   );

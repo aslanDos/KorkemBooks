@@ -6,6 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getAuthErrorMessage } from "@/lib/auth/messages";
 import { newPasswordSchema, signInSchema } from "@/lib/auth/validation";
 import { createDevSession, deleteDevSession, isValidDevCredentials } from "@/lib/auth/dev-auth";
+import { consumePasswordSetupToken, type PasswordSetupPurpose } from "@/lib/auth/password-setup-tokens";
 
 export type AuthActionState = { error?: string; success?: string };
 
@@ -53,6 +54,21 @@ export async function updatePasswordAction(_: AuthActionState, formData: FormDat
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { error: getAuthErrorMessage(error.message) };
   return { success: "Пароль успешно изменён" };
+}
+
+export async function setPasswordFromLinkAction(_: AuthActionState, formData: FormData): Promise<AuthActionState> {
+  const parsed = newPasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return validationError(parsed.error.issues);
+
+  const token = formData.get("token");
+  const purpose = formData.get("purpose");
+  if (typeof token !== "string" || (purpose !== "invite" && purpose !== "reset")) {
+    return { error: "Ссылка недействительна" };
+  }
+
+  const result = await consumePasswordSetupToken(token, purpose as PasswordSetupPurpose, parsed.data.password);
+  if (result.error) return { error: result.error };
+  return { success: "Пароль сохранён. Теперь вы можете войти в аккаунт." };
 }
 
 export async function signOutAction() {

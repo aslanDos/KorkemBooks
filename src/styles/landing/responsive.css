@@ -15,9 +15,9 @@
   .landing-mobile-nav .landing-button { margin-top: 10px; min-height: 48px; }
   .landing-hero { padding-top: 128px; }
   .landing h1 { font-size: 54px; }
-  .landing-book-page { padding: 28px 28px 50px; min-height: 340px; }
-  .landing-page-title { font-size: 32px; }
-  .landing .landing-book-page h2 { font-size: 20px; }
+  .landing-editor-demo__workspace { grid-template-columns: minmax(0, 1fr) minmax(300px, .82fr); }
+  .landing-editor-demo__editor { padding: 24px; }
+  .landing-editor-demo__preview { padding-inline: 20px; }
   .landing-features { gap: 24px; }
   .landing-steps li { grid-template-columns: 1fr 72px 1fr; }
   .landing-step-card { padding: 22px; }
@@ -33,16 +33,13 @@
   .landing-hero > .landing-button { margin-top: 28px; }
   .landing-button { min-height: 56px; padding: 15px 25px; font-size: 14px; }
   .landing .landing-hero-note { margin-top: 16px; font-size: 11px; }
-  .landing .landing-book-preview { margin-top: 44px; }
-  .landing-book-page { min-height: 235px; padding: 22px 17px 40px; }
-  .landing-page-kicker { font-size: 7px; letter-spacing: .08em; }
-  .landing-page-title { margin-top: 20px; font-size: 23px; }
-  .landing-page-subtitle { margin-top: 16px; font-size: 9px; }
-  .landing .landing-book-page h2 { margin-top: 20px; font-size: 13px; line-height: 1.4; }
-  .landing .landing-book-page p { margin-top: 12px; font-size: 9px; line-height: 1.75; }
-  .landing-page-number { left: 17px; bottom: 18px; font-size: 8px; }
-  .landing-book-page-right .landing-page-number { right: 17px; }
-  .landing-book-preview figcaption { font-size: 10px; margin-top: 20px; }
+  .landing-editor-demo { margin-top: 44px; border-radius: 18px; }
+  .landing-editor-demo__workspace { grid-template-columns: 1fr; }
+  .landing-editor-demo__editor { padding: 22px 16px 24px; border-right: 0; border-bottom: 1px solid var(--landing-line); }
+  .landing .landing-editor-demo__prompt h2 { font-size: 19px; }
+  .landing-editor-demo .rich-answer-editor__field { min-height: 190px; max-height: 260px; }
+  .landing-editor-demo__preview { padding: 22px 16px; }
+  .landing-editor-demo__stage { min-height: 410px; padding: 22px; }
   .landing-section { width: calc(100% - 40px); padding-block: 62px; }
   .landing-section-heading { margin-bottom: 36px; }
   .landing-section-heading > p:last-child:not(.landing-eyebrow) { font-size: 15px; line-height: 1.8; margin-top: 16px; }

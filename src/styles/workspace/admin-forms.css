@@ -51,7 +51,7 @@
 .credentials-card > p { color: var(--muted); font-size: 11px; }
 .credentials-card > div { display: grid; width: 100%; gap: 6px; margin: 13px 0; padding: 16px; background: var(--background); border-radius: 10px; }
 .credentials-card small { margin-top: 7px; color: var(--muted); font-size: 9px; text-transform: uppercase; }
-.credentials-card code { font-size: 14px; }
+.credentials-card code { max-width: 100%; overflow-wrap: anywhere; color: var(--ink); font-size: 12px; line-height: 1.6; user-select: all; }
 .credentials-card button { display: inline-flex; height: 42px; padding: 0 14px; align-items: center; gap: 7px; color: var(--primary-ink); background: var(--primary); border: 0; border-radius: 8px; cursor: pointer; font-size: 10px; font-weight: 800; }
 .admin-analytics-chart { margin-top: 18px; }
 .admin-analytics-chart select { height: 38px; padding: 0 12px; color: var(--ink); background: var(--background); border: 1px solid var(--line); border-radius: 8px; font-size: 10px; }
