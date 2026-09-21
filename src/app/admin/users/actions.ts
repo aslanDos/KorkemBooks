@@ -10,15 +10,20 @@ import { normalizePhone } from "@/lib/auth/phone";
 import { issuePasswordSetupToken, type PasswordSetupPurpose } from "@/lib/auth/password-setup-tokens";
 
 const schema = z.object({
-  displayName: z.string().trim().min(2, "Укажите имя").max(120),
   phone: z.string().trim().min(1, "Укажите номер телефона"),
   role: z.enum(["user", "manager"]),
+  bookTypeId: z.string().trim().optional(),
+}).superRefine((value, context) => {
+  if (value.role === "user" && !z.uuid().safeParse(value.bookTypeId).success) {
+    context.addIssue({ code: "custom", path: ["bookTypeId"], message: "Выберите тип получателя" });
+  }
 });
 
 type PasswordLink = { url: string; expiresAt: string };
 
 export type CreateUserState = { error?: string; invitation?: PasswordLink & { login: string } };
 export type ResetPasswordState = { error?: string; resetLink?: PasswordLink };
+export type AssignBookTypeState = { error?: string; success?: string };
 
 async function getPublicUrl(path: string) {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -49,7 +54,7 @@ async function createPasswordLink(userId: string, purpose: PasswordSetupPurpose)
 export async function createUserAction(_state: CreateUserState, formData: FormData): Promise<CreateUserState> {
   const currentUser = await getCurrentUser();
   if (currentUser?.role !== "admin") return { error: "Недостаточно прав" };
-  const parsed = schema.safeParse({ displayName: formData.get("displayName"), phone: formData.get("phone"), role: formData.get("role") });
+  const parsed = schema.safeParse({ phone: formData.get("phone"), role: formData.get("role"), bookTypeId: formData.get("bookTypeId") });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Проверьте данные" };
   const phone = normalizePhone(parsed.data.phone);
   if (!phone) return { error: "Введите корректный номер телефона" };
@@ -57,12 +62,23 @@ export async function createUserAction(_state: CreateUserState, formData: FormDa
   if (!admin) return { error: "Добавьте SUPABASE_SERVICE_ROLE_KEY для создания аккаунтов" };
   const { data: existing } = await admin.from("profiles").select("id").eq("phone_e164", phone).maybeSingle();
   if (existing) return { error: "Пользователь с таким номером уже существует" };
+
+  let bookTypeId: string | null = null;
+  if (parsed.data.role === "user") {
+    bookTypeId = parsed.data.bookTypeId ?? null;
+    const [{ data: bookType }, { count: questionCount }] = await Promise.all([
+      admin.from("book_types").select("id").eq("id", bookTypeId).eq("is_active", true).maybeSingle(),
+      admin.from("question_catalog").select("id", { count: "exact", head: true }).eq("book_type_id", bookTypeId),
+    ]);
+    if (!bookType || questionCount !== 100) return { error: "Выбранный тип получателя пока недоступен" };
+  }
+
   const id = crypto.randomUUID();
   const technicalEmail = `${id}@auth.korkembooks.kz`;
   const inaccessiblePassword = `${randomBytes(48).toString("base64url")}Aa1!`;
-  const { data, error } = await admin.auth.admin.createUser({ id, email: technicalEmail, password: inaccessiblePassword, email_confirm: true, user_metadata: { display_name: parsed.data.displayName, phone_e164: phone } });
+  const { data, error } = await admin.auth.admin.createUser({ id, email: technicalEmail, password: inaccessiblePassword, email_confirm: true, user_metadata: { phone_e164: phone } });
   if (error || !data.user) return { error: error?.message ?? "Не удалось создать аккаунт" };
-  const { error: profileError } = await admin.from("profiles").update({ role: parsed.data.role, display_name: parsed.data.displayName, phone_e164: phone }).eq("id", data.user.id);
+  const { error: profileError } = await admin.from("profiles").update({ role: parsed.data.role, phone_e164: phone, book_type_id: bookTypeId }).eq("id", data.user.id);
   if (profileError) {
     await admin.auth.admin.deleteUser(data.user.id);
     return { error: "Не удалось сохранить профиль пользователя" };
@@ -99,4 +115,36 @@ export async function resetUserPasswordAction(_state: ResetPasswordState, formDa
   } catch {
     return { error: "Не удалось создать ссылку для сброса. Проверьте миграции базы данных." };
   }
+}
+
+export async function assignUserBookTypeAction(_state: AssignBookTypeState, formData: FormData): Promise<AssignBookTypeState> {
+  const currentUser = await getCurrentUser();
+  if (currentUser?.role !== "admin") return { error: "Недостаточно прав" };
+
+  const parsed = z.object({ userId: z.uuid(), bookTypeId: z.uuid() }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Выберите тип получателя" };
+
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { error: "Добавьте SUPABASE_SERVICE_ROLE_KEY" };
+  const [{ data: profile }, { data: bookType }, { count: questionCount }] = await Promise.all([
+    admin.from("profiles").select("role, book_type_id").eq("id", parsed.data.userId).maybeSingle(),
+    admin.from("book_types").select("id, name").eq("id", parsed.data.bookTypeId).eq("is_active", true).maybeSingle(),
+    admin.from("question_catalog").select("id", { count: "exact", head: true }).eq("book_type_id", parsed.data.bookTypeId),
+  ]);
+
+  if (!profile || profile.role !== "user") return { error: "Тип можно назначить только пользователю" };
+  if (profile.book_type_id) return { error: "Тип получателя уже назначен" };
+  if (!bookType || questionCount !== 100) return { error: "Выбранный тип пока недоступен" };
+
+  const { data: updated, error } = await admin
+    .from("profiles")
+    .update({ book_type_id: bookType.id })
+    .eq("id", parsed.data.userId)
+    .is("book_type_id", null)
+    .select("id")
+    .maybeSingle();
+  if (error || !updated) return { error: "Не удалось назначить тип получателя" };
+
+  revalidatePath("/admin/users");
+  return { success: bookType.name };
 }

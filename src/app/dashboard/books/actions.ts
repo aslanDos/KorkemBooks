@@ -45,10 +45,17 @@ export async function createBookAction(_: CreateBookState, formData: FormData): 
     .maybeSingle();
   if (existingBook) return { error: "Сейчас один пользователь может создать только одну книгу" };
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("book_type_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!profile?.book_type_id) return { error: "Тип получателя не назначен. Обратитесь к администратору" };
+
   const { data: bookType } = await supabase
     .from("book_types")
     .select("id")
-    .eq("id", parsed.data.typeId)
+    .eq("id", profile.book_type_id)
     .eq("is_active", true)
     .maybeSingle();
 

@@ -26,6 +26,11 @@
 .admin-reset-result span { display: flex; align-items: center; gap: 5px; color: #3f7d55; font-size: 9px; white-space: nowrap; }
 .admin-reset-result code { color: var(--ink); user-select: all; }
 .admin-muted-action { color: var(--muted); font-size: 9px; }
+.admin-assigned-type { color: var(--ink); font-size: 10px; font-weight: 750; white-space: nowrap; }
+.admin-assign-type-form { display: grid; min-width: 150px; gap: 6px; }
+.admin-assign-type-form select { height: 32px; padding: 0 9px; color: var(--ink); background: var(--background); border: 1px solid var(--line); border-radius: 7px; font-size: 9px; }
+.admin-assign-type-form button { width: fit-content; min-height: 30px; padding: 0 10px; color: var(--primary); background: var(--background); border: 1px solid var(--line); border-radius: 7px; cursor: pointer; font-size: 9px; font-weight: 800; }
+.admin-assign-type-form small { color: #9a3f3f !important; font-size: 9px; }
 .role-pill--admin { color: #75598e; background: rgb(117 89 142 / 13%); }
 .role-pill--manager { color: #936c25; background: rgb(191 145 58 / 13%); }
 .role-pill--user { color: #526c8f; background: rgb(82 108 143 / 12%); }

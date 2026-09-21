@@ -76,12 +76,16 @@ export async function getValidPasswordSetupToken(
   };
 }
 
-export async function consumePasswordSetupToken(token: string, purpose: PasswordSetupPurpose, password: string) {
+export async function consumePasswordSetupToken(
+  token: string,
+  purpose: PasswordSetupPurpose,
+  password: string,
+): Promise<{ success: true; email: string } | { success: false; error: string }> {
   const passwordToken = await getValidPasswordSetupToken(token, purpose);
-  if (!passwordToken) return { error: "Ссылка истекла, уже использована или недействительна" };
+  if (!passwordToken) return { success: false, error: "Ссылка истекла, уже использована или недействительна" };
 
   const admin = createSupabaseAdminClient();
-  if (!admin) return { error: "Авторизация ещё не настроена" };
+  if (!admin) return { success: false, error: "Авторизация ещё не настроена" };
 
   const usedAt = new Date().toISOString();
   const { data: claimedToken, error: claimError } = await admin
@@ -94,15 +98,15 @@ export async function consumePasswordSetupToken(token: string, purpose: Password
     .maybeSingle();
 
   if (claimError || !claimedToken) {
-    return { error: "Ссылка истекла, уже использована или недействительна" };
+    return { success: false, error: "Ссылка истекла, уже использована или недействительна" };
   }
 
-  const { error: passwordError } = await admin.auth.admin.updateUserById(passwordToken.userId, { password });
-  if (passwordError) {
+  const { data: updatedUser, error: passwordError } = await admin.auth.admin.updateUserById(passwordToken.userId, { password });
+  if (passwordError || !updatedUser.user.email) {
     // Let the user retry if Supabase Auth failed after the token was claimed.
     await admin.from("password_setup_tokens").update({ used_at: null }).eq("id", passwordToken.id).eq("used_at", usedAt);
-    return { error: "Не удалось сохранить пароль. Попробуйте ещё раз" };
+    return { success: false, error: "Не удалось сохранить пароль. Попробуйте ещё раз" };
   }
 
-  return { success: true as const };
+  return { success: true, email: updatedUser.user.email };
 }

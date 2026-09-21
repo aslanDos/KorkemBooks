@@ -2,15 +2,14 @@ import Link from "next/link";
 import { BookOpenText, Plus } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { BookCard } from "@/components/books/book-card";
-import { getCurrentUser } from "@/lib/auth/current-user";
 import { getBooks } from "@/lib/books/queries";
 
 export default async function DashboardPage() {
-  const [user, books] = await Promise.all([getCurrentUser(), getBooks()]);
+  const books = await getBooks();
 
   return (
     <>
-      <DashboardHeader title="Добро пожаловать" description={user?.displayName ? `Продолжите создавать историю, ${user.displayName}` : "Продолжите создавать свою историю"} />
+      <DashboardHeader title="Добро пожаловать" description="Продолжите создавать свою историю" />
       <section className={`overview-grid${books.length <= 1 ? " overview-grid--single" : ""}`}>
         <article className="overview-hero">
           <div><p className="eyebrow">{books.length > 0 ? "Продолжите историю" : "Начните с воспоминания"}</p><h2>{books.length > 0 ? "Ваша книга ждёт продолжения" : "Ваша первая книга ждёт"}</h2><p>Отвечайте на простые вопросы, а korkembooks поможет собрать ответы в связную историю.</p></div>

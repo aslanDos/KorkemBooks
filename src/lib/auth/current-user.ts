@@ -8,7 +8,6 @@ export type CurrentUser = {
   email: string;
   phone?: string;
   role: AppRole;
-  displayName?: string;
   isDevelopmentUser: boolean;
 };
 
@@ -29,7 +28,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, display_name, phone_e164")
+    .select("role, phone_e164")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -37,7 +36,6 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     email: user.email,
     phone: profile?.phone_e164 ?? user.phone,
     role: isAppRole(profile?.role) ? profile.role : "user",
-    displayName: profile?.display_name ?? undefined,
     isDevelopmentUser: false,
   };
 });

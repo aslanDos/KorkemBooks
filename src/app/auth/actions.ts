@@ -67,8 +67,19 @@ export async function setPasswordFromLinkAction(_: AuthActionState, formData: Fo
   }
 
   const result = await consumePasswordSetupToken(token, purpose as PasswordSetupPurpose, parsed.data.password);
-  if (result.error) return { error: result.error };
-  return { success: "Пароль сохранён. Теперь вы можете войти в аккаунт." };
+  if (!result.success) return { error: result.error };
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return configurationError();
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: result.email,
+    password: parsed.data.password,
+  });
+  if (signInError) {
+    return { success: "Пароль сохранён. Теперь вы можете войти в аккаунт." };
+  }
+
+  redirect("/dashboard");
 }
 
 export async function signOutAction() {
