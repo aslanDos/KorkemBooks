@@ -44,6 +44,42 @@ function form(values = {}) {
   return data;
 }
 
+test('admin language change confirms the saved value and reports RPC failures', async () => {
+  const calls = [];
+  let rpcError = null;
+  let savedLanguage = 'ru';
+  const client = {
+    async rpc(name, args) {
+      calls.push(['rpc', name, args]);
+      if (rpcError) return { data: null, error: rpcError };
+      savedLanguage = args.target_language;
+      return { data: true, error: null };
+    },
+    from() {
+      const query = {
+        select() { return query; },
+        eq() { return query; },
+        async single() { return { data: { language: savedLanguage }, error: null }; },
+      };
+      return query;
+    },
+  };
+  const action = load('src/app/admin/books/[bookId]/actions.ts', {
+    '@/lib/books/delivery': deliveryModule,
+    '@/lib/books/language': { isBookLanguage: value => ['ru', 'kk', 'en'].includes(value) },
+    '@/lib/auth/current-user': { getCurrentUser: async () => ({ role: 'admin' }) },
+    '@/lib/supabase/admin': { createSupabaseAdminClient: () => client },
+    'next/cache': { revalidatePath: path => calls.push(['revalidate', path]) },
+  }).updateBookLanguageAction;
+  assert.deepEqual(await action(bookId, 'kk'), {});
+  assert.equal(savedLanguage, 'kk');
+  assert.ok(calls.some(([kind]) => kind === 'revalidate'));
+  rpcError = { message: 'Database error' };
+  assert.match((await action(bookId, 'en')).error, /Database error/);
+  assert.equal(savedLanguage, 'kk');
+  assert.match((await action(bookId, 'invalid')).error, /Некорректный/);
+});
+
 test('delivery saves trimmed city/address and reloads them for the same book', async () => {
   const f = fixture();
   assert.deepEqual(await f.saveBookDeliveryAction({}, form()), { success: true });

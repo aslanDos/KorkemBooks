@@ -9,7 +9,7 @@ const initialState: AssignBookTypeState = {};
 export function AssignBookTypeForm({ userId, bookTypes }: { userId: string; bookTypes: BookType[] }) {
   const [state, action, pending] = useActionState(assignUserBookTypeAction, initialState);
 
-  if (state.success) return <span className="admin-assigned-type">{state.success}</span>;
+  if (state.success) return <span className="admin-assigned-type">Тип назначен</span>;
 
   return (
     <form action={action} className="admin-assign-type-form">

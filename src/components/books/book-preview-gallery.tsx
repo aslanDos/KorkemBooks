@@ -17,6 +17,7 @@ import { getPageBackgroundColor, normalizePageBackground } from "@/lib/books/cov
 import { sliceAnswerFormat } from "@/lib/books/answer-format";
 import { getBookFooterLabel } from "@/lib/books/page-footer";
 import { getBookContent } from "@/lib/books/language";
+import { QuestionSuggestionForm } from "@/components/books/question-suggestion-form";
 
 const PHOTO_TEXT_SIZES: BookPhotoTextSettings["size"][] = [10, 12, 14, 16, 20];
 const PHOTO_TEXT_POSITIONS: Array<{ value: BookPhotoTextSettings["position"]; label: string }> = [
@@ -47,7 +48,7 @@ function photoTextRow(bookId: string, imageId: string, settings: BookPhotoTextSe
 
 
 
-export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWithContent; initialQuestionId?: string }) {
+export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionIds = [] }: { book: BookWithContent; initialQuestionId?: string; pendingSuggestionIds?: string[] }) {
   const bookContent = getBookContent(book.language);
   const [images, setImages] = useState<Record<string, BookPageImage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.images]))));
   const [blankPages, setBlankPages] = useState<Record<string, BookBlankPage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.blankPages]))));
@@ -529,6 +530,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
       </div> : editable?.kind === "question" ? <>
         <span className="book-inline-editor__chapter">{editable.chapter.title} · {questionIndex + 1} из {questions.length}</span>
         <label>{editable.prompt}</label>
+        <QuestionSuggestionForm key={editable.questionId} bookId={book.id} questionId={editable.questionId} prompt={editable.prompt} alreadyPending={pendingSuggestionIds.includes(editable.questionId)} />
         <RichAnswerEditor key={editable.questionId} value={editable.answer} format={editable.answerFormat} onChange={(answer, answerFormat) => { setAnswers(current => ({ ...current, [editable.questionId]: answer })); setFormats(current => ({ ...current, [editable.questionId]: answerFormat })); setSaveError(""); }} />
         <small>{editable.answer.length} символов</small>
         <div className="book-inline-editor__navigation"><button type="button" disabled={questionIndex <= 0} onClick={() => setActivePageKey(questions[questionIndex - 1].key)}>Предыдущий вопрос</button><button type="button" disabled={questionIndex >= questions.length - 1} onClick={() => setActivePageKey(questions[questionIndex + 1].key)}>Следующий вопрос</button></div>

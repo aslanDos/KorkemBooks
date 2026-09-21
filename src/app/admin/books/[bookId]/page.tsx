@@ -25,7 +25,7 @@ export default async function AdminBookPage({ params }: { params: Promise<{ book
   return <div className="admin-book-workspace">
     <header className="book-workspace-header">
       <Link href="/admin/books"><ArrowLeft size={17} />Все книги</Link>
-      <div className="book-workspace-header__controls"><BookLanguageSelect bookId={book.id} language={book.language} /><BookStatusSelect bookId={book.id} status={book.productionStatus} /></div>
+      <div className="book-workspace-header__controls"><BookLanguageSelect key={book.language} bookId={book.id} language={book.language} /><BookStatusSelect bookId={book.id} status={book.productionStatus} /></div>
     </header>
     <section className="book-overview book-overview--summary" aria-label="Данные книги">
       <div className="book-summary-card">
@@ -37,6 +37,7 @@ export default async function AdminBookPage({ params }: { params: Promise<{ book
           <dl className="book-summary-people">
             <div><dt>Автор</dt><dd>{book.author_name}</dd></div>
             {book.recipient_name && <div><dt>Получатель</dt><dd>{book.recipient_name}</dd></div>}
+            <div><dt>Тип получателя</dt><dd>{book.typeName}</dd></div>
             <div><dt>Язык</dt><dd>{getBookLanguageLabel(book.language)}</dd></div>
           </dl>
           <div className="admin-book-metadata"><span>Ответы: <b>{answered} из {questions.length}</b></span><span>Обновлена: <time dateTime={book.updated_at}>{new Date(book.updated_at).toLocaleDateString("ru-KZ")}</time></span></div>

@@ -46,18 +46,22 @@ export async function saveAdminAnswerAction(_: AdminAnswerState, formData: FormD
   return { success: true };
 }
 
-export async function updateBookLanguageAction(formData: FormData) {
+export async function updateBookLanguageAction(bookIdValue: string, languageValue: string): Promise<{ error?: string }> {
   const user = await getCurrentUser();
-  if (user?.role !== "admin") return;
-  const bookId = z.string().uuid().safeParse(formData.get("bookId"));
-  const language = formData.get("language");
-  if (!bookId.success || !isBookLanguage(language)) return;
+  if (user?.role !== "admin") return { error: "Недостаточно прав для смены языка" };
+  const bookId = z.string().uuid().safeParse(bookIdValue);
+  if (!bookId.success || !isBookLanguage(languageValue)) return { error: "Некорректный язык книги" };
 
   const admin = createSupabaseAdminClient();
-  if (!admin) return;
-  const { error } = await admin.rpc("set_book_language", { target_book_id: bookId.data, target_language: language });
-  if (error) return;
+  if (!admin) return { error: "Подключение к базе данных не настроено" };
+  const { data: updated, error } = await admin.rpc("set_book_language", { target_book_id: bookId.data, target_language: languageValue });
+  if (error) return { error: `Не удалось сменить язык: ${error.message}` };
+  if (updated !== true) return { error: "Книга не найдена или недоступна" };
+
+  const { data: book, error: readError } = await admin.from("books").select("language").eq("id", bookId.data).single();
+  if (readError || book?.language !== languageValue) return { error: "Язык не удалось подтвердить. Обновите страницу и попробуйте ещё раз" };
 
   revalidatePath(`/admin/books/${bookId.data}`, "layout");
   revalidatePath(`/dashboard/books/${bookId.data}`, "layout");
+  return {};
 }

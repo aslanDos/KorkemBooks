@@ -3,7 +3,7 @@ import type { AppRole } from "@/lib/auth/current-user";
 export type AdminUser = {
   id: string;
   phone: string | null;
-  bookTypeName: string | null;
+  hasBookType: boolean;
   role: AppRole;
   createdAt: string;
 };
@@ -28,6 +28,7 @@ export type BookProductionStatus = "writing" | "editing" | "printing" | "ready" 
 export type AdminBook = {
   id: string;
   title: string;
+  typeName: string;
   authorName: string;
   recipientName: string;
   ownerPhone: string;
