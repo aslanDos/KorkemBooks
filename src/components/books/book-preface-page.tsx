@@ -1,14 +1,15 @@
-export function BookPrefacePage() {
+import { getBookContent } from "@/lib/books/language";
+import type { BookLanguage } from "@/lib/books/types";
+
+export function BookPrefacePage({ language = "ru" }: { language?: BookLanguage }) {
+  const content = getBookContent(language);
   return (
     <div className="preview-preface-page">
-      <h2>Предисловие</h2>
+      <h2>{content.prefaceTitle}</h2>
       <div className="preview-preface-page__text">
-        <p>У каждого человека есть история, достойная того, чтобы стать книгой. Эта книга появилась потому, что ваши воспоминания важны и ими хочется делиться.</p>
-        <p>На этих страницах собраны знакомые места, случайные улыбки и события, из которых складывается жизнь. Здесь остаётся то, что легко потерять в повседневной спешке.</p>
-        <p>Читайте её не торопясь. Возвращайтесь к любимым эпизодам, вспоминайте, разговаривайте и открывайте друг в друге то, о чём прежде не успели спросить.</p>
-        <p>Пусть эта книга бережно хранит вашу историю и передаёт её тепло тем, кто будет листать её сегодня и много лет спустя.</p>
+        {content.preface.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       </div>
-      <p className="preview-preface-page__signature">С теплом,<br />KorkemBooks</p>
+      <p className="preview-preface-page__signature">{content.signature}<br />KorkemBooks</p>
     </div>
   );
 }

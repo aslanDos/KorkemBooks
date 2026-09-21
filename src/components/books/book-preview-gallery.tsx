@@ -16,6 +16,7 @@ import { paginateBookAnswer } from "@/lib/books/pagination";
 import { getPageBackgroundColor, normalizePageBackground } from "@/lib/books/cover-palettes";
 import { sliceAnswerFormat } from "@/lib/books/answer-format";
 import { getBookFooterLabel } from "@/lib/books/page-footer";
+import { getBookContent } from "@/lib/books/language";
 
 const PHOTO_TEXT_SIZES: BookPhotoTextSettings["size"][] = [10, 12, 14, 16, 20];
 const PHOTO_TEXT_POSITIONS: Array<{ value: BookPhotoTextSettings["position"]; label: string }> = [
@@ -47,6 +48,7 @@ function photoTextRow(bookId: string, imageId: string, settings: BookPhotoTextSe
 
 
 export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWithContent; initialQuestionId?: string }) {
+  const bookContent = getBookContent(book.language);
   const [images, setImages] = useState<Record<string, BookPageImage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.images]))));
   const [blankPages, setBlankPages] = useState<Record<string, BookBlankPage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.blankPages]))));
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -427,14 +429,14 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
 
     if (page.kind === "title") return <BookTitlePage authorName={book.author_name} title={book.title} titleSize={book.titlePageTitleSize} />;
 
-    if (page.kind === "preface") return <BookPrefacePage />;
+    if (page.kind === "preface") return <BookPrefacePage language={book.language} />;
 
     if (page.kind === "contents") return <div className="preview-contents-page">
-      <h2>Содержание</h2>
+      <h2>{bookContent.contents}</h2>
       <ol>{page.contents.map((entry) => <li key={entry.id}><span className="preview-contents-page__chapter-number">{String(entry.chapterNumber).padStart(2, "0")}</span><span className="preview-contents-page__title">{entry.title}</span><i aria-hidden="true" /><b>{entry.pageNumber ?? "—"}</b></li>)}</ol>
     </div>;
 
-    if (page.kind === "chapter") return <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={book.chapterPageStyle} titleSize={book.chapterTitleSize} background={book.pageBackground} />;
+    if (page.kind === "chapter") return <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={book.chapterPageStyle} titleSize={book.chapterTitleSize} background={book.pageBackground} language={book.language} />;
 
     if (page.kind === "photo") return <div className={`preview-photo-page preview-photo-page--${page.image.displayMode}${book.pageBackground !== "white" ? " preview-page-background--colored" : ""}${page.image.roundedCorners ? " preview-photo-page--rounded" : ""}${page.image.displayMode === "contain" && hasVisiblePhotoText(page.image.photoText) && page.image.photoText.placement === "below" ? " preview-photo-page--text-below" : ""}${thumbnail ? " preview-photo-page--thumbnail" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }}>
       <BookPagePhoto image={page.image} pageNumber={page.pageNumber} />

@@ -12,6 +12,7 @@ import { BookChapterPage } from "@/components/books/book-chapter-page";
 import { BookPrefacePage } from "@/components/books/book-preface-page";
 import { getPageBackgroundColor } from "@/lib/books/cover-palettes";
 import { getBookFooterLabel } from "@/lib/books/page-footer";
+import { getBookContent } from "@/lib/books/language";
 
 export default async function PrintBookPage({ params }: { params: Promise<{ bookId: string }> }) {
   const { bookId } = await params;
@@ -19,6 +20,7 @@ export default async function PrintBookPage({ params }: { params: Promise<{ book
   if (!book) notFound();
 
   const printLayout = getBookPrintLayout(book);
+  const content = getBookContent(book.language);
   const { storyPages } = printLayout;
 
   const contents = book.chapters.map((chapter, index) => ({
@@ -42,13 +44,13 @@ export default async function PrintBookPage({ params }: { params: Promise<{ book
       <BookTitlePage authorName={book.author_name} title={book.title} titleSize={book.titlePageTitleSize} />
     </PrintBookSheet>
     <PrintBookSheet pageNumber={3} className={`preview-page--font-${book.pageFont}`}>
-      <BookPrefacePage />
+      <BookPrefacePage language={book.language} />
     </PrintBookSheet>
     <PrintBookSheet pageNumber={4} className={`preview-page--font-${book.pageFont}`}>
-      <div className="preview-contents-page"><h2>Содержание</h2><ol>{contents.map(entry => <li key={entry.id}><span className="preview-contents-page__chapter-number">{String(entry.number).padStart(2, "0")}</span><span className="preview-contents-page__title">{entry.title}</span><i aria-hidden="true" /><b>{entry.pageNumber ?? "—"}</b></li>)}</ol></div>
+      <div className="preview-contents-page"><h2>{content.contents}</h2><ol>{contents.map(entry => <li key={entry.id}><span className="preview-contents-page__chapter-number">{String(entry.number).padStart(2, "0")}</span><span className="preview-contents-page__title">{entry.title}</span><i aria-hidden="true" /><b>{entry.pageNumber ?? "—"}</b></li>)}</ol></div>
     </PrintBookSheet>
     {storyPages.map(page => <PrintBookSheet pageNumber={page.pageNumber} printMode={page.kind === "question" ? "monochrome" : "color"} className={`preview-page--font-${book.pageFont} preview-page--question-size-${book.questionTextSize} preview-page--answer-size-${book.answerTextSize}${page.kind === "photo" ? " preview-page--photo" : ""}${page.kind === "chapter" ? " preview-page--chapter" : ""}`} background={page.kind === "question" ? "#FFFFFF" : getPageBackgroundColor(book.pageBackground)} key={page.key}>
-      {page.kind === "chapter" ? <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={book.chapterPageStyle} titleSize={book.chapterTitleSize} background={book.pageBackground} /> : page.kind === "question" ? <div className="preview-page__content"><div className="preview-page__body">{page.answerPageIndex === 0 && <p className="preview-page__question">{page.question.prompt}</p>}{page.answerPart.trim() && <p className="preview-page__answer"><RichAnswerText text={page.answerPart} format={page.answerPageFormat} /></p>}</div></div> : page.kind === "photo" ? <div className={`preview-photo-page preview-photo-page--${page.image.displayMode}${book.pageBackground !== "white" ? " preview-page-background--colored" : ""}${page.image.roundedCorners ? " preview-photo-page--rounded" : ""}${page.image.displayMode === "contain" && hasVisiblePhotoText(page.image.photoText) && page.image.photoText.placement === "below" ? " preview-photo-page--text-below" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }}><BookPagePhoto image={page.image} pageNumber={page.pageNumber} /><BookPhotoText settings={page.image.photoText} displayMode={page.image.displayMode} /></div> : <div className={`preview-blank-page${book.pageBackground !== "white" ? " preview-page-background--colored" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }} aria-label={`Пустая страница ${page.pageNumber}`} />}
+      {page.kind === "chapter" ? <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={book.chapterPageStyle} titleSize={book.chapterTitleSize} background={book.pageBackground} language={book.language} /> : page.kind === "question" ? <div className="preview-page__content"><div className="preview-page__body">{page.answerPageIndex === 0 && <p className="preview-page__question">{page.question.prompt}</p>}{page.answerPart.trim() && <p className="preview-page__answer"><RichAnswerText text={page.answerPart} format={page.answerPageFormat} /></p>}</div></div> : page.kind === "photo" ? <div className={`preview-photo-page preview-photo-page--${page.image.displayMode}${book.pageBackground !== "white" ? " preview-page-background--colored" : ""}${page.image.roundedCorners ? " preview-photo-page--rounded" : ""}${page.image.displayMode === "contain" && hasVisiblePhotoText(page.image.photoText) && page.image.photoText.placement === "below" ? " preview-photo-page--text-below" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }}><BookPagePhoto image={page.image} pageNumber={page.pageNumber} /><BookPhotoText settings={page.image.photoText} displayMode={page.image.displayMode} /></div> : <div className={`preview-blank-page${book.pageBackground !== "white" ? " preview-page-background--colored" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }} aria-label={`Пустая страница ${page.pageNumber}`} />}
       {page.kind !== "chapter" && page.kind !== "blank" && !(page.kind === "photo" && page.image.hideFooter) && <PageFooter pageNumber={page.pageNumber} bookTitle={book.title} authorName={book.author_name} showAuthor={book.showFooterAuthor} showTitle={book.showFooterTitle} />}
     </PrintBookSheet>)}
     </div></div>

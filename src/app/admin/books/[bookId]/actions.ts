@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { bookDeliverySchema, getDeliveryError, type BookDeliveryState } from "@/lib/books/delivery";
+import { isBookLanguage } from "@/lib/books/language";
 
 export type AdminAnswerState = { error?: string; success?: boolean };
 const answerSchema = z.object({ bookId: z.string().uuid(), questionId: z.string().uuid(), answerText: z.string().max(50000, "Ответ слишком длинный") });
@@ -43,4 +44,20 @@ export async function saveAdminAnswerAction(_: AdminAnswerState, formData: FormD
   revalidatePath(`/admin/books/${parsed.data.bookId}`);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}`, "layout");
   return { success: true };
+}
+
+export async function updateBookLanguageAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (user?.role !== "admin") return;
+  const bookId = z.string().uuid().safeParse(formData.get("bookId"));
+  const language = formData.get("language");
+  if (!bookId.success || !isBookLanguage(language)) return;
+
+  const admin = createSupabaseAdminClient();
+  if (!admin) return;
+  const { error } = await admin.rpc("set_book_language", { target_book_id: bookId.data, target_language: language });
+  if (error) return;
+
+  revalidatePath(`/admin/books/${bookId.data}`, "layout");
+  revalidatePath(`/dashboard/books/${bookId.data}`, "layout");
 }

@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DEFAULT_BOOK_PHOTO_TEXT, type BookAnswerTextSize, type BookBlankPage, type BookChapter, type BookChapterTitleSize, type BookCover, type BookPageImage, type BookPhotoText, type BookQuestion, type BookQuestionTextSize, type BookSummary, type BookTitlePageTitleSize, type BookType, type BookWithContent, type CoverTemplate } from "./types";
 import { normalizePageBackground } from "./cover-palettes";
 import { normalizeAnswerFormat } from "./answer-format";
+import { isBookLanguage } from "./language";
 
 export async function getCoverTemplates(): Promise<CoverTemplate[]> {
   const supabase = await createSupabaseServerClient();
@@ -37,7 +38,7 @@ export async function getBooks(limit?: number): Promise<BookSummary[]> {
 
   let query = supabase
     .from("books")
-    .select("id, title, author_name, recipient_name, status, progress, updated_at, book_types(name)")
+    .select("id, title, author_name, recipient_name, language, status, progress, updated_at, book_types(name)")
     .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
@@ -45,6 +46,7 @@ export async function getBooks(limit?: number): Promise<BookSummary[]> {
   const { data } = await query;
   return (data ?? []).map((book) => ({
     ...book,
+    language: isBookLanguage(book.language) ? book.language : "ru",
     book_types: Array.isArray(book.book_types) ? (book.book_types[0] ?? null) : book.book_types,
   })) as BookSummary[];
 }
@@ -75,7 +77,7 @@ export async function getAdminBookWithContent(bookId: string): Promise<BookWithC
 async function loadBookWithContent(supabase: SupabaseClient, bookId: string, content: "full" | "structure" | "cover" = "full"): Promise<BookWithContent | null> {
   const { data: book } = await supabase
     .from("books")
-    .select("id, title, author_name, recipient_name, status, progress, updated_at, page_font, production_status, book_types(name)")
+    .select("id, title, author_name, recipient_name, language, status, progress, updated_at, page_font, production_status, book_types(name)")
     .eq("id", bookId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -216,6 +218,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     title: book.title,
     author_name: book.author_name,
     recipient_name: book.recipient_name,
+    language: isBookLanguage(book.language) ? book.language : "ru",
     status: book.status,
     progress: book.progress,
     updated_at: book.updated_at,

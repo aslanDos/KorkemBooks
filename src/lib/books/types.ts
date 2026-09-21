@@ -6,6 +6,8 @@ export type BookType = {
   questionCount: number;
 };
 
+export type BookLanguage = "ru" | "kk" | "en";
+
 export type CoverTemplate = {
   id: string;
   slug: string;
@@ -54,6 +56,7 @@ export type BookSummary = {
   title: string;
   author_name: string;
   recipient_name: string;
+  language: BookLanguage;
   status: "draft" | "in_progress" | "completed" | "archived";
   progress: number;
   updated_at: string;

@@ -14,6 +14,7 @@ import type { AnswerFormat, BookBlankPage, BookChapter, BookPageImage, BookQuest
 import { getPageBackgroundColor } from "@/lib/books/cover-palettes";
 import { sliceAnswerFormat } from "@/lib/books/answer-format";
 import { getBookFooterLabel } from "@/lib/books/page-footer";
+import { getBookContent } from "@/lib/books/language";
 
 type ContentsEntry = { id: string; title: string; chapterNumber: number; pageNumber: number | null };
 type ReaderPage =
@@ -175,11 +176,12 @@ function ReaderLeaf({ page, book, titlePageTitleSize, chapterPageStyle, chapterT
 }
 
 function ReaderPageContent({ page, book, titlePageTitleSize, chapterPageStyle, chapterTitleSize, pageBackground }: { page: ReaderPage; book: BookWithContent; titlePageTitleSize: BookWithContent["titlePageTitleSize"]; chapterPageStyle: BookWithContent["chapterPageStyle"]; chapterTitleSize: BookWithContent["chapterTitleSize"]; pageBackground: BookWithContent["pageBackground"] }) {
+  const content = getBookContent(book.language);
   if (page.kind === "opening-blank") return <div className="preview-opening-blank" aria-label="Первая пустая страница" />;
   if (page.kind === "title") return <BookTitlePage authorName={book.author_name} title={book.title} titleSize={titlePageTitleSize} />;
-  if (page.kind === "preface") return <BookPrefacePage />;
-  if (page.kind === "contents") return <div className="preview-contents-page"><h2>Содержание</h2><ol>{page.contents.map((entry) => <li key={entry.id}><span className="preview-contents-page__chapter-number">{String(entry.chapterNumber).padStart(2, "0")}</span><span className="preview-contents-page__title">{entry.title}</span><i aria-hidden="true" /><b>{entry.pageNumber ?? "—"}</b></li>)}</ol></div>;
-  if (page.kind === "chapter") return <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={chapterPageStyle} titleSize={chapterTitleSize} background={pageBackground} />;
+  if (page.kind === "preface") return <BookPrefacePage language={book.language} />;
+  if (page.kind === "contents") return <div className="preview-contents-page"><h2>{content.contents}</h2><ol>{page.contents.map((entry) => <li key={entry.id}><span className="preview-contents-page__chapter-number">{String(entry.chapterNumber).padStart(2, "0")}</span><span className="preview-contents-page__title">{entry.title}</span><i aria-hidden="true" /><b>{entry.pageNumber ?? "—"}</b></li>)}</ol></div>;
+  if (page.kind === "chapter") return <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={chapterPageStyle} titleSize={chapterTitleSize} background={pageBackground} language={book.language} />;
   if (page.kind === "photo") return <div className={`preview-photo-page preview-photo-page--${page.image.displayMode}${pageBackground !== "white" ? " preview-page-background--colored" : ""}${page.image.roundedCorners ? " preview-photo-page--rounded" : ""}${page.image.displayMode === "contain" && hasVisiblePhotoText(page.image.photoText) && page.image.photoText.placement === "below" ? " preview-photo-page--text-below" : ""}`} style={{ background: getPageBackgroundColor(pageBackground) }}><BookPagePhoto image={page.image} pageNumber={page.pageNumber} /><BookPhotoText settings={page.image.photoText} displayMode={page.image.displayMode} /></div>;
   if (page.kind === "blank") return <div className={`preview-blank-page${pageBackground !== "white" ? " preview-page-background--colored" : ""}`} style={{ background: getPageBackgroundColor(pageBackground) }} aria-label={`Пустая страница ${page.pageNumber}`} />;
   return <div className="preview-page__content"><div className="preview-page__body">{page.answerPageIndex === 0 && <p className="preview-page__question">{page.question.prompt}</p>}{page.answerPart.trim() && <p className="preview-page__answer"><RichAnswerText text={page.answerPart} format={page.answerPageFormat} /></p>}</div></div>;

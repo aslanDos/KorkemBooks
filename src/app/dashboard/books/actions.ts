@@ -67,6 +67,7 @@ export async function createBookAction(_: CreateBookState, formData: FormData): 
     title: parsed.data.title,
     author_name: parsed.data.authorName,
     recipient_name: parsed.data.recipientName,
+    language: parsed.data.language,
   }).select("id").single();
 
   if (error || !book) return { error: error?.code === "23505" ? "Сейчас один пользователь может создать только одну книгу" : "Не удалось создать книгу. Попробуйте ещё раз" };

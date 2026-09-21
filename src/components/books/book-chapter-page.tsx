@@ -5,8 +5,10 @@ import { getPageBackgroundColor } from "@/lib/books/cover-palettes";
 import { formatChapterTitle } from "@/lib/books/chapter-title-text";
 import { fitRenderedChapterTitle } from "@/lib/books/chapter-title-layout";
 import type { BookChapterPageStyle, BookChapterTitleSize, BookPageBackground } from "@/lib/books/types";
+import type { BookLanguage } from "@/lib/books/types";
+import { getBookContent } from "@/lib/books/language";
 
-export function BookChapterPage({ chapterNumber, title, style, titleSize, background }: { chapterNumber: number; title: string; style: BookChapterPageStyle; titleSize: BookChapterTitleSize; background: BookPageBackground }) {
+export function BookChapterPage({ chapterNumber, title, style, titleSize, background, language = "ru" }: { chapterNumber: number; title: string; style: BookChapterPageStyle; titleSize: BookChapterTitleSize; background: BookPageBackground; language?: BookLanguage }) {
   const pageRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const page = pageRef.current;
@@ -34,7 +36,8 @@ export function BookChapterPage({ chapterNumber, title, style, titleSize, backgr
       printMedia.removeEventListener("change", fit);
     };
   }, [title, style, titleSize, chapterNumber]);
-  const label = style === "default" ? `Глава ${chapterNumber}` : `Глава ${toRomanNumeral(chapterNumber)}`;
+  const chapterLabel = getBookContent(language).chapter;
+  const label = style === "default" ? `${chapterLabel} ${chapterNumber}` : `${chapterLabel} ${toRomanNumeral(chapterNumber)}`;
 
   return (
     <div ref={pageRef} className={`preview-chapter-page preview-chapter-page--${style} preview-chapter-page--title-size-${titleSize}${background !== "white" ? " preview-chapter-page--colored" : ""}`} data-chapter-number={String(chapterNumber).padStart(2, "0")} style={{ background: getPageBackgroundColor(background) }}>

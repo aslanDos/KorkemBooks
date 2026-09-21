@@ -31,6 +31,7 @@ function fixture(overrides = {}) {
   } };
   const mocks = {
     '@/lib/books/delivery': deliveryModule,
+    '@/lib/books/language': { isBookLanguage: value => ['ru', 'kk', 'en'].includes(value) },
     '@/lib/auth/current-user': { getCurrentUser: async () => state.role ? { role: state.role } : null },
     '@/lib/supabase/admin': { createSupabaseAdminClient: () => state.configured ? client : null },
     'next/cache': { revalidatePath: path => calls.push(['revalidate', path]) },

@@ -7,6 +7,7 @@ import { EditBookDialog } from "@/components/books/edit-book-dialog";
 import { ChapterList } from "@/components/books/chapter-list";
 import { BookStructureStats } from "@/components/books/book-structure-stats";
 import { SubmitBookButton } from "@/components/books/submit-book-button";
+import { getBookLanguageLabel } from "@/lib/books/language";
 
 export default async function BookPage({ params }: { params: Promise<{ bookId: string }> }) {
   const { bookId } = await params;
@@ -35,7 +36,8 @@ export default async function BookPage({ params }: { params: Promise<{ bookId: s
             <h1>{book.title}</h1>
             <dl className="book-summary-people">
               <div><dt>Автор</dt><dd>{book.author_name}</dd></div>
-              {book.recipient_name && <div><dt>Получатель</dt><dd>{book.recipient_name}</dd></div>}
+            {book.recipient_name && <div><dt>Получатель</dt><dd>{book.recipient_name}</dd></div>}
+            <div><dt>Язык книги</dt><dd>{getBookLanguageLabel(book.language)}</dd></div>
             </dl>
             {!readOnly && <EditBookDialog bookId={book.id} title={book.title} authorName={book.author_name} recipientName={book.recipient_name} />}
           </div>

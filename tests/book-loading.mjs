@@ -47,6 +47,7 @@ function fixture({ missing = false } = {}) {
   const mockedRequire = name => name.includes('supabase/server') ? { createSupabaseServerClient: async () => client }
     : name.includes('supabase/admin') ? { createSupabaseAdminClient: () => client }
     : name === './types' ? bookTypes.exports
+    : name === './language' ? { isBookLanguage: value => ['ru', 'kk', 'en'].includes(value) }
     : name === './answer-format' ? { normalizeAnswerFormat: value => value ?? { version: 1, marks: [] } }
     : name === './cover-palettes' ? { normalizePageBackground: value => ['white', 'primary', 'wine', 'berry', 'terracotta', 'navy', 'umber', 'olive', 'ochre'].includes(value) ? value : 'white' }
     : require(name);
