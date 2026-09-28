@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Crop, FilePlus2, FileText, GripVertical, ImagePlus, List, Move, Plus, RotateCcw, Trash2, X } from "lucide-react";
-import { BookPhotoDialog } from "@/components/books/book-photo-dialog";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Crop, FilePlus2, FileText, GripVertical, ImagePlus, List, Move, Plus, RotateCcw, Settings2, Trash2, X } from "lucide-react";
 import { BookPagePhoto } from "@/components/books/book-page-photo";
 import { BookPhotoText, hasVisiblePhotoText } from "@/components/books/book-photo-text";
 import { BookTitlePage } from "@/components/books/book-title-page";
@@ -10,14 +11,17 @@ import { BookChapterPage } from "@/components/books/book-chapter-page";
 import { BookPrefacePage } from "@/components/books/book-preface-page";
 import { RichAnswerEditor, RichAnswerText } from "@/components/books/rich-answer-editor";
 import type { AnswerFormat, BookBlankPage, BookPageImage, BookPhotoText as BookPhotoTextSettings, BookWithContent } from "@/lib/books/types";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { saveAnswerAction, saveReadingPositionAction } from "@/app/dashboard/books/write-actions";
+import { saveAnswersAction, saveReadingPositionAction } from "@/app/dashboard/books/write-actions";
+import { saveBookPhotoDefaultsAction } from "@/app/dashboard/books/preview-actions";
+import { appendBlankPageAction, deleteBookPageImageAction, deleteBookQuestionBlankAction, reorderBookQuestionPageAction, saveBookImageCropAction, savePhotoTextAction, updatePhotoDisplayModeAction, updatePhotoFooterAction } from "@/app/dashboard/books/page-actions";
 import { paginateBookAnswer } from "@/lib/books/pagination";
 import { getPageBackgroundColor, normalizePageBackground } from "@/lib/books/cover-palettes";
 import { sliceAnswerFormat } from "@/lib/books/answer-format";
 import { getBookFooterLabel } from "@/lib/books/page-footer";
 import { getBookContent } from "@/lib/books/language";
 import { QuestionSuggestionForm } from "@/components/books/question-suggestion-form";
+
+const BookPhotoDialog = dynamic(() => import("@/components/books/book-photo-dialog").then((module) => module.BookPhotoDialog), { ssr: false });
 
 const PHOTO_TEXT_SIZES: BookPhotoTextSettings["size"][] = [10, 12, 14, 16, 20];
 const PHOTO_TEXT_POSITIONS: Array<{ value: BookPhotoTextSettings["position"]; label: string }> = [
@@ -31,24 +35,8 @@ const PHOTO_TEXT_TONES: Array<{ value: BookPhotoTextSettings["tone"]; label: str
   { value: "dark", label: "Тёмный" },
 ];
 
-function photoTextRow(bookId: string, imageId: string, settings: BookPhotoTextSettings) {
-  return {
-    image_id: imageId,
-    book_id: bookId,
-    enabled: settings.enabled,
-    content: settings.content,
-    text_size: settings.size,
-    placement: settings.placement,
-    position: settings.position,
-    tone: settings.tone,
-    image_darkening: Math.min(50, settings.darkening),
-    text_shadow: settings.textShadow,
-  };
-}
-
-
-
-export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionIds = [] }: { book: BookWithContent; initialQuestionId?: string; pendingSuggestionIds?: string[] }) {
+export function BookPreviewGallery({ book, initialQuestionId, questionSuggestions = {} }: { book: BookWithContent; initialQuestionId?: string; questionSuggestions?: Record<string, { question_id: string; status: string; review_comment: string | null }> }) {
+  const router = useRouter();
   const bookContent = getBookContent(book.language);
   const [images, setImages] = useState<Record<string, BookPageImage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.images]))));
   const [blankPages, setBlankPages] = useState<Record<string, BookBlankPage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.blankPages]))));
@@ -108,8 +96,7 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
   const [photoDialogTarget, setPhotoDialogTarget] = useState<{ questionId: string; imageId: string | null; placement: BookPageImage["placement"]; insertPosition?: number } | null>(null);
   const [layoutError, setLayoutError] = useState("");
   const [layoutPending, setLayoutPending] = useState(false);
-  const [applyRoundingToAll, setApplyRoundingToAll] = useState(false);
-  const [applyFooterRemovalToAll, setApplyFooterRemovalToAll] = useState(false);
+  const [applyFooterRemovalToAll, setApplyFooterRemovalToAll] = useState(book.hidePhotoFooters);
   const [cropEditor, setCropEditor] = useState<{ questionId: string; image: BookPageImage; x: number; y: number; scale: number } | null>(null);
   const [cropPending, setCropPending] = useState(false);
   const [cropError, setCropError] = useState("");
@@ -151,20 +138,19 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
 
   const saveText = useCallback(async () => {
     const pendingIds = Object.keys(answers).filter(id => answers[id] !== savedAnswers[id] || JSON.stringify(formats[id]) !== JSON.stringify(savedFormats[id]));
-    if (!pendingIds.length || savingRef.current) return;
+    if (!pendingIds.length) return true;
+    if (savingRef.current) return false;
     savingRef.current = true;
     setSaving(true);
     setSaveError("");
     try {
-      for (const id of pendingIds) {
-        const answer = answers[id];
-        const answerFormat = formats[id] ?? savedFormats[id];
-        const result = await saveAnswerAction({ questionId: id, answerText: answer, answerFormat });
-        if (result.error) { setSaveError(result.error); return; }
-        setSavedAnswers(current => ({ ...current, [id]: answer }));
-        setSavedFormats(current => ({ ...current, [id]: answerFormat }));
-      }
-    } catch { setSaveError("Не удалось сохранить ответ. Попробуйте ещё раз."); }
+      const pending = pendingIds.map((id) => ({ questionId: id, answerText: answers[id], answerFormat: formats[id] ?? savedFormats[id] }));
+      const result = await saveAnswersAction(pending);
+      if (result.error) { setSaveError(result.error); return false; }
+      setSavedAnswers((current) => ({ ...current, ...Object.fromEntries(pending.map((answer) => [answer.questionId, answer.answerText])) }));
+      setSavedFormats((current) => ({ ...current, ...Object.fromEntries(pending.map((answer) => [answer.questionId, answer.answerFormat])) }));
+      return true;
+    } catch { setSaveError("Не удалось сохранить ответ. Попробуйте ещё раз."); return false; }
     finally { savingRef.current = false; setSaving(false); }
   }, [answers, formats, savedAnswers, savedFormats]);
 
@@ -173,6 +159,15 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     const timeout = window.setTimeout(() => { void saveText(); }, 900);
     return () => window.clearTimeout(timeout);
   }, [dirty, saving, saveError, saveText]);
+
+  async function openPageSettings() {
+    const saved = await saveText();
+    if (!saved) return;
+    const settingsGroup = active.kind === "title" ? "title" : active.kind === "chapter" ? "chapter" : "page";
+    const search = new URLSearchParams({ page: active.key, settings: settingsGroup });
+    router.push(`/dashboard/books/${book.id}/preview?${search.toString()}#book-settings`);
+  }
+
   const photoSourcePage = photoDialogTarget ? pages.find((page) => page.kind === "question" && page.questionId === photoDialogTarget.questionId) ?? null : null;
   const photoDialogImage = photoDialogTarget?.imageId ? (images[photoDialogTarget.questionId] ?? []).find((image) => image.id === photoDialogTarget.imageId) ?? null : null;
   const photoDialogPageNumber = photoSourcePage && photoDialogTarget
@@ -202,17 +197,9 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     setLayoutPending(true);
     setLayoutError("");
     try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) throw new Error();
-      const result = await supabase.rpc("append_book_question_blank", {
-        target_book_id: book.id,
-        target_question_id: target.questionId,
-        target_placement: target.placement,
-        target_position: target.position,
-      }).single();
-      const data = result.data as { id: string; placement: string; position: number; background_style: string } | null;
-      const error = result.error;
-      if (error || !data) throw new Error();
+      const result = await appendBlankPageAction({ bookId: book.id, questionId: target.questionId, placement: target.placement, position: target.position });
+      if (result.error || !result.data) throw new Error(result.error);
+      const data = result.data;
       const createdPage: BookBlankPage = { id: data.id, pageBackground: normalizePageBackground(data.background_style), placement: data.placement === "before" ? "before" : "after", position: data.position };
       setImages((current) => ({ ...current, [target.questionId]: (current[target.questionId] ?? []).map((image) => image.placement === target.placement && image.position >= data.position ? { ...image, position: image.position + 1 } : image) }));
       setBlankPages((current) => ({
@@ -234,10 +221,8 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     setLayoutError("");
     setImages((current) => ({ ...current, [active.questionId]: (current[active.questionId] ?? []).map((image) => image.id === active.image.id ? { ...image, displayMode: mode } : image) }));
     try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) throw new Error();
-      const { error } = await supabase.from("book_page_images").update({ display_mode: mode }).eq("id", active.image.id);
-      if (error) throw error;
+      const result = await updatePhotoDisplayModeAction({ imageId: active.image.id, mode });
+      if (result.error) throw new Error(result.error);
     } catch {
       setImages((current) => ({ ...current, [active.questionId]: (current[active.questionId] ?? []).map((image) => image.id === active.image.id ? { ...image, displayMode: previous } : image) }));
       setLayoutError("Не удалось сохранить расположение фотографии.");
@@ -252,10 +237,8 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
   }
 
   async function persistPhotoText(imageId: string, settings: BookPhotoTextSettings) {
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) throw new Error();
-    const { error } = await supabase.from("book_photo_texts").upsert(photoTextRow(book.id, imageId, settings), { onConflict: "image_id" });
-    if (error) throw error;
+    const result = await savePhotoTextAction({ bookId: book.id, imageId, settings });
+    if (result.error) throw new Error(result.error);
   }
 
   function changePhotoTextDraft(patch: Partial<BookPhotoTextSettings>) {
@@ -295,32 +278,10 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     } finally { setLayoutPending(false); }
   }
 
-  async function changePhotoRounding(roundedCorners: boolean, applyToAll = applyRoundingToAll) {
-    if (active.kind !== "photo" || active.image.displayMode !== "contain" || layoutPending) return;
-    const previousImages = images;
-    const activeImageId = active.image.id;
-    setLayoutPending(true);
-    setLayoutError("");
-    setImages((current) => Object.fromEntries(Object.entries(current).map(([questionId, questionImages]) => [
-      questionId,
-      questionImages.map((image) => applyToAll || image.id === activeImageId ? { ...image, roundedCorners } : image),
-    ])));
-    try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) throw new Error();
-      const query = supabase.from("book_page_images").update({ rounded_corners: roundedCorners });
-      const { error } = applyToAll ? await query.eq("book_id", book.id) : await query.eq("id", activeImageId);
-      if (error) throw error;
-    } catch {
-      setImages(previousImages);
-      if (applyToAll) setApplyRoundingToAll(false);
-      setLayoutError(applyToAll ? "Не удалось применить скругление ко всем фотографиям." : "Не удалось сохранить скругление фотографии.");
-    } finally { setLayoutPending(false); }
-  }
-
   async function changePhotoFooterHidden(hideFooter: boolean, applyToAll = applyFooterRemovalToAll) {
     if (active.kind !== "photo" || layoutPending) return;
     const previousImages = images;
+    const previousApplyToAll = applyFooterRemovalToAll;
     const activeImageId = active.image.id;
     setLayoutPending(true);
     setLayoutError("");
@@ -329,15 +290,36 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
       questionImages.map((image) => applyToAll || image.id === activeImageId ? { ...image, hideFooter } : image),
     ])));
     try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) throw new Error();
-      const query = supabase.from("book_page_images").update({ hide_footer: hideFooter });
-      const { error } = applyToAll ? await query.eq("book_id", book.id) : await query.eq("id", activeImageId);
-      if (error) throw error;
+      if (applyToAll) {
+        const result = await saveBookPhotoDefaultsAction({ bookId: book.id, target: "footer", enabled: hideFooter });
+        if (result.error) throw new Error(result.error);
+      } else {
+        const result = await updatePhotoFooterAction({ imageId: activeImageId, hidden: hideFooter });
+        if (result.error) throw new Error(result.error);
+      }
     } catch {
       setImages(previousImages);
-      if (applyToAll) setApplyFooterRemovalToAll(false);
+      if (applyToAll) setApplyFooterRemovalToAll(previousApplyToAll);
       setLayoutError(applyToAll ? "Не удалось убрать колонтитулы у всех фотографий." : "Не удалось сохранить настройку колонтитула фотографии.");
+    } finally { setLayoutPending(false); }
+  }
+
+  async function changeFooterApplyToAll(enabled: boolean) {
+    if (active.kind !== "photo" || layoutPending) return;
+    if (enabled) {
+      setApplyFooterRemovalToAll(true);
+      await changePhotoFooterHidden(true, true);
+      return;
+    }
+    setLayoutPending(true);
+    setLayoutError("");
+    setApplyFooterRemovalToAll(false);
+    try {
+      const result = await saveBookPhotoDefaultsAction({ bookId: book.id, target: "footer", enabled: false, applyToExisting: false });
+      if (result.error) throw new Error(result.error);
+    } catch {
+      setApplyFooterRemovalToAll(true);
+      setLayoutError("Не удалось сохранить настройку колонтитула фотографии.");
     } finally { setLayoutPending(false); }
   }
 
@@ -355,10 +337,8 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     setLayoutPending(true);
     setLayoutError("");
     try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) throw new Error();
-      const { data, error } = await supabase.rpc("reorder_book_question_page", { target_page_id: activePageId, target_position: nextPosition });
-      if (error || !data) throw new Error();
+      const result = await reorderBookQuestionPageAction({ pageId: activePageId, position: nextPosition });
+      if (result.error) throw new Error(result.error);
       setImages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((image) => image.pageId === activePageId ? { ...image, position: nextPosition } : image.pageId === targetPageId ? { ...image, position: previousPosition } : image) }));
       setBlankPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.id === activePageId ? { ...page, position: nextPosition } : page.id === targetPageId ? { ...page, position: previousPosition } : page) }));
     } catch { setLayoutError("Не удалось изменить порядок страниц."); }
@@ -372,10 +352,8 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     setLayoutPending(true);
     setLayoutError("");
     try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) throw new Error();
-      const { data, error } = await supabase.rpc("delete_book_question_blank", { target_page_id: deletedPage.id });
-      if (error || !data) throw new Error();
+      const result = await deleteBookQuestionBlankAction({ bookId: book.id, pageId: deletedPage.id });
+      if (result.error) throw new Error(result.error);
       setImages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((image) => image.placement === deletedPage.placement && image.position > deletedPage.position ? { ...image, position: image.position - 1 } : image) }));
       setBlankPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).filter((page) => page.id !== deletedPage.id).map((page) => page.placement === deletedPage.placement && page.position > deletedPage.position ? { ...page, position: page.position - 1 } : page) }));
       setActivePageKey(`question-${questionId}`);
@@ -390,11 +368,8 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     setLayoutPending(true);
     setLayoutError("");
     try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) throw new Error();
-      const { data: deletedStoragePath, error } = await supabase.rpc("delete_book_page_image", { target_image_id: deletedImage.id });
-      if (error || !deletedStoragePath) throw new Error();
-      await supabase.storage.from("book-images").remove([deletedStoragePath]);
+      const result = await deleteBookPageImageAction({ bookId: book.id, imageId: deletedImage.id });
+      if (result.error) throw new Error(result.error);
       setImages((current) => ({
         ...current,
         [questionId]: (current[questionId] ?? [])
@@ -415,10 +390,8 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     setCropPending(true);
     setCropError("");
     try {
-      const supabase = createSupabaseBrowserClient();
-      if (!supabase) throw new Error();
-      const { error } = await supabase.from("book_page_images").update({ crop_x: cropEditor.x, crop_y: cropEditor.y, crop_scale: cropEditor.scale }).eq("id", cropEditor.image.id);
-      if (error) throw error;
+      const result = await saveBookImageCropAction({ imageId: cropEditor.image.id, x: cropEditor.x, y: cropEditor.y, scale: cropEditor.scale });
+      if (result.error) throw new Error(result.error);
       setImages((current) => ({ ...current, [cropEditor.questionId]: (current[cropEditor.questionId] ?? []).map((image) => image.id === cropEditor.image.id ? { ...image, cropX: cropEditor.x, cropY: cropEditor.y, cropScale: cropEditor.scale } : image) }));
       setCropEditor(null);
     } catch { setCropError("Не удалось сохранить кадрирование фотографии."); }
@@ -439,13 +412,13 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
 
     if (page.kind === "chapter") return <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={book.chapterPageStyle} titleSize={book.chapterTitleSize} background={book.pageBackground} language={book.language} />;
 
-    if (page.kind === "photo") return <div className={`preview-photo-page preview-photo-page--${page.image.displayMode}${book.pageBackground !== "white" ? " preview-page-background--colored" : ""}${page.image.roundedCorners ? " preview-photo-page--rounded" : ""}${page.image.displayMode === "contain" && hasVisiblePhotoText(page.image.photoText) && page.image.photoText.placement === "below" ? " preview-photo-page--text-below" : ""}${thumbnail ? " preview-photo-page--thumbnail" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }}>
-      <BookPagePhoto image={page.image} pageNumber={page.pageNumber} />
+    if (page.kind === "photo") return <div className={`preview-photo-page preview-photo-page--${page.image.displayMode} preview-page-background--colored${book.roundPhotos ? " preview-photo-page--rounded" : ""}${page.image.displayMode === "contain" && hasVisiblePhotoText(page.image.photoText) && page.image.photoText.placement === "below" ? " preview-photo-page--text-below" : ""}${thumbnail ? " preview-photo-page--thumbnail" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }}>
+      <BookPagePhoto image={{ ...page.image, roundedCorners: book.roundPhotos }} pageNumber={page.pageNumber} />
       <BookPhotoText settings={page.image.photoText} displayMode={page.image.displayMode} />
       {thumbnail && <span className="preview-photo-page__drag-hint" aria-hidden="true"><GripVertical size={10} /></span>}
     </div>;
 
-    if (page.kind === "blank") return <div className={`preview-blank-page${book.pageBackground !== "white" ? " preview-page-background--colored" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }} aria-label={`Пустая страница ${page.pageNumber}`} />;
+    if (page.kind === "blank") return <div className="preview-blank-page preview-page-background--colored" style={{ background: getPageBackgroundColor(book.pageBackground) }} aria-label={`Пустая страница ${page.pageNumber}`} />;
 
     return <>
       <div className="preview-page__content">
@@ -461,6 +434,7 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     <div className="book-editor-controls">
     <div className="book-editor-savebar"><span role="status">{saveError ? "Не удалось сохранить" : saving || dirty ? "Сохраняется…" : "Сохранено"}</span>{saveError && <button type="button" disabled={saving} onClick={() => void saveText()}>Повторить сохранение</button>}</div>
     <div className="book-spread-toolbar">
+      <button className="book-spread-toolbar__settings" type="button" disabled={saving || layoutPending} onClick={() => void openPageSettings()}><Settings2 size={17} />Изменить настройки страницы</button>
       <button type="button" aria-haspopup="dialog" onClick={() => {
         setExpandedChapterId(editable?.kind === "question" ? editable.chapter.id : null);
         drawerRef.current?.showModal();
@@ -485,7 +459,7 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
         <p>Фото привязано к этому вопросу. Добавьте следующую страницу, чтобы собрать цепочку фотографий.</p>
         <strong>Настройки страницы</strong>
         <div className="book-photo-page-settings__preview">
-          <BookPagePhoto image={active.image} pageNumber={active.pageNumber} settings />
+          <BookPagePhoto image={{ ...active.image, roundedCorners: book.roundPhotos }} pageNumber={active.pageNumber} settings />
           <button className="book-photo-page-settings__replace" type="button" onClick={() => setPhotoDialogTarget({ questionId: active.questionId, imageId: active.image.id, placement: active.image.placement })}><ImagePlus size={16} />Заменить</button>
           <button className="book-photo-page-settings__crop" type="button" onClick={() => { setCropError(""); setCropEditor({ questionId: active.questionId, image: active.image, x: active.image.cropX, y: active.image.cropY, scale: active.image.cropScale }); }}><Crop size={16} />Кадрировать</button>
         </div>
@@ -514,24 +488,20 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
             <label className="book-photo-text-settings__range"><span><strong>Тень текста</strong><output>{active.image.photoText.textShadow}%</output></span><input type="range" min="0" max="100" step="5" value={active.image.photoText.textShadow} disabled={layoutPending} onChange={(event) => changePhotoTextDraft({ textShadow: Number(event.target.value) })} /></label>
           </div>}
         </section>
-        {active.image.displayMode === "contain" && <section className="book-photo-rounding-settings" aria-label="Скругление фотографии">
-          <div><span><strong>Скруглить фотографию</strong><small>Смягчить углы фотографии на странице</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Скруглить фотографию" aria-checked={active.image.roundedCorners} disabled={layoutPending} onClick={() => { const next = !active.image.roundedCorners; if (!next) setApplyRoundingToAll(false); void changePhotoRounding(next); }}><span /></button></div>
-          {active.image.roundedCorners && <div className="book-photo-rounding-settings__apply-all"><span><strong>Применить ко всем фото</strong><small>Использовать это скругление для всей книги</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Применить скругление ко всем фотографиям в книге" aria-checked={applyRoundingToAll} disabled={layoutPending} onClick={() => { const next = !applyRoundingToAll; setApplyRoundingToAll(next); if (next) void changePhotoRounding(active.image.roundedCorners, true); }}><span /></button></div>}
-        </section>}
         <section className="book-photo-rounding-settings" aria-label="Колонтитулы фотографии">
           <div><span><strong>Убрать колонтитулы</strong><small>Скрыть подпись и номер на этой странице</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Убрать колонтитулы с фотографии" aria-checked={active.image.hideFooter} disabled={layoutPending} onClick={() => { const next = !active.image.hideFooter; if (!next) setApplyFooterRemovalToAll(false); void changePhotoFooterHidden(next); }}><span /></button></div>
-          {active.image.hideFooter && <div className="book-photo-rounding-settings__apply-all"><span><strong>Применить ко всем фото</strong><small>Убрать колонтитулы со всех фотографий книги</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Убрать колонтитулы со всех фотографий книги" aria-checked={applyFooterRemovalToAll} disabled={layoutPending} onClick={() => { const next = !applyFooterRemovalToAll; setApplyFooterRemovalToAll(next); if (next) void changePhotoFooterHidden(active.image.hideFooter, true); }}><span /></button></div>}
+          {active.image.hideFooter && <div className="book-photo-rounding-settings__apply-all"><span><strong>Применить ко всем фото</strong><small>Убрать колонтитулы со всех фотографий книги</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Убрать колонтитулы со всех фотографий книги" aria-checked={applyFooterRemovalToAll} disabled={layoutPending} onClick={() => void changeFooterApplyToAll(!applyFooterRemovalToAll)}><span /></button></div>}
         </section>
       </div> : active.kind === "blank" ? <div className="book-blank-page-settings" aria-busy={layoutPending}>
         <div className="book-page-settings-heading"><span className="book-inline-editor__chapter">Пустая страница · Страница {active.pageNumber}</span><div><button type="button" aria-label="Переместить страницу раньше" title="Переместить раньше" disabled={layoutPending || active.position <= 1} onClick={() => void movePage(-1)}><ChevronLeft size={18} /></button><button type="button" aria-label="Переместить страницу позже" title="Переместить позже" disabled={layoutPending || !pages.some(page => (page.kind === "photo" || page.kind === "blank") && page.questionId === active.questionId && page.placement === active.placement && page.position > active.position)} onClick={() => void movePage(1)}><ChevronRight size={18} /></button><button className="book-page-settings-heading__delete" type="button" aria-label="Удалить страницу" title="Удалить страницу" disabled={layoutPending} onClick={() => void deleteBlankPage()}><Trash2 size={17} /></button></div></div>
         <p>Она останется пустой в готовой книге и сохранит своё место в последовательности этого вопроса.</p>
         <strong>Пустая страница</strong>
-        <div className={`book-blank-page-settings__preview${book.pageBackground !== "white" ? " preview-page-background--colored" : ""}`} style={{ background: getPageBackgroundColor(book.pageBackground) }}><FilePlus2 size={28} /><span>Без текста и фотографий</span></div>
+        <div className="book-blank-page-settings__preview preview-page-background--colored" style={{ background: getPageBackgroundColor(book.pageBackground) }}><FilePlus2 size={28} /><span>Без текста и фотографий</span></div>
       </div> : editable?.kind === "question" ? <>
         <span className="book-inline-editor__chapter">{editable.chapter.title} · {questionIndex + 1} из {questions.length}</span>
         <label>{editable.prompt}</label>
-        <QuestionSuggestionForm key={editable.questionId} bookId={book.id} questionId={editable.questionId} prompt={editable.prompt} alreadyPending={pendingSuggestionIds.includes(editable.questionId)} />
-        <RichAnswerEditor key={editable.questionId} value={editable.answer} format={editable.answerFormat} onChange={(answer, answerFormat) => { setAnswers(current => ({ ...current, [editable.questionId]: answer })); setFormats(current => ({ ...current, [editable.questionId]: answerFormat })); setSaveError(""); }} />
+        <QuestionSuggestionForm key={`suggestion-${editable.questionId}`} bookId={book.id} questionId={editable.questionId} prompt={editable.prompt} suggestion={questionSuggestions[editable.questionId]} />
+        <RichAnswerEditor key={`answer-${editable.questionId}`} value={editable.answer} format={editable.answerFormat} onChange={(answer, answerFormat) => { setAnswers(current => ({ ...current, [editable.questionId]: answer })); setFormats(current => ({ ...current, [editable.questionId]: answerFormat })); setSaveError(""); }} />
         <small>{editable.answer.length} символов</small>
         <div className="book-inline-editor__navigation"><button type="button" disabled={questionIndex <= 0} onClick={() => setActivePageKey(questions[questionIndex - 1].key)}>Предыдущий вопрос</button><button type="button" disabled={questionIndex >= questions.length - 1} onClick={() => setActivePageKey(questions[questionIndex + 1].key)}>Следующий вопрос</button></div>
       </> : <p>Выберите вопрос или страницу с историей, чтобы начать писать. Начальные страницы, предисловие и содержание формируются автоматически.</p>}
@@ -540,7 +510,7 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     <div className="book-spread-stage" ref={stageRef} aria-label={`Страница ${active.pageNumber} книги`}>
       <div className="book-spread-paper book-spread-paper--single" style={{ zoom: scale }}>
         <div key={active.key} className="book-spread-leaf is-selected">
-          <div className={`preview-page preview-page--font-${book.pageFont} preview-page--question-size-${book.questionTextSize} preview-page--answer-size-${book.answerTextSize}${active.kind === "photo" ? " preview-page--photo" : ""}${active.kind === "title" ? " preview-page--title" : ""}${active.kind === "chapter" ? " preview-page--chapter" : ""}`}>{renderPage(active)}{active.kind !== "opening-blank" && active.kind !== "title" && active.kind !== "preface" && active.kind !== "contents" && active.kind !== "chapter" && active.kind !== "blank" && !(active.kind === "photo" && active.image.hideFooter) && <footer className="preview-page__footer"><p className="preview-page__chapter">{getBookFooterLabel({ pageNumber: active.pageNumber, authorName: book.author_name, bookTitle: book.title, showAuthor: book.showFooterAuthor, showTitle: book.showFooterTitle })}</p><span className="preview-page__number">{active.pageNumber}</span></footer>}</div>
+          <div data-no-translate className={`preview-page preview-page--font-${book.pageFont} preview-page--question-size-${book.questionTextSize} preview-page--answer-size-${book.answerTextSize}${active.kind === "photo" ? " preview-page--photo" : ""}${active.kind === "title" ? " preview-page--title" : ""}${active.kind === "chapter" ? " preview-page--chapter" : ""}`}>{renderPage(active)}{active.kind !== "opening-blank" && active.kind !== "title" && active.kind !== "preface" && active.kind !== "contents" && active.kind !== "chapter" && active.kind !== "blank" && !(active.kind === "photo" && active.image.hideFooter) && <footer className="preview-page__footer"><p className="preview-page__chapter">{getBookFooterLabel({ pageNumber: active.pageNumber, authorName: book.author_name, bookTitle: book.title, showAuthor: book.showFooterAuthor, showTitle: book.showFooterTitle })}</p><span className="preview-page__number">{active.pageNumber}</span></footer>}</div>
           <button className="book-spread-select" type="button" aria-label={`Страница ${active.pageNumber}${active.kind === "photo" ? ". Двойное нажатие открывает кадрирование" : ""}`} aria-pressed="true" onDoubleClick={() => { if (active.kind === "photo") { setCropError(""); setCropEditor({ questionId: active.questionId, image: active.image, x: active.image.cropX, y: active.image.cropY, scale: active.image.cropScale }); } }} />
         </div>
       </div>
@@ -593,6 +563,8 @@ export function BookPreviewGallery({ book, initialQuestionId, pendingSuggestionI
     </dialog>}
     <BookPhotoDialog
       bookId={book.id}
+      defaultRoundedCorners={book.roundPhotos}
+      defaultHideFooter={applyFooterRemovalToAll}
       page={photoSourcePage?.kind === "question" && photoDialogTarget ? { id: photoSourcePage.questionId, pageNumber: photoDialogPageNumber, prompt: photoSourcePage.prompt, image: photoDialogImage, placement: photoDialogTarget.placement, insertPosition: photoDialogTarget.insertPosition } : null}
       onClose={() => setPhotoDialogTarget(null)}
       onImageSave={(questionId, image) => {

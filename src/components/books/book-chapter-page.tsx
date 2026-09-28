@@ -40,7 +40,7 @@ export function BookChapterPage({ chapterNumber, title, style, titleSize, backgr
   const label = style === "default" ? `${chapterLabel} ${chapterNumber}` : `${chapterLabel} ${toRomanNumeral(chapterNumber)}`;
 
   return (
-    <div ref={pageRef} className={`preview-chapter-page preview-chapter-page--${style} preview-chapter-page--title-size-${titleSize}${background !== "white" ? " preview-chapter-page--colored" : ""}`} data-chapter-number={String(chapterNumber).padStart(2, "0")} style={{ background: getPageBackgroundColor(background) }}>
+    <div ref={pageRef} className={`preview-chapter-page preview-chapter-page--${style} preview-chapter-page--title-size-${titleSize} preview-chapter-page--colored`} data-chapter-number={String(chapterNumber).padStart(2, "0")} data-no-translate style={{ background: getPageBackgroundColor(background) }}>
       <span>{label}</span>
       <h2 title={title}>{formatChapterTitle(title)}</h2>
     </div>

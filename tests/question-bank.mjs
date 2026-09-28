@@ -23,7 +23,7 @@ const legacy=(await db.query(`insert into books(owner_id,type_id,title,author_na
 const oldQuestion=(await db.query('select id,prompt from questions order by created_at limit 1')).rows[0];
 await db.query(`insert into answers(question_id,book_id,owner_id,answer_text) values ($1,$2,$3,'Saved history')`,[oldQuestion.id,legacy,owner]);
 for(const file of migrations.filter(f=>f.startsWith('20260909'))) await db.exec('begin;'+await readFile(root+'/supabase/migrations/'+file,'utf8')+'commit;');
-assert.equal((await db.query('select count(*)::int count from question_catalog')).rows[0].count,1300);
+assert.equal((await db.query('select count(*)::int count from question_catalog')).rows[0].count,1100);
 assert.deepEqual((await db.query('select prompt from questions where id=$1',[oldQuestion.id])).rows[0],{prompt:oldQuestion.prompt});
 assert.equal((await db.query('select answer_text from answers where question_id=$1',[oldQuestion.id])).rows[0].answer_text,'Saved history');
 assert.equal((await db.query('select count(*)::int count from chapters where book_id=$1',[legacy])).rows[0].count,8);
@@ -55,11 +55,13 @@ assert.equal((await db.query('select storage_path from book_page_images where qu
 assert.equal((await db.query('select title from chapters where id=$1',[chapters[1]])).rows[0].title,'Моя глава');
 assert.equal((await db.query('select title from chapters where id=$1',[chapters[0]])).rows[0].title,'How It All Began');
 await db.exec('reset role;'+await readFile(root+'/supabase/migrations/202609210003_question_prompt_suggestions.sql','utf8'));
+await db.exec(await readFile(root+'/supabase/migrations/202609210004_question_suggestion_feedback.sql','utf8'));
 await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);
 await assert.rejects(db.query('select id from question_prompt_suggestions'));
 await db.exec('reset role; set role service_role;');
 const suggestion=(await db.query('insert into question_prompt_suggestions(book_id,question_id,owner_id,language,original_prompt,suggested_prompt) values($1,$2,$3,\'en\',$4,\'Suggested wording?\') returning id',[book,q,owner,translated.prompt])).rows[0].id;
-assert.equal((await db.query("select resolve_question_prompt_suggestion($1,'approved','Approved wording?') ok",[suggestion])).rows[0].ok,true);
+assert.equal((await db.query("select resolve_question_prompt_suggestion($1,'approved','Approved wording?','Спасибо за уточнение') ok",[suggestion])).rows[0].ok,true);
+assert.deepEqual((await db.query('select status,review_comment,resolved_prompt from question_prompt_suggestions where id=$1',[suggestion])).rows[0],{status:'approved',review_comment:'Спасибо за уточнение',resolved_prompt:'Approved wording?'});
 await db.exec('reset role;');
 assert.equal((await db.query('select prompt from questions where id=$1',[q])).rows[0].prompt,'Approved wording?');
 assert.equal((await db.query('select answer_text from answers where question_id=$1',[q])).rows[0].answer_text,'Keep this answer');
@@ -77,7 +79,8 @@ assert.equal((await db.query('select prompt from questions where id=$1',[oldQues
 await db.exec('set role service_role;');
 const rejected=(await db.query('insert into question_prompt_suggestions(book_id,question_id,owner_id,language,original_prompt,suggested_prompt) values($1,$2,$3,\'en\',\'Approved wording?\',\'Another wording?\') returning id',[book,q,owner])).rows[0].id;
 await assert.rejects(db.query('insert into question_prompt_suggestions(book_id,question_id,owner_id,language,original_prompt,suggested_prompt) values($1,$2,$3,\'en\',\'Approved wording?\',\'Duplicate wording?\')',[book,q,owner]));
-assert.equal((await db.query("select resolve_question_prompt_suggestion($1,'rejected',null) ok",[rejected])).rows[0].ok,true);
+assert.equal((await db.query("select resolve_question_prompt_suggestion($1,'rejected',null,'Не меняем смысл вопроса') ok",[rejected])).rows[0].ok,true);
+assert.deepEqual((await db.query('select status,review_comment,resolved_prompt from question_prompt_suggestions where id=$1',[rejected])).rows[0],{status:'rejected',review_comment:'Не меняем смысл вопроса',resolved_prompt:null});
 await db.exec('reset role;');
 assert.equal((await db.query('select prompt from questions where id=$1',[q])).rows[0].prompt,'Approved wording?');
 await db.exec(`reset role; set role authenticated; set request.jwt.claim.sub='${owner}';`);
@@ -121,5 +124,76 @@ const allIds=(await db.query('select id from questions where book_id=$1',[book])
 assert.equal(await call(allIds,replacement,true),true);
 assert.equal((await db.query('select count(*)::int count from questions where book_id=$1 and chapter_id=$2',[book,replacement])).rows[0].count,100);
 assert.equal((await db.query('select answer_text from answers where question_id=$1',[q])).rows[0].answer_text,'Keep this answer');
-console.log('PASS: 13 catalogs, localized questions, local approved wording survives language switches, preserved answers/photos, assignment, pool, deletion, progress, ownership and immutable catalog wording.');
+await db.exec("reset role; alter table public.books add column production_status text not null default 'writing';");
+await db.exec(await readFile(root+'/supabase/migrations/202609220003_admin_edit_question_catalog.sql','utf8'));
+const catalog=(await db.query('select catalog_id from questions where id=$1',[q])).rows[0].catalog_id;
+const oldEnglish=(await db.query("select prompt from question_catalog_translations where catalog_id=$1 and language='en'",[catalog])).rows[0].prompt;
+await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);
+await assert.rejects(db.query("select admin_edit_question_catalog($1,'en',$2,'Edited for everyone?')",[catalog,oldEnglish]));
+await db.exec('reset role; set role service_role;');
+assert.equal((await db.query("select admin_edit_question_catalog($1,'en',$2,'Edited for everyone?') ok",[catalog,oldEnglish])).rows[0].ok,true);
+assert.equal((await db.query("select admin_edit_question_catalog($1,'en',$2,'Stale edit?') ok",[catalog,oldEnglish])).rows[0].ok,false);
+await db.exec('reset role;');
+assert.equal((await db.query('select prompt from questions where id=$1',[q])).rows[0].prompt,'Approved wording?');
+assert.equal((await db.query('select answer_text from answers where question_id=$1',[q])).rows[0].answer_text,'Keep this answer');
+const editable=(await db.query('select id,catalog_id,prompt from questions where book_id=$1 and catalog_id<>$2 limit 1',[book,catalog])).rows[0];
+await db.exec('set role service_role;');
+assert.equal((await db.query("select admin_edit_question_catalog($1,'en',$2,'Updated English prompt?') ok",[editable.catalog_id,editable.prompt])).rows[0].ok,true);
+await db.exec('reset role;');
+assert.equal((await db.query('select prompt from questions where id=$1',[editable.id])).rows[0].prompt,'Updated English prompt?');
+await db.query("update books set production_status='approval' where id=$1",[book]);
+await db.exec('set role service_role;');
+assert.equal((await db.query("select admin_edit_question_catalog($1,'en','Updated English prompt?','Later prompt?') ok",[editable.catalog_id])).rows[0].ok,true);
+await db.exec('reset role;');
+assert.equal((await db.query('select prompt from questions where id=$1',[editable.id])).rows[0].prompt,'Updated English prompt?');
+await db.exec('reset role;'+await readFile(root+'/supabase/migrations/202609260003_update_boyfriend_question_bank.sql','utf8'));
+const boyfriendSource=JSON.parse(await readFile(root+'/content/question-bank-boyfriend-v2.json','utf8'));
+const boyfriendType=(await db.query("select id from book_types where slug='boyfriend'")).rows[0].id;
+assert.equal((await db.query('select count(*)::int count from question_catalog where book_type_id=$1',[boyfriendType])).rows[0].count,150);
+assert.deepEqual(
+  (await db.query('select prompt from question_catalog where book_type_id=$1 order by number',[boyfriendType])).rows.map(row=>row.prompt),
+  boyfriendSource.locales.ru.questions,
+);
+assert.deepEqual(
+  (await db.query("select translations.prompt from question_catalog catalog join question_catalog_translations translations on translations.catalog_id=catalog.id and translations.language='kk' where catalog.book_type_id=$1 order by catalog.number",[boyfriendType])).rows.map(row=>row.prompt),
+  boyfriendSource.locales.kk.questions,
+);
+const existingBoyfriend=(await db.query('select id from books where type_id=$1 order by created_at limit 1',[boyfriendType])).rows[0].id;
+assert.equal((await db.query('select count(*)::int count from questions where book_id=$1',[existingBoyfriend])).rows[0].count,150);
+assert.equal((await db.query('select count(*)::int count from questions where book_id=$1 and chapter_id is null',[existingBoyfriend])).rows[0].count,50);
+await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);
+const boyfriendBook=(await db.query("insert into books(owner_id,type_id,title,author_name,recipient_name,language) values($1,$2,'Boyfriend','Author','Recipient','ru') returning id",[owner,boyfriendType])).rows[0].id;
+assert.equal((await db.query('select count(*)::int count from chapters where book_id=$1',[boyfriendBook])).rows[0].count,5);
+assert.deepEqual((await db.query('select count(*)::int count from questions where book_id=$1 group by chapter_id order by min(position)',[boyfriendBook])).rows.map(row=>row.count),[30,30,30,30,30]);
+assert.equal((await db.query('select prompt from questions where book_id=$1 order by catalog_id limit 1',[boyfriendBook])).rows.length,1);
+assert.equal((await db.query('select prompt from questions where book_id=$1 and catalog_id=(select id from question_catalog where book_type_id=$2 and number=1)',[boyfriendBook,boyfriendType])).rows[0].prompt,boyfriendSource.locales.ru.questions[0]);
+await db.exec('reset role; set role service_role;');
+assert.equal((await db.query("select set_book_language($1,'kk') ok",[boyfriendBook])).rows[0].ok,true);
+await db.exec('reset role;');
+assert.equal((await db.query('select prompt from questions where book_id=$1 and catalog_id=(select id from question_catalog where book_type_id=$2 and number=150)',[boyfriendBook,boyfriendType])).rows[0].prompt,boyfriendSource.locales.kk.questions[149]);
+assert.deepEqual((await db.query('select title from chapters where book_id=$1 order by position',[boyfriendBook])).rows.map(row=>row.title),boyfriendSource.locales.kk.chapters.map(chapter=>chapter.title));
+await db.exec('reset role;'+await readFile(root+'/supabase/migrations/202609290001_update_ru_kk_question_bank.sql','utf8'));
+const updatedSource=JSON.parse(await readFile(root+'/content/question-bank-ru-kk-v3.json','utf8'));
+const wifeSource=updatedSource.types.find(type=>type.slug==='wife');
+assert.equal((await db.query('select count(*)::int count from chapters where book_id=$1 and deleted_at is null',[books[2]])).rows[0].count,6);
+assert.equal((await db.query('select count(*)::int count from questions where book_id=$1 and chapter_id is not null',[books[2]])).rows[0].count,150);
+assert.deepEqual((await db.query('select title from chapters where book_id=$1 and deleted_at is null order by position',[books[2]])).rows.map(row=>row.title),wifeSource.locales.ru.chapters.map(chapter=>chapter.title));
+assert.equal((await db.query('select count(*)::int count from questions where book_id=$1',[books[0]])).rows[0].count,100); // approval content remains frozen
+for (const sourceType of updatedSource.types) {
+  const type=(await db.query('select id from book_types where slug=$1',[sourceType.slug])).rows[0];
+  assert.equal((await db.query('select count(*)::int count from question_catalog where book_type_id=$1',[type.id])).rows[0].count,150);
+  assert.deepEqual((await db.query('select prompt from question_catalog where book_type_id=$1 order by number',[type.id])).rows.map(row=>row.prompt),sourceType.locales.ru.questions);
+  assert.deepEqual((await db.query("select translations.prompt from question_catalog catalog join question_catalog_translations translations on translations.catalog_id=catalog.id and translations.language='kk' where catalog.book_type_id=$1 order by catalog.number",[type.id])).rows.map(row=>row.prompt),sourceType.locales.kk.questions);
+  await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);
+  const localizedBook=(await db.query("insert into books(owner_id,type_id,title,author_name,recipient_name,language) values($1,$2,'Localized','Author','Recipient','ru') returning id",[owner,type.id])).rows[0].id;
+  assert.equal((await db.query('select count(*)::int count from chapters where book_id=$1',[localizedBook])).rows[0].count,sourceType.locales.ru.chapters.length);
+  assert.equal((await db.query('select count(*)::int count from questions where book_id=$1',[localizedBook])).rows[0].count,150);
+  assert.ok((await db.query('select count(*)::int count from questions where book_id=$1 group by chapter_id',[localizedBook])).rows.every(row=>row.count===sourceType.questionsPerChapter));
+  await db.exec('reset role; set role service_role;');
+  assert.equal((await db.query("select set_book_language($1,'kk') ok",[localizedBook])).rows[0].ok,true);
+  await db.exec('reset role;');
+  assert.deepEqual((await db.query('select title from chapters where book_id=$1 order by position',[localizedBook])).rows.map(row=>row.title),sourceType.locales.kk.chapters.map(chapter=>chapter.title));
+  assert.equal((await db.query('select prompt from questions where book_id=$1 and catalog_id=(select id from question_catalog where book_type_id=$2 and number=150)',[localizedBook,type.id])).rows[0].prompt,sourceType.locales.kk.questions[149]);
+}
+console.log('PASS: 11 RU/KK catalogs, admin catalog editing, per-book overrides and answers preserved, approval frozen, assignment, pool, deletion, progress and ownership.');
 await db.close();

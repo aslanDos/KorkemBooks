@@ -1,9 +1,48 @@
 /* Ordered entry point. Keep imports in cascade order. */
+@import "../styles/workspace/base-content.css";
+@import "../styles/books/writer.css";
+@import "../styles/books/pages.css";
+@import "../styles/books/preview.css";
+@import "../styles/books/covers.css";
+@import "../styles/workspace/base-admin.css";
+@import "../styles/workspace/catalog-editor.css";
+@import "../styles/books/print.css";
+@import "../styles/workspace/admin-forms.css";
+@import "../styles/shared/responsive.css";
+@import "../styles/books/outline-overview.css";
 @import "../styles/workspace/shell.css";
 @import "../styles/workspace/content.css";
 @import "../styles/workspace/admin.css";
+@import "../styles/workspace/finance.css";
 @import "../styles/workspace/responsive.css";
 @import "../styles/books/spread-editor.css";
 @import "../styles/books/page-settings.css";
 @import "../styles/books/reader-settings.css";
 @import "../styles/workspace/summary-delivery.css";
+
+.route-loading {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 1000;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.route-loading span {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #74333b);
+  animation: route-loading-slide 1s ease-in-out infinite;
+}
+
+@keyframes route-loading-slide {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(350%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading span { animation: none; width: 100%; }
+}

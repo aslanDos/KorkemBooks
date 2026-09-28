@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { refreshBookPageProgress } from "@/lib/books/queries";
+import { isAvailableBookLanguage, isBookLanguage } from "@/lib/books/language";
+import { isRemovedBookTypeSlug } from "@/lib/books/catalog";
 
 export async function submitBookForEditingAction(formData: FormData) {
   const bookId = z.string().uuid().safeParse(formData.get("bookId"));
@@ -13,8 +16,8 @@ export async function submitBookForEditingAction(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  const { data: progress, error: progressError } = await supabase.rpc("refresh_book_progress", { target_book_id: bookId.data });
-  if (progressError || progress === null || progress < 50) return;
+  const progress = await refreshBookPageProgress(supabase, bookId.data);
+  if (progress === null || progress < 50) return;
 
   await supabase.from("books").update({ production_status: "editing" }).eq("id", bookId.data).eq("owner_id", user.id).eq("production_status", "writing").is("deleted_at", null);
   revalidatePath(`/dashboard/books/${bookId.data}`, "layout");
@@ -36,30 +39,42 @@ export async function createBookAction(_: CreateBookState, formData: FormData): 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Сессия истекла. Войдите снова" };
 
-  const { data: existingBook } = await supabase
-    .from("books")
-    .select("id")
-    .eq("owner_id", user.id)
-    .is("deleted_at", null)
-    .limit(1)
-    .maybeSingle();
-  if (existingBook) return { error: "Сейчас один пользователь может создать только одну книгу" };
-
   const { data: profile } = await supabase
     .from("profiles")
-    .select("book_type_id")
+    .select("role, book_type_id, book_language")
     .eq("id", user.id)
     .maybeSingle();
-  if (!profile?.book_type_id) return { error: "Тип получателя не назначен. Обратитесь к администратору" };
+  if (!profile) return { error: "Профиль не найден" };
+  const isAdmin = profile.role === "admin";
+  if (!isAdmin) {
+    const { data: existingBook } = await supabase
+      .from("books")
+      .select("id")
+      .eq("owner_id", user.id)
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (existingBook) return { error: "Сейчас один пользователь может создать только одну книгу" };
+  }
+
+  const typeId = isAdmin ? z.string().uuid().safeParse(formData.get("typeId")) : null;
+  if (isAdmin && !typeId?.success) return { error: "Выберите тип получателя" };
+  const selectedTypeId = isAdmin ? (typeId?.success ? typeId.data : null) : profile.book_type_id;
+  if (!selectedTypeId) return { error: "Тип получателя не назначен. Обратитесь к администратору" };
+  const requestedLanguage = formData.get("language");
+  const selectedLanguage = isAdmin
+    ? (isAvailableBookLanguage(requestedLanguage) ? requestedLanguage : null)
+    : (isBookLanguage(profile.book_language) ? profile.book_language : null);
+  if (!selectedLanguage) return { error: isAdmin ? "Выберите язык книги" : "Язык книги не назначен. Обратитесь к администратору" };
 
   const { data: bookType } = await supabase
     .from("book_types")
-    .select("id")
-    .eq("id", profile.book_type_id)
+    .select("id, slug")
+    .eq("id", selectedTypeId)
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!bookType) return { error: "Выбранный тип книги недоступен" };
+  if (!bookType || isRemovedBookTypeSlug(bookType.slug)) return { error: "Выбранный тип книги недоступен" };
 
   const { data: book, error } = await supabase.from("books").insert({
     owner_id: user.id,
@@ -67,10 +82,10 @@ export async function createBookAction(_: CreateBookState, formData: FormData): 
     title: parsed.data.title,
     author_name: parsed.data.authorName,
     recipient_name: parsed.data.recipientName,
-    language: parsed.data.language,
+    language: selectedLanguage,
   }).select("id").single();
 
-  if (error || !book) return { error: error?.code === "23505" ? "Сейчас один пользователь может создать только одну книгу" : "Не удалось создать книгу. Попробуйте ещё раз" };
+  if (error || !book) return { error: !isAdmin && error?.code === "23505" ? "Сейчас один пользователь может создать только одну книгу" : "Не удалось создать книгу. Попробуйте ещё раз" };
   redirect(`/dashboard/books/${book.id}`);
 }
 

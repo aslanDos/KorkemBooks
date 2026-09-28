@@ -9,13 +9,17 @@ const reviewSchema = z.object({
   suggestionId: z.uuid(),
   decision: z.enum(["approved", "rejected"]),
   finalPrompt: z.string().trim().max(1000, "Вопрос слишком длинный"),
+  reviewComment: z.string().trim().max(1000, "Комментарий слишком длинный"),
 }).superRefine((value, context) => {
   if (value.decision === "approved" && !value.finalPrompt) {
     context.addIssue({ code: "custom", path: ["finalPrompt"], message: "Введите итоговую формулировку" });
   }
+  if (value.decision === "rejected" && !value.reviewComment) {
+    context.addIssue({ code: "custom", path: ["reviewComment"], message: "Укажите причину отклонения для пользователя" });
+  }
 });
 
-export async function reviewQuestionSuggestionAction(input: { suggestionId: string; decision: "approved" | "rejected"; finalPrompt: string }): Promise<{ error?: string; success?: boolean }> {
+export async function reviewQuestionSuggestionAction(input: { suggestionId: string; decision: "approved" | "rejected"; finalPrompt: string; reviewComment: string }): Promise<{ error?: string; success?: boolean }> {
   const currentUser = await getCurrentUser();
   if (currentUser?.role !== "admin" && currentUser?.role !== "manager") return { error: "Недостаточно прав" };
   const parsed = reviewSchema.safeParse(input);
@@ -34,11 +38,14 @@ export async function reviewQuestionSuggestionAction(input: { suggestionId: stri
     target_suggestion_id: parsed.data.suggestionId,
     target_status: parsed.data.decision,
     final_prompt: parsed.data.decision === "approved" ? parsed.data.finalPrompt : null,
+    reviewer_comment: parsed.data.reviewComment || null,
   });
   if (error) return { error: `Не удалось обработать предложение: ${error.message}` };
   if (resolved !== true) return { error: "Формулировка книги изменилась. Обновите страницу и проверьте предложение" };
 
   revalidatePath("/dashboard/suggestions");
+  revalidatePath("/admin/suggestions");
+  revalidatePath("/dashboard/my-suggestions");
   revalidatePath(`/dashboard/books/${suggestion.book_id}`, "layout");
   revalidatePath(`/admin/books/${suggestion.book_id}`, "layout");
   return { success: true };

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ImagePlus, LoaderCircle, Trash2, Upload, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DEFAULT_BOOK_PHOTO_TEXT, type BookPageImage } from "@/lib/books/types";
+import { deleteBookPageImageAction, refreshBookProgressAction } from "@/app/dashboard/books/page-actions";
 
 const MAX_FILE_SIZE = 6 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -19,12 +20,16 @@ type PhotoDialogPage = {
 
 export function BookPhotoDialog({
   bookId,
+  defaultRoundedCorners,
+  defaultHideFooter,
   page,
   onClose,
   onImageSave,
   onImageDelete,
 }: {
   bookId: string;
+  defaultRoundedCorners: boolean;
+  defaultHideFooter: boolean;
   page: PhotoDialogPage | null;
   onClose: () => void;
   onImageSave: (questionId: string, image: BookPageImage) => void;
@@ -147,6 +152,7 @@ export function BookPhotoDialog({
 
     const { data: signed } = await supabase.storage.from("book-images").createSignedUrl(storagePath, 3600);
     if (page.image?.storagePath) await supabase.storage.from("book-images").remove([page.image.storagePath]);
+    await refreshBookProgressAction(bookId);
     onImageSave(page.id, {
       id: row.id,
       pageId,
@@ -155,9 +161,9 @@ export function BookPhotoDialog({
       mimeType: file.type,
       sizeBytes: file.size,
       displayMode: page.image?.displayMode ?? "contain",
-      pageBackground: page.image?.pageBackground ?? "white",
-      roundedCorners: page.image?.roundedCorners ?? false,
-      hideFooter: page.image?.hideFooter ?? false,
+      pageBackground: page.image?.pageBackground ?? "burgundy",
+      roundedCorners: page.image?.roundedCorners ?? defaultRoundedCorners,
+      hideFooter: page.image?.hideFooter ?? defaultHideFooter,
       photoText: page.image?.photoText ?? { ...DEFAULT_BOOK_PHOTO_TEXT },
       placement: page.image?.placement ?? page.placement,
       cropX: page.image?.cropX ?? 0,
@@ -177,19 +183,12 @@ export function BookPhotoDialog({
     if (!page?.image) return;
     setPending(true);
     setError("");
-    const supabase = createSupabaseBrowserClient();
-    if (!supabase) {
-      setError("Supabase не настроен.");
-      setPending(false);
-      return;
-    }
-    const { data: deletedStoragePath, error: metadataError } = await supabase.rpc("delete_book_page_image", { target_image_id: page.image.id });
-    if (metadataError || !deletedStoragePath) {
+    const result = await deleteBookPageImageAction({ bookId, imageId: page.image.id });
+    if (result.error) {
       setError("Не удалось удалить фотографию.");
       setPending(false);
       return;
     }
-    await supabase.storage.from("book-images").remove([deletedStoragePath]);
     onImageDelete(page.id, page.image.id);
     setPending(false);
     onClose();

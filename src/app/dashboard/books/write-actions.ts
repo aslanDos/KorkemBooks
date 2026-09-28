@@ -1,15 +1,16 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { normalizeAnswerFormat } from "@/lib/books/answer-format";
+import { refreshBookPageProgress } from "@/lib/books/queries";
 
 const saveAnswerSchema = z.object({
   questionId: z.string().uuid(),
   answerText: z.string().max(50000),
   answerFormat: z.unknown().optional(),
 });
+const saveAnswersSchema = z.array(saveAnswerSchema).min(1).max(100);
 
 const readingPositionSchema = z.object({
   bookId: z.string().uuid(),
@@ -40,53 +41,41 @@ export async function saveReadingPositionAction(input: { bookId: string; questio
     question_id: parsed.data.questionId,
   }, { onConflict: "book_id,owner_id" });
   if (error) return { error: "Не удалось сохранить позицию" };
-  revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
   return { success: true };
 }
 
-export async function saveAnswerAction(input: { questionId: string; answerText: string; answerFormat?: unknown }) {
-  const parsed = saveAnswerSchema.safeParse(input);
+export async function saveAnswersAction(input: Array<{ questionId: string; answerText: string; answerFormat?: unknown }>) {
+  const parsed = saveAnswersSchema.safeParse(input);
   if (!parsed.success) return { error: "Ответ слишком длинный" };
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) return { error: "Supabase не настроен" };
-  const { data: { user } } = await supabase.auth.getUser();
+  const questionIds = parsed.data.map((answer) => answer.questionId);
+  const [{ data: { user } }, { data: questions }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from("questions").select("id, book_id").in("id", questionIds).is("deleted_at", null),
+  ]);
   if (!user) return { error: "Сессия истекла" };
-
-  const { data: question } = await supabase
-    .from("questions")
-    .select("id, chapter_id")
-    .eq("id", parsed.data.questionId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (!question) return { error: "Вопрос не найден" };
-
-  const { data: chapter } = await supabase
-    .from("chapters")
-    .select("book_id")
-    .eq("id", question.chapter_id)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (!chapter) return { error: "Глава не найдена" };
-  const { data: book } = await supabase.from("books").select("production_status").eq("id", chapter.book_id).eq("owner_id", user.id).is("deleted_at", null).maybeSingle();
+  if (!questions || questions.length !== questionIds.length) return { error: "Вопрос не найден" };
+  const bookIds = [...new Set(questions.map((question) => question.book_id))];
+  if (bookIds.length !== 1) return { error: "Ответы относятся к разным книгам" };
+  const bookId = bookIds[0];
+  const { data: book } = await supabase.from("books").select("production_status").eq("id", bookId).eq("owner_id", user.id).is("deleted_at", null).maybeSingle();
   if (!book) return { error: "Книга не найдена" };
   if (book.production_status !== "writing") return { error: "Книга уже отправлена на редактуру и доступна только для просмотра" };
 
-  const answerText = parsed.data.answerText;
-  const answerFormat = normalizeAnswerFormat(parsed.data.answerFormat, answerText.length);
-  const hasAnswer = Boolean(answerText.trim());
-  const { error } = await supabase.from("answers").upsert({
-    question_id: question.id,
-    book_id: chapter.book_id,
+  const { error } = await supabase.from("answers").upsert(parsed.data.map((answer) => ({
+    question_id: answer.questionId,
+    book_id: bookId,
     owner_id: user.id,
-    answer_text: answerText,
-    answer_format: answerFormat,
-    answered_at: hasAnswer ? new Date().toISOString() : null,
-  }, { onConflict: "question_id" });
+    answer_text: answer.answerText,
+    answer_format: normalizeAnswerFormat(answer.answerFormat, answer.answerText.length),
+    answered_at: answer.answerText.trim() ? new Date().toISOString() : null,
+  })), { onConflict: "question_id" });
   if (error) return { error: "Не удалось сохранить ответ" };
 
-  const { data: progress, error: progressError } = await supabase.rpc("refresh_book_progress", { target_book_id: chapter.book_id });
-  if (progressError) return { error: "Ответ сохранён, но не удалось обновить прогресс. Попробуйте сохранить ещё раз." };
+  const progress = await refreshBookPageProgress(supabase, bookId);
+  if (progress === null) return { error: "Ответ сохранён, но не удалось обновить прогресс. Попробуйте сохранить ещё раз." };
 
   return { success: true, progress };
 }

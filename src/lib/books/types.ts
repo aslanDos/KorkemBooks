@@ -1,3 +1,5 @@
+import type { BookProductionStatus } from "./production-status";
+
 export type BookType = {
   id: string;
   slug: string;
@@ -44,7 +46,7 @@ export type BookCover = {
   template: CoverTemplate;
 };
 
-export type CoverColorKey = "wine" | "berry" | "terracotta" | "navy" | "umber" | "olive" | "ochre";
+export type CoverColorKey = "black" | "gray" | "burgundy" | "olive" | "navy" | "terracotta";
 export type CoverStyle = "solid" | "template";
 
 export type CoverTitlePosition = "top" | "center" | "bottom";
@@ -58,6 +60,7 @@ export type BookSummary = {
   recipient_name: string;
   language: BookLanguage;
   status: "draft" | "in_progress" | "completed" | "archived";
+  productionStatus: BookProductionStatus;
   progress: number;
   updated_at: string;
   book_types: { name: string } | null;
@@ -81,7 +84,7 @@ export type AnswerFormat = {
   marks: Array<{ type: AnswerMarkType; from: number; to: number }>;
 };
 
-export type BookPageBackground = "white" | "primary" | CoverColorKey;
+export type BookPageBackground = CoverColorKey;
 
 export type BookPhotoTextSize = 10 | 12 | 14 | 16 | 20;
 export type BookPhotoTextPlacement = "overlay" | "below";
@@ -145,7 +148,7 @@ export type BookChapter = {
 
 export type BookWithContent = Omit<BookSummary, "book_types"> & {
   typeName: string;
-  productionStatus: "writing" | "editing" | "printing" | "ready" | "delivery" | "received";
+  productionStatus: BookProductionStatus;
   pageFont: BookPageFont;
   titlePageTitleSize: BookTitlePageTitleSize;
   chapterPageStyle: BookChapterPageStyle;
@@ -154,6 +157,8 @@ export type BookWithContent = Omit<BookSummary, "book_types"> & {
   answerTextSize: BookAnswerTextSize;
   showFooterAuthor: boolean;
   showFooterTitle: boolean;
+  roundPhotos: boolean;
+  hidePhotoFooters: boolean;
   pageBackground: BookPageBackground;
   chapters: BookChapter[];
   cover: BookCover | null;

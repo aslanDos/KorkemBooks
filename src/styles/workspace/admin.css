@@ -1,4 +1,6 @@
 .dashboard-shell .admin-stats { gap: 16px; }
+.dashboard-shell .admin-books-create { display: flex; justify-content: flex-end; margin: -20px 0 20px; }
+.dashboard-shell .admin-books-create .content-primary-button { border-radius: var(--workspace-pill); }
 .dashboard-shell .admin-stats article { min-height: 164px; padding: 24px; grid-template-columns: 1fr auto; gap: 12px; border-radius: var(--workspace-radius); }
 .dashboard-shell .admin-stats article > span { grid-column: 2; grid-row: 1; width: 32px; height: 32px; background: transparent; color: var(--accent); }
 .dashboard-shell .admin-stats article > div { grid-column: 1; grid-row: 1; }
@@ -38,7 +40,13 @@
 .book-language-control { position: relative; }
 .book-language-control__message { position: absolute; z-index: 2; top: calc(100% + 6px); right: 0; min-width: 180px; max-width: 320px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); font-size: 12px; box-shadow: 0 6px 20px rgb(0 0 0 / 8%); }
 .book-language-control__message--error { color: #9b2929; }
-.book-workspace-header__controls { display: flex; align-items: center; gap: 10px; }
+.book-workspace-header__controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.delete-book-control { position: relative; }
+.delete-book-button { display: inline-flex; min-height: 42px; padding: 9px 16px; align-items: center; justify-content: center; gap: 7px; color: #9b2929; background: color-mix(in srgb, #9b2929 7%, var(--surface)); border: 1px solid color-mix(in srgb, #9b2929 28%, var(--line)); border-radius: var(--workspace-pill); cursor: pointer; font: inherit; font-size: 12px; font-weight: 650; }
+.delete-book-button:hover { background: color-mix(in srgb, #9b2929 12%, var(--surface)); }
+.delete-book-button:focus-visible { outline: 2px solid #9b2929; outline-offset: 2px; }
+.delete-book-button:disabled { cursor: wait; opacity: .58; }
+.delete-book-control > span { position: absolute; z-index: 2; top: calc(100% + 6px); right: 0; width: min(320px, calc(100vw - 32px)); padding: 8px 12px; color: #9b2929; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgb(0 0 0 / 8%); font-size: 12px; line-height: 1.45; }
 .book-status-control > svg { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .dashboard-shell .book-status-select { display: block; height: 42px; min-width: 140px; padding: 0 42px 0 18px; appearance: none; -webkit-appearance: none; font-size: 12px; line-height: 1.5; font-weight: 600; border-radius: var(--workspace-pill); }
 .dashboard-shell .book-status-select:focus { border-color: var(--line); box-shadow: none; }
@@ -60,5 +68,3 @@
 .dashboard-shell .credentials-card > p, .dashboard-shell .credentials-card button { font-size: 13px; }
 .dashboard-shell .credentials-card button { border-radius: var(--workspace-pill); }
 .dashboard-shell .admin-analytics-chart select { min-height: 42px; font-size: 12px; border-radius: var(--workspace-pill); }
-.dashboard-shell .skeleton-hero { background: linear-gradient(135deg, var(--hero-start), var(--hero-end)); }
-.dashboard-shell .skeleton-hero .skeleton-line, .dashboard-shell .skeleton-hero .skeleton-button { --skeleton-base: var(--line); --skeleton-shine: var(--surface); }

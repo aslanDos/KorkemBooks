@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --test tests/book-loading.mjs tests/book-delivery.mjs tests/chapter-title-text.mjs tests/print-layout.mjs tests/spine-text-fit.mjs tests/question-bank.mjs tests/password-setup-tokens.mjs tests/profile-book-type.mjs",
+    "test": "node --test tests/admin-delete-book.mjs tests/admin-unlimited-books.mjs tests/book-approval.mjs tests/book-finance.mjs tests/book-loading.mjs tests/book-delivery.mjs tests/chapter-title-text.mjs tests/print-layout.mjs tests/spine-text-fit.mjs tests/question-bank.mjs tests/password-setup-tokens.mjs tests/profile-book-type.mjs tests/profile-book-language.mjs tests/remove-book-types.mjs",
     "test:question-bank": "node tests/question-bank.mjs",
     "test:browser": "node tests/cover-spine-browser.mjs"
   },

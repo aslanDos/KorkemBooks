@@ -1,5 +1,5 @@
-.landing-skip { position: fixed; top: -100px; left: 20px; padding: 16px; background: #fffdf8; border-radius: 8px; z-index: 50; }
-:root[data-theme="dark"] .landing-skip { background: #203129; }
+.landing-skip { position: fixed; top: -100px; left: 20px; padding: 16px; background: #fffdf9; border-radius: 8px; z-index: 50; }
+:root[data-theme="dark"] .landing-skip { background: #372429; }
 .landing-skip:focus { top: 18px; }
 @media (max-width: 820px) {
   .landing-header { width: calc(100% - 24px); }
@@ -9,7 +9,7 @@
   .landing-header.is-scrolled { top: 10px; width: calc(100% - 24px); }
   .landing-header.is-scrolled .landing-header-bar { min-height: 62px; }
   .landing-header.is-open { border-radius: 24px; background: #f9f6f0; border-color: var(--landing-line); box-shadow: 0 8px 28px rgb(43 37 29 / 8%); }
-  :root[data-theme="dark"] .landing-header.is-open { background: #17241f; box-shadow: 0 8px 28px rgb(0 0 0 / 24%); }
+  :root[data-theme="dark"] .landing-header.is-open { background: #291a1e; box-shadow: 0 8px 28px rgb(0 0 0 / 24%); }
   .landing-mobile-nav:not([hidden]) { display: flex; flex-direction: column; gap: 4px; padding: 8px 20px 20px; border-top: 1px solid var(--landing-line); }
   .landing-mobile-nav > a:not(.landing-button) { padding: 13px 4px; font-size: 15px; }
   .landing-mobile-nav .landing-button { margin-top: 10px; min-height: 48px; }

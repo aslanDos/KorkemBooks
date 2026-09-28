@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { assignUserBookTypeAction, type AssignBookTypeState } from "@/app/admin/users/actions";
 import type { BookType } from "@/lib/books/types";
+import { isBookTypeReady } from "@/lib/books/catalog";
 
 const initialState: AssignBookTypeState = {};
 
@@ -16,7 +17,7 @@ export function AssignBookTypeForm({ userId, bookTypes }: { userId: string; book
       <input type="hidden" name="userId" value={userId} />
       <select name="bookTypeId" defaultValue="" required aria-label="Тип получателя">
         <option value="" disabled>Выберите тип</option>
-        {bookTypes.filter((type) => type.questionCount === 100).map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
+        {bookTypes.filter(isBookTypeReady).map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
       </select>
       <button type="submit" disabled={pending}>{pending ? "Назначаем…" : "Назначить"}</button>
       {state.error && <small>{state.error}</small>}

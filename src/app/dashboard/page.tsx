@@ -3,17 +3,20 @@ import { BookOpenText, Plus } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { BookCard } from "@/components/books/book-card";
 import { getBooks } from "@/lib/books/queries";
+import { BOOK_PRODUCTION_DESCRIPTIONS, BOOK_PRODUCTION_LABELS } from "@/lib/books/production-status";
 
 export default async function DashboardPage() {
   const books = await getBooks();
+  const firstBook = books[0];
+  const awaitingApproval = firstBook?.productionStatus === "approval";
 
   return (
     <>
       <DashboardHeader title="Добро пожаловать" description="Продолжите создавать свою историю" />
       <section className={`overview-grid${books.length <= 1 ? " overview-grid--single" : ""}`}>
         <article className="overview-hero">
-          <div><p className="eyebrow">{books.length > 0 ? "Продолжите историю" : "Начните с воспоминания"}</p><h2>{books.length > 0 ? "Ваша книга ждёт продолжения" : "Ваша первая книга ждёт"}</h2><p>Отвечайте на простые вопросы, а korkembooks поможет собрать ответы в связную историю.</p></div>
-          <Link className="content-primary-button" href={books[0] ? `/dashboard/books/${books[0].id}` : "/dashboard/books/new"}>{books.length > 0 ? "Продолжить" : <><Plus size={18} />Создать книгу</>}</Link>
+          <div><p className="eyebrow">{firstBook ? BOOK_PRODUCTION_LABELS[firstBook.productionStatus] : "Начните с воспоминания"}</p><h2>{awaitingApproval ? "Книга ждёт вашего решения" : firstBook?.productionStatus === "writing" ? "Ваша книга ждёт продолжения" : firstBook ? "Ваша книга в работе" : "Ваша первая книга ждёт"}</h2><p>{firstBook ? BOOK_PRODUCTION_DESCRIPTIONS[firstBook.productionStatus] : "Отвечайте на простые вопросы, а korkembooks поможет собрать ответы в связную историю."}</p></div>
+          <Link className="content-primary-button" href={firstBook ? `/dashboard/books/${firstBook.id}` : "/dashboard/books/new"}>{firstBook ? awaitingApproval ? "Согласовать макет" : firstBook.productionStatus === "writing" ? "Продолжить" : "Посмотреть книгу" : <><Plus size={18} />Создать книгу</>}</Link>
         </article>
         {books.length > 1 && <article className="overview-stat"><span><BookOpenText size={21} /></span><div><strong>{books.length}</strong><p>Книг в библиотеке</p></div></article>}
       </section>

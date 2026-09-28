@@ -1,13 +1,4 @@
 /* Ordered entry point. Keep imports in cascade order. */
 @import "../styles/shared/foundation.css";
 @import "../styles/shared/forms-auth.css";
-@import "../styles/workspace/base-content.css";
-@import "../styles/books/writer.css";
-@import "../styles/books/pages.css";
-@import "../styles/books/preview.css";
-@import "../styles/books/covers.css";
-@import "../styles/workspace/base-admin.css";
-@import "../styles/books/print.css";
-@import "../styles/workspace/admin-forms.css";
-@import "../styles/shared/responsive.css";
-@import "../styles/books/outline-overview.css";
+@import "../styles/shared/auth-responsive.css";

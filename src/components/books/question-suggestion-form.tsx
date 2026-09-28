@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { submitQuestionSuggestionAction } from "@/app/dashboard/books/suggestion-actions";
 
-export function QuestionSuggestionForm({ bookId, questionId, prompt, alreadyPending = false }: { bookId: string; questionId: string; prompt: string; alreadyPending?: boolean }) {
+export function QuestionSuggestionForm({ bookId, questionId, prompt, suggestion }: { bookId: string; questionId: string; prompt: string; suggestion?: { status: string; review_comment: string | null } }) {
   const [open, setOpen] = useState(false);
   const [suggestedPrompt, setSuggestedPrompt] = useState(prompt);
   const [pending, setPending] = useState(false);
@@ -26,7 +27,8 @@ export function QuestionSuggestionForm({ bookId, questionId, prompt, alreadyPend
   }
 
   return <div className="question-suggestion-form">
-    {alreadyPending ? <p role="status">Ваше предложение по этому вопросу ожидает рассмотрения.</p> : sent ? <p role="status">Спасибо! Ваш вариант отправлен на рассмотрение. Текущий вопрос пока не изменился.</p> : <>
+    {suggestion?.status === "pending" || sent ? <p role="status">Ваше предложение по этому вопросу на рассмотрении. <Link href="/dashboard/my-suggestions">Все исправления</Link></p> : <>
+      {suggestion && <p className="question-suggestion-form__result" role="status">Предыдущее предложение: {suggestion.status === "approved" ? "принято" : "отклонено"}. {suggestion.review_comment && <span>Комментарий: {suggestion.review_comment} </span>}<Link href="/dashboard/my-suggestions">История исправлений</Link></p>}
       <button type="button" className="question-suggestion-form__toggle" aria-expanded={open} onClick={() => { setOpen(!open); setError(""); }}>Предложить исправление вопроса</button>
       {open && <div className="question-suggestion-form__body">
         <label htmlFor={`suggest-question-${questionId}`}>Как должен звучать вопрос?</label>

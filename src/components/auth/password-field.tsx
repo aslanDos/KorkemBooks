@@ -17,7 +17,7 @@ export function PasswordField({ id, label, autoComplete, hint }: PasswordFieldPr
   return (
     <FormField
       id={id} name={id} label={label} type={isVisible ? "text" : "password"}
-      autoComplete={autoComplete} placeholder="Минимум 8 символов" minLength={8} required hint={hint}
+      autoComplete={autoComplete} placeholder={autoComplete === "current-password" ? "Введите текущий пароль" : "Минимум 8 символов"} minLength={autoComplete === "new-password" ? 8 : undefined} required hint={hint}
       trailingAction={
         <button className="password-toggle" type="button" onClick={() => setIsVisible((value) => !value)} aria-label={isVisible ? "Скрыть пароль" : "Показать пароль"} aria-pressed={isVisible}>
           {isVisible ? <EyeOff size={20} /> : <Eye size={20} />}

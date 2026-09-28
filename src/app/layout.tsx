@@ -4,7 +4,6 @@ import { ThemeScript } from "@/components/theme/theme-script";
 import { LocaleProvider, type Locale } from "@/components/locale/locale-provider";
 import { cookies } from "next/headers";
 import "./globals.css";
-import "./workspace.css";
 
 const manrope = Manrope({ variable: "--font-manrope", subsets: ["cyrillic", "latin"] });
 const forum = Forum({ preload: false, variable: "--font-forum", subsets: ["cyrillic", "latin"], weight: "400" });

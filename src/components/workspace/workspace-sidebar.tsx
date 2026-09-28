@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, BookCopy, BookMarked, House, LayoutDashboard, LogOut, Menu, MessageSquareText, PanelLeftClose, PanelLeftOpen, Plus, Settings, Users, X } from "lucide-react";
+import { BarChart3, BookCopy, BookMarked, House, LayoutDashboard, ListChecks, LogOut, Menu, MessageSquareText, PanelLeftClose, PanelLeftOpen, Plus, Settings, Users, X } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { signOutAction } from "@/app/auth/actions";
 import { BrandMark } from "@/components/brand-mark";
@@ -11,13 +11,15 @@ import type { AppRole } from "@/lib/auth/current-user";
 const customerLinks = [
   { href: "/dashboard", label: "Обзор", icon: House, exact: true },
   { href: "/dashboard/books", label: "Мои книги", icon: BookMarked, exact: false },
+  { href: "/dashboard/my-suggestions", label: "Мои исправления", icon: MessageSquareText, exact: false },
   { href: "/dashboard/settings", label: "Настройки", icon: Settings, exact: false },
 ];
 const adminLinks = [
   { href: "/admin", label: "Обзор", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Пользователи", icon: Users, exact: false },
   { href: "/admin/books", label: "Книги", icon: BookCopy, exact: false },
-  { href: "/dashboard/suggestions", label: "Исправления", icon: MessageSquareText, exact: false },
+  { href: "/admin/questions", label: "Вопросы", icon: ListChecks, exact: false },
+  { href: "/admin/suggestions", label: "Исправления", icon: MessageSquareText, exact: false },
   { href: "/admin/analytics", label: "Продажи", icon: BarChart3, exact: false },
 ];
 const mobileQuery = "(max-width: 980px)";
@@ -35,7 +37,7 @@ export function WorkspaceSidebar({ admin = false, role = "user", canCreateBook =
   const sidebar = useRef<HTMLElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const links = admin ? adminLinks : role === "manager" || role === "admin" ? [...customerLinks, { href: "/dashboard/suggestions", label: "Исправления", icon: MessageSquareText, exact: false }] : customerLinks;
+  const links = admin ? adminLinks : role === "manager" ? [...customerLinks, { href: "/dashboard/users/new", label: "Создать аккаунт", icon: Users, exact: false }, { href: "/dashboard/suggestions", label: "Исправления", icon: MessageSquareText, exact: false }] : customerLinks;
   const close = () => { setOpen(false); trigger.current?.focus(); };
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export function WorkspaceSidebar({ admin = false, role = "user", canCreateBook =
     {open && mobile && <button className="sidebar-backdrop" type="button" onClick={close} tabIndex={-1} aria-label="Закрыть меню" />}
     <aside ref={sidebar} id="workspace-navigation" inert={mobile && !open} role={mobile && open ? "dialog" : undefined} aria-modal={mobile && open ? true : undefined} aria-label={admin ? "Навигация администратора" : "Навигация личного кабинета"} className={`dashboard-sidebar${admin ? " admin-sidebar" : ""}${open && mobile ? " dashboard-sidebar--open" : ""}${collapsed ? " dashboard-sidebar--collapsed" : ""}`}>
       <div className="dashboard-sidebar__top">
-        <BrandMark collapsed={collapsed && !mobile} href={admin ? "/admin" : "/dashboard"} />
+        <BrandMark collapsed={collapsed && !mobile} href="/" />
         <button className="sidebar-collapse" type="button" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Развернуть боковое меню" : "Свернуть боковое меню"} aria-expanded={!collapsed}>{collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}</button>
         <button ref={closeButton} className="sidebar-close" type="button" onClick={close} aria-label="Закрыть меню"><X size={21} /></button>
       </div>

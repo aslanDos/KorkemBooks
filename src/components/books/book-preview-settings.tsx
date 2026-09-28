@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { ChevronDown, Settings2 } from "lucide-react";
-import { saveBookFooterVisibilityAction, saveBookPageBackgroundAction, saveBookPageTextSizeAction, saveBookTitlePageTitleSizeAction, saveChapterPageStyleAction, saveChapterTitleSizeAction } from "@/app/dashboard/books/preview-actions";
+import { saveBookFooterVisibilityAction, saveBookPageBackgroundAction, saveBookPageTextSizeAction, saveBookPhotoDefaultsAction, saveBookTitlePageTitleSizeAction, saveChapterPageStyleAction, saveChapterTitleSizeAction } from "@/app/dashboard/books/preview-actions";
 import { BookChapterPage } from "@/components/books/book-chapter-page";
 import { PAGE_BACKGROUND_OPTIONS } from "@/lib/books/cover-palettes";
-import { BOOK_ANSWER_TEXT_SIZES, BOOK_CHAPTER_TITLE_SIZES, BOOK_QUESTION_TEXT_SIZES, BOOK_TITLE_PAGE_TITLE_SIZES, type BookAnswerTextSize, type BookChapterPageStyle, type BookChapterTitleSize, type BookPageBackground, type BookQuestionTextSize, type BookTitlePageTitleSize } from "@/lib/books/types";
+import { BOOK_ANSWER_TEXT_SIZES, BOOK_CHAPTER_TITLE_SIZES, BOOK_QUESTION_TEXT_SIZES, BOOK_TITLE_PAGE_TITLE_SIZES, type BookAnswerTextSize, type BookChapterPageStyle, type BookChapterTitleSize, type BookLanguage, type BookPageBackground, type BookQuestionTextSize, type BookTitlePageTitleSize } from "@/lib/books/types";
 
 const STYLE_OPTIONS: Array<{ value: BookChapterPageStyle; label: string; description: string }> = [
   { value: "default", label: "По умолчанию", description: "Спокойная центрированная композиция" },
@@ -13,7 +13,13 @@ const STYLE_OPTIONS: Array<{ value: BookChapterPageStyle; label: string; descrip
   { value: "vertical", label: "Вертикальная", description: "Название смещено к вертикальной оси" },
 ];
 
-export function BookPreviewSettings({ bookId, titlePageTitleSize, chapterStyle, chapterTitleSize, questionTextSize, answerTextSize, showFooterAuthor, showFooterTitle, pageBackground, sampleTitle, disabled, onTitlePageTitleSizeChange, onChapterStyleChange, onChapterTitleSizeChange, onQuestionTextSizeChange, onAnswerTextSizeChange, onFooterAuthorChange, onFooterTitleChange, onPageBackgroundChange }: { bookId: string; titlePageTitleSize: BookTitlePageTitleSize; chapterStyle: BookChapterPageStyle; chapterTitleSize: BookChapterTitleSize; questionTextSize: BookQuestionTextSize; answerTextSize: BookAnswerTextSize; showFooterAuthor: boolean; showFooterTitle: boolean; pageBackground: BookPageBackground; sampleTitle: string; disabled: boolean; onTitlePageTitleSizeChange: (size: BookTitlePageTitleSize) => void; onChapterStyleChange: (style: BookChapterPageStyle) => void; onChapterTitleSizeChange: (size: BookChapterTitleSize) => void; onQuestionTextSizeChange: (size: BookQuestionTextSize) => void; onAnswerTextSizeChange: (size: BookAnswerTextSize) => void; onFooterAuthorChange: (visible: boolean) => void; onFooterTitleChange: (visible: boolean) => void; onPageBackgroundChange: (background: BookPageBackground) => void }) {
+export type BookPreviewSettingsGroup = "title" | "chapter" | "page";
+
+export function BookPreviewSettings({ initialOpenGroup, bookId, bookLanguage, titlePageTitleSize, chapterStyle, chapterTitleSize, questionTextSize, answerTextSize, showFooterAuthor, showFooterTitle, roundPhotos, pageBackground, sampleTitle, disabled, onTitlePageTitleSizeChange, onChapterStyleChange, onChapterTitleSizeChange, onQuestionTextSizeChange, onAnswerTextSizeChange, onFooterAuthorChange, onFooterTitleChange, onRoundPhotosChange, onPageBackgroundChange }: { initialOpenGroup?: BookPreviewSettingsGroup; bookId: string; bookLanguage: BookLanguage; titlePageTitleSize: BookTitlePageTitleSize; chapterStyle: BookChapterPageStyle; chapterTitleSize: BookChapterTitleSize; questionTextSize: BookQuestionTextSize; answerTextSize: BookAnswerTextSize; showFooterAuthor: boolean; showFooterTitle: boolean; roundPhotos: boolean; pageBackground: BookPageBackground; sampleTitle: string; disabled: boolean; onTitlePageTitleSizeChange: (size: BookTitlePageTitleSize) => void; onChapterStyleChange: (style: BookChapterPageStyle) => void; onChapterTitleSizeChange: (size: BookChapterTitleSize) => void; onQuestionTextSizeChange: (size: BookQuestionTextSize) => void; onAnswerTextSizeChange: (size: BookAnswerTextSize) => void; onFooterAuthorChange: (visible: boolean) => void; onFooterTitleChange: (visible: boolean) => void; onRoundPhotosChange: (rounded: boolean) => void; onPageBackgroundChange: (background: BookPageBackground) => void }) {
+  const [settingsOpen, setSettingsOpen] = useState(Boolean(initialOpenGroup));
+  const [titleGroupOpen, setTitleGroupOpen] = useState(!initialOpenGroup || initialOpenGroup === "title");
+  const [chapterGroupOpen, setChapterGroupOpen] = useState(!initialOpenGroup || initialOpenGroup === "chapter");
+  const [pageGroupOpen, setPageGroupOpen] = useState(initialOpenGroup === "page");
   const [titlePageStatus, setTitlePageStatus] = useState("");
   const [chapterStatus, setChapterStatus] = useState("");
   const [pageStatus, setPageStatus] = useState("");
@@ -135,15 +141,31 @@ export function BookPreviewSettings({ bookId, titlePageTitleSize, chapterStyle, 
     });
   }
 
+  function selectPhotoRounding(rounded: boolean) {
+    if (disabled || isPagePending) return;
+    const previous = roundPhotos;
+    onRoundPhotosChange(rounded);
+    setPageStatus("Сохраняется…");
+    startPageTransition(async () => {
+      const result = await saveBookPhotoDefaultsAction({ bookId, target: "rounding", enabled: rounded });
+      if (result.error) {
+        onRoundPhotosChange(previous);
+        setPageStatus(result.error);
+        return;
+      }
+      setPageStatus("Сохранено");
+    });
+  }
+
   return (
-    <details className="book-preview-settings">
+    <details id="book-settings" className="book-preview-settings" open={settingsOpen} onToggle={(event) => setSettingsOpen(event.currentTarget.open)}>
       <summary>
         <Settings2 size={18} aria-hidden="true" />
         <span><strong>Настройки книги</strong><small>Оформление страниц и разделов</small></span>
         <ChevronDown className="book-preview-settings__chevron" size={18} aria-hidden="true" />
       </summary>
       <div className="book-preview-settings__body">
-        <details className="book-preview-settings__group" open>
+        <details className="book-preview-settings__group" open={titleGroupOpen} onToggle={(event) => setTitleGroupOpen(event.currentTarget.open)}>
           <summary>
             <span><strong>Оформление титульной страницы</strong><small>Размер названия книги</small></span>
             <ChevronDown className="book-preview-settings__chevron" size={17} aria-hidden="true" />
@@ -159,7 +181,7 @@ export function BookPreviewSettings({ bookId, titlePageTitleSize, chapterStyle, 
             <div className="book-preview-settings__status"><span aria-live="polite">{titlePageStatus}</span>{disabled && <small>Настройки недоступны после отправки книги на редактуру.</small>}</div>
           </div>
         </details>
-        <details className="book-preview-settings__group" open>
+        <details className="book-preview-settings__group" open={chapterGroupOpen} onToggle={(event) => setChapterGroupOpen(event.currentTarget.open)}>
           <summary>
             <span><strong>Оформление глав</strong><small>{selectedLabel}</small></span>
             <ChevronDown className="book-preview-settings__chevron" size={17} aria-hidden="true" />
@@ -168,7 +190,7 @@ export function BookPreviewSettings({ bookId, titlePageTitleSize, chapterStyle, 
             <p>Выберите вступительную страницу, которая будет открывать каждую главу.</p>
             <div className="book-chapter-style-grid" role="group" aria-label="Вариант оформления глав">
               {STYLE_OPTIONS.map((option) => <button key={option.value} type="button" className={chapterStyle === option.value ? "is-selected" : ""} aria-pressed={chapterStyle === option.value} disabled={disabled || isChapterPending} onClick={() => selectStyle(option.value)}>
-                <span className="book-chapter-style-card__preview" aria-hidden="true"><span><BookChapterPage chapterNumber={1} title={sampleTitle} style={option.value} titleSize={chapterTitleSize} background={pageBackground} /></span></span>
+                <span className="book-chapter-style-card__preview" aria-hidden="true"><span><BookChapterPage chapterNumber={1} title={sampleTitle} style={option.value} titleSize={chapterTitleSize} background={pageBackground} language={bookLanguage} /></span></span>
                 <span className="book-chapter-style-card__copy"><strong>{option.label}</strong><small>{option.description}</small></span>
               </button>)}
             </div>
@@ -181,13 +203,13 @@ export function BookPreviewSettings({ bookId, titlePageTitleSize, chapterStyle, 
             <div className="book-preview-settings__status"><span aria-live="polite">{chapterStatus}</span>{disabled && <small>Настройки недоступны после отправки книги на редактуру.</small>}</div>
           </div>
         </details>
-        <details className="book-preview-settings__group">
+        <details className="book-preview-settings__group" open={pageGroupOpen} onToggle={(event) => setPageGroupOpen(event.currentTarget.open)}>
           <summary>
-            <span><strong>Оформление страниц</strong><small>Текст и фон</small></span>
+            <span><strong>Оформление страниц</strong><small>Текст, фон и фотографии</small></span>
             <ChevronDown className="book-preview-settings__chevron" size={17} aria-hidden="true" />
           </summary>
           <div className="book-preview-settings__group-body" aria-busy={isPagePending}>
-            <p>Настройте размер текста вопроса и ответа, основной фон и нижний колонтитул страниц книги.</p>
+            <p>Настройте текст, основной фон, фотографии и нижний колонтитул страниц книги.</p>
             <fieldset className="book-size-options">
               <legend>Размер текста вопроса</legend>
               <div>
@@ -204,6 +226,13 @@ export function BookPreviewSettings({ bookId, titlePageTitleSize, chapterStyle, 
               <legend>Основной цвет фона</legend>
               <div className="book-page-background-grid">
                 {PAGE_BACKGROUND_OPTIONS.map((option) => <button key={option.key} type="button" className={pageBackground === option.key ? "is-selected" : ""} aria-label={option.name} title={option.name} aria-pressed={pageBackground === option.key} disabled={disabled || isPagePending} style={{ background: option.background }} onClick={() => selectBackground(option.key)} />)}
+              </div>
+            </fieldset>
+            <fieldset className="book-footer-options">
+              <legend>Фотографии</legend>
+              <div className="book-footer-option">
+                <span><strong>Скруглить фотографии</strong><small>Смягчить углы всех фотографий с полями</small></span>
+                <button className="book-footer-toggle" type="button" role="switch" aria-label="Скруглить все фотографии в книге" aria-checked={roundPhotos} disabled={disabled || isPagePending} onClick={() => selectPhotoRounding(!roundPhotos)}><span /></button>
               </div>
             </fieldset>
             <fieldset className="book-footer-options">

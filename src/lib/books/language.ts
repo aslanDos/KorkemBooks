@@ -1,10 +1,15 @@
 import type { BookLanguage } from "./types";
 
-export const BOOK_LANGUAGES: Array<{ value: BookLanguage; label: string }> = [
+export const BOOK_LANGUAGES = [
   { value: "ru", label: "RU — Русский" },
   { value: "kk", label: "KZ — Қазақша" },
-  { value: "en", label: "EN — English" },
-];
+] as const satisfies ReadonlyArray<{ value: BookLanguage; label: string }>;
+
+export type AvailableBookLanguage = (typeof BOOK_LANGUAGES)[number]["value"];
+
+export function isAvailableBookLanguage(value: unknown): value is AvailableBookLanguage {
+  return value === "ru" || value === "kk";
+}
 
 const CONTENT: Record<BookLanguage, {
   contents: string;
@@ -56,6 +61,7 @@ export function getBookContent(language: BookLanguage) {
 }
 
 export function getBookLanguageLabel(language: BookLanguage) {
+  if (language === "en") return "EN — English";
   return BOOK_LANGUAGES.find((option) => option.value === language)?.label ?? "RU — Русский";
 }
 

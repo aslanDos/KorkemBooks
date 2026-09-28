@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { BookAnswerTextSize, BookChapterTitleSize, BookQuestionTextSize, BookTitlePageTitleSize } from "@/lib/books/types";
+import { refreshBookPageProgress } from "@/lib/books/queries";
 
 const chapterPageStyleSchema = z.object({
   bookId: z.string().uuid(),
@@ -22,7 +23,14 @@ const chapterTitleSizeSchema = z.object({
 
 const pageBackgroundSchema = z.object({
   bookId: z.string().uuid(),
-  background: z.enum(["white", "primary", "wine", "berry", "terracotta", "navy", "umber", "olive", "ochre"]),
+  background: z.enum(["black", "gray", "burgundy", "olive", "navy", "terracotta"]),
+});
+
+const photoDefaultsSchema = z.object({
+  bookId: z.string().uuid(),
+  target: z.enum(["rounding", "footer"]),
+  enabled: z.boolean(),
+  applyToExisting: z.boolean().default(true),
 });
 
 const pageTextSizeSchema = z.discriminatedUnion("target", [
@@ -149,6 +157,7 @@ export async function saveBookPageTextSizeAction(input: { bookId: string; target
     return { error: schemaIsOutdated ? "База данных не обновлена. Примените последнюю миграцию." : "Не удалось сохранить размер текста" };
   }
 
+  await refreshBookPageProgress(supabase, parsed.data.bookId);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/write`);
   revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
@@ -186,7 +195,7 @@ export async function saveBookFooterVisibilityAction(input: { bookId: string; ta
   return { success: true };
 }
 
-export async function saveBookPageBackgroundAction(input: { bookId: string; background: "white" | "primary" | "wine" | "berry" | "terracotta" | "navy" | "umber" | "olive" | "ochre" }) {
+export async function saveBookPageBackgroundAction(input: { bookId: string; background: "black" | "gray" | "burgundy" | "olive" | "navy" | "terracotta" }) {
   const parsed = pageBackgroundSchema.safeParse(input);
   if (!parsed.success) return { error: "Некорректный фон страниц" };
 
@@ -208,6 +217,33 @@ export async function saveBookPageBackgroundAction(input: { bookId: string; back
   if (error || !updated) {
     const schemaIsOutdated = error?.code === "PGRST204" || error?.message.includes("page_background_style");
     return { error: schemaIsOutdated ? "База данных не обновлена. Примените последнюю миграцию." : "Не удалось сохранить основной фон страниц" };
+  }
+
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}/write`);
+  revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
+  return { success: true };
+}
+
+export async function saveBookPhotoDefaultsAction(input: { bookId: string; target: "rounding" | "footer"; enabled: boolean; applyToExisting?: boolean }) {
+  const parsed = photoDefaultsSchema.safeParse(input);
+  if (!parsed.success) return { error: "Некорректная настройка фотографий" };
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { error: "Подключение к Supabase не настроено" };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Сессия истекла. Войдите снова" };
+
+  const { data, error } = await supabase.rpc("set_book_photo_defaults", {
+    target_book_id: parsed.data.bookId,
+    target_round_photos: parsed.data.target === "rounding" ? parsed.data.enabled : null,
+    target_hide_photo_footers: parsed.data.target === "footer" ? parsed.data.enabled : null,
+    target_apply_to_existing: parsed.data.applyToExisting,
+  });
+
+  if (error || !data) {
+    const schemaIsOutdated = error?.code === "PGRST202" || error?.message.includes("set_book_photo_defaults");
+    return { error: schemaIsOutdated ? "База данных не обновлена. Примените последнюю миграцию." : "Не удалось сохранить настройку фотографий" };
   }
 
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);

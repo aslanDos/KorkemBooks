@@ -4,7 +4,7 @@ import type { BookLanguage } from "@/lib/books/types";
 export function BookPrefacePage({ language = "ru" }: { language?: BookLanguage }) {
   const content = getBookContent(language);
   return (
-    <div className="preview-preface-page">
+    <div className="preview-preface-page" data-no-translate>
       <h2>{content.prefaceTitle}</h2>
       <div className="preview-preface-page__text">
         {content.preface.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}

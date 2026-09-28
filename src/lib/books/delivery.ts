@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export type BookDelivery = { pickup: boolean; city: string; address: string };
-export type BookDeliveryState = { error?: string; success?: boolean };
+export type BookDeliveryState = { error?: string; success?: boolean; delivery?: BookDelivery };
 export const DELIVERY_MIGRATION_ERROR = "Для сохранения доставки примените миграцию Supabase 202609150015_add_book_deliveries.sql и обновите страницу.";
 
 export const bookDeliverySchema = z.object({

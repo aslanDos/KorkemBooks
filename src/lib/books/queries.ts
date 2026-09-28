@@ -1,10 +1,16 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
 import { DEFAULT_BOOK_PHOTO_TEXT, type BookAnswerTextSize, type BookBlankPage, type BookChapter, type BookChapterTitleSize, type BookCover, type BookPageImage, type BookPhotoText, type BookQuestion, type BookQuestionTextSize, type BookSummary, type BookTitlePageTitleSize, type BookType, type BookWithContent, type CoverTemplate } from "./types";
-import { normalizePageBackground } from "./cover-palettes";
+import { normalizeCoverColor, normalizePageBackground } from "./cover-palettes";
 import { normalizeAnswerFormat } from "./answer-format";
 import { isBookLanguage } from "./language";
+import { getBookPageProgress } from "./progress";
+import { getExpectedChapterCount, isRemovedBookTypeSlug } from "./catalog";
+
+export type BookContentMode = "full" | "structure" | "cover" | "summary";
+type InternalBookContentMode = BookContentMode | "progress";
 
 export async function getCoverTemplates(): Promise<CoverTemplate[]> {
   const supabase = await createSupabaseServerClient();
@@ -25,10 +31,17 @@ export async function getBookTypes(): Promise<BookType[]> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return [];
 
-  const { data: types } = await supabase.from("book_types").select("id, slug, name").eq("is_active", true).order("sort_order");
-  return Promise.all((types ?? []).map(async (type) => {
-    const { count } = await supabase.from("question_catalog").select("id", { count: "exact", head: true }).eq("book_type_id", type.id);
-    return { ...type, chapterCount: 4, questionCount: count ?? 0 } as BookType;
+  const { data: types } = await supabase
+    .from("book_types")
+    .select("id, slug, name, question_catalog(count)")
+    .eq("is_active", true)
+    .order("sort_order");
+  return (types ?? []).filter((type) => !isRemovedBookTypeSlug(type.slug)).map((type) => ({
+    id: type.id,
+    slug: type.slug,
+    name: type.name,
+    chapterCount: getExpectedChapterCount(type.slug),
+    questionCount: type.question_catalog?.[0]?.count ?? 0,
   }));
 }
 
@@ -36,22 +49,43 @@ export async function getBooks(limit?: number): Promise<BookSummary[]> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return [];
 
-  let query = supabase
-    .from("books")
-    .select("id, title, author_name, recipient_name, language, status, progress, updated_at, book_types(name)")
-    .is("deleted_at", null)
-    .order("updated_at", { ascending: false });
-
-  if (limit) query = query.limit(limit);
-  const { data } = await query;
-  return (data ?? []).map((book) => ({
-    ...book,
-    language: isBookLanguage(book.language) ? book.language : "ru",
-    book_types: Array.isArray(book.book_types) ? (book.book_types[0] ?? null) : book.book_types,
-  })) as BookSummary[];
+  const books: BookSummary[] = [];
+  const pageSize = limit ?? 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("books")
+      .select("id, title, author_name, recipient_name, language, status, production_status, progress, updated_at, book_types(name)")
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+    if (error) return [];
+    books.push(...(data ?? []).map((book) => ({
+      ...book,
+      language: isBookLanguage(book.language) ? book.language : "ru",
+      productionStatus: book.production_status ?? "writing",
+      book_types: Array.isArray(book.book_types) ? (book.book_types[0] ?? null) : book.book_types,
+    })) as BookSummary[]);
+    if (limit || !data || data.length < pageSize) break;
+  }
+  return books;
 }
 
-export async function getBookWithContent(bookId: string, content: "full" | "structure" | "cover" = "full"): Promise<BookWithContent | null> {
+export const getFirstBookId = cache(async (): Promise<string | null> => {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from("books")
+    .select("id")
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? null;
+});
+
+export async function getBookWithContent(bookId: string, content: BookContentMode = "full"): Promise<BookWithContent | null> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
   return loadBookWithContent(supabase, bookId, content);
@@ -68,65 +102,67 @@ export async function getLastViewedQuestionId(bookId: string): Promise<string | 
   return data?.question_id ?? null;
 }
 
-export async function getAdminBookWithContent(bookId: string): Promise<BookWithContent | null> {
+export async function getAdminBookWithContent(bookId: string, content: BookContentMode = "full"): Promise<BookWithContent | null> {
   const supabase = createSupabaseAdminClient();
   if (!supabase) return null;
-  return loadBookWithContent(supabase, bookId);
+  return loadBookWithContent(supabase, bookId, content);
 }
 
-async function loadBookWithContent(supabase: SupabaseClient, bookId: string, content: "full" | "structure" | "cover" = "full"): Promise<BookWithContent | null> {
+export async function refreshBookPageProgress(supabase: SupabaseClient, bookId: string): Promise<number | null> {
+  const book = await loadBookWithContent(supabase, bookId, "progress");
+  if (!book) return null;
+  const { error } = await supabase.from("books").update({ progress: book.progress }).eq("id", bookId).is("deleted_at", null);
+  return error ? null : book.progress;
+}
+
+async function loadBookWithContent(supabase: SupabaseClient, bookId: string, content: InternalBookContentMode = "full"): Promise<BookWithContent | null> {
+  const includeChapters = content !== "cover";
+  const includeAttachments = content === "full" || content === "summary" || content === "progress";
+  const includeCover = content !== "progress";
   const { data: book } = await supabase
     .from("books")
-    .select("id, title, author_name, recipient_name, language, status, progress, updated_at, page_font, production_status, book_types(name)")
+    .select("id, title, author_name, recipient_name, language, status, progress, updated_at, page_font, production_status, title_page_title_size, chapter_page_style, chapter_title_size, question_text_size, answer_text_size, show_footer_author, show_footer_title, round_photos, hide_photo_footers, page_background_style, book_types(name)")
     .eq("id", bookId)
     .is("deleted_at", null)
     .maybeSingle();
 
   if (!book) return null;
 
-  const { data: bookSettings } = await supabase
-    .from("books")
-    .select("title_page_title_size, chapter_page_style, chapter_title_size, question_text_size, answer_text_size, show_footer_author, show_footer_title, page_background_style")
-    .eq("id", bookId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
   // The book lookup above remains the access boundary; RLS applies to every query.
-  const [{ data: chapterRows }, { data: coverRow }, { data: answerRows }, { data: imageRows }, { data: pageRows }] = await Promise.all([
-    content === "cover" ? Promise.resolve({ data: [] }) : supabase
+  const [{ data: chapterRows }, { data: coverRow }, { data: answerRows }, { data: imageRows }, { data: pageRows }, { data: questionData }] = await Promise.all([
+    !includeChapters ? Promise.resolve({ data: [] }) : supabase
     .from("chapters")
     .select("id, title, position")
     .eq("book_id", bookId)
     .is("deleted_at", null)
     .order("position"),
-    supabase
+    !includeCover ? Promise.resolve({ data: null }) : supabase
     .from("book_covers")
     .select("template_id, show_author, show_recipient, custom_background_path, title_position, font_style, text_tone, overlay_strength, color_key, cover_style, colored_back, background_inside_frame, show_frame, frame_style, frame_color, show_back_text, spine_letter_spacing, spine_author_name, title_size, author_size, back_text_tone, cover_templates(id, slug, name, background_path, text_color, overlay_color, overlay_opacity)")
     .eq("book_id", bookId)
     .maybeSingle(),
-    content !== "cover" ? supabase.from("answers").select("question_id, answer_text, answer_format").eq("book_id", bookId) : Promise.resolve({ data: [] }),
-    content === "full" ? supabase.from("book_page_images").select("id, question_id, storage_path, mime_type, size_bytes, display_mode, placement, crop_x, crop_y, crop_scale, rounded_corners, hide_footer, position, book_photo_texts(enabled, content, text_size, placement, position, tone, image_darkening, text_shadow)").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
-    content === "full" ? supabase.from("book_question_pages").select("id, question_id, image_id, kind, placement, position, background_style").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
+    includeChapters ? supabase.from("answers").select("question_id, answer_text, answer_format").eq("book_id", bookId) : Promise.resolve({ data: [] }),
+    includeAttachments ? supabase.from("book_page_images").select("id, question_id, storage_path, mime_type, size_bytes, display_mode, placement, crop_x, crop_y, crop_scale, rounded_corners, hide_footer, position, book_photo_texts(enabled, content, text_size, placement, position, tone, image_darkening, text_shadow)").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
+    includeAttachments ? supabase.from("book_question_pages").select("id, question_id, image_id, kind, placement, position, background_style").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
+    includeChapters ? supabase.from("questions").select("id, chapter_id, catalog_id, prompt, position").eq("book_id", bookId).is("deleted_at", null).order("position") : Promise.resolve({ data: [] }),
   ]);
 
   const chapters = (chapterRows ?? []) as Omit<BookChapter, "questions">[];
-  const chapterIds = chapters.map((chapter) => chapter.id);
+  const paths = [...new Set((imageRows ?? []).map((image) => image.storage_path))];
+  const [{ data: signed }, customBackgroundSigned] = await Promise.all([
+    content === "full" && paths.length
+      ? supabase.storage.from("book-images").createSignedUrls(paths, 3600)
+      : Promise.resolve({ data: [] }),
+    content !== "progress" && coverRow?.custom_background_path
+      ? supabase.storage.from("book-cover-images").createSignedUrl(coverRow.custom_background_path, 3600)
+      : Promise.resolve(null),
+  ]);
   let questions: (BookQuestion & { chapter_id: string })[] = [];
 
-  if (chapterIds.length > 0) {
-    const { data } = await supabase
-      .from("questions")
-      .select("id, chapter_id, catalog_id, prompt, position")
-      .in("chapter_id", chapterIds)
-      .is("deleted_at", null)
-      .order("position");
-    const questionRows = (data ?? []) as (Omit<BookQuestion & { chapter_id: string }, "answer" | "images" | "blankPages"> & { catalog_id: string | null })[];
+  if (chapters.length > 0) {
+    const questionRows = (questionData ?? []) as (Omit<BookQuestion & { chapter_id: string }, "answer" | "images" | "blankPages"> & { catalog_id: string | null })[];
     const answersByQuestion = new Map((answerRows ?? []).map((answer) => [answer.question_id, answer.answer_text]));
     const formatsByQuestion = new Map((answerRows ?? []).map((answer) => [answer.question_id, normalizeAnswerFormat(answer.answer_format, answer.answer_text.length)]));
-    const paths = [...new Set((imageRows ?? []).map((image) => image.storage_path))];
-    const { data: signed } = paths.length
-      ? await supabase.storage.from("book-images").createSignedUrls(paths, 3600)
-      : { data: [] };
     const urls = new Map((signed ?? []).map((image) => [image.path, image.signedUrl]));
     const pageByImageId = new Map((pageRows ?? []).filter((page) => page.kind === "photo" && page.image_id).map((page) => [page.image_id, page]));
     const signedImages = (imageRows ?? []).map((image) => {
@@ -176,9 +212,6 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
 
   const typeRelation = Array.isArray(book.book_types) ? book.book_types[0] : book.book_types;
   const coverRelation = coverRow ? (Array.isArray(coverRow.cover_templates) ? coverRow.cover_templates[0] : coverRow.cover_templates) : null;
-  const customBackgroundSigned = coverRow?.custom_background_path
-    ? await supabase.storage.from("book-cover-images").createSignedUrl(coverRow.custom_background_path, 3600)
-    : null;
   const cover = coverRow && coverRelation ? {
     templateId: coverRow.template_id,
     showAuthor: coverRow.show_author,
@@ -189,7 +222,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     fontStyle: coverRow.font_style,
     textTone: coverRow.text_tone,
     overlayStrength: Number(coverRow.overlay_strength),
-    colorKey: coverRow.color_key,
+    colorKey: normalizeCoverColor(coverRow.color_key),
     style: coverRow.cover_style ?? "solid",
     coloredBack: coverRow.colored_back ?? false,
     backgroundInsideFrame: coverRow.background_inside_frame ?? false,
@@ -213,7 +246,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     },
   } satisfies BookCover : null;
 
-  return {
+  const loadedBook = {
     id: book.id,
     title: book.title,
     author_name: book.author_name,
@@ -225,20 +258,25 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     typeName: typeRelation?.name ?? "Книга",
     productionStatus: book.production_status ?? "writing",
     pageFont: "literata",
-    titlePageTitleSize: normalizeTitlePageTitleSize(bookSettings?.title_page_title_size),
-    chapterPageStyle: bookSettings?.chapter_page_style === "numeral" || bookSettings?.chapter_page_style === "vertical" ? bookSettings.chapter_page_style : "default",
-    chapterTitleSize: normalizeChapterTitleSize(bookSettings?.chapter_title_size),
-    questionTextSize: normalizeQuestionTextSize(bookSettings?.question_text_size),
-    answerTextSize: normalizeAnswerTextSize(bookSettings?.answer_text_size),
-    showFooterAuthor: bookSettings?.show_footer_author !== false,
-    showFooterTitle: bookSettings?.show_footer_title !== false,
-    pageBackground: normalizePageBackground(bookSettings?.page_background_style),
+    titlePageTitleSize: normalizeTitlePageTitleSize(book.title_page_title_size),
+    chapterPageStyle: book.chapter_page_style === "numeral" || book.chapter_page_style === "vertical" ? book.chapter_page_style : "default",
+    chapterTitleSize: normalizeChapterTitleSize(book.chapter_title_size),
+    questionTextSize: normalizeQuestionTextSize(book.question_text_size),
+    answerTextSize: normalizeAnswerTextSize(book.answer_text_size),
+    showFooterAuthor: book.show_footer_author !== false,
+    showFooterTitle: book.show_footer_title !== false,
+    roundPhotos: Boolean(book.round_photos),
+    hidePhotoFooters: Boolean(book.hide_photo_footers),
+    pageBackground: normalizePageBackground(book.page_background_style),
     cover,
     chapters: chapters.map((chapter) => ({
       ...chapter,
       questions: questions.filter((question) => question.chapter_id === chapter.id),
     })),
   } as BookWithContent;
+
+  if (includeAttachments) loadedBook.progress = getBookPageProgress(loadedBook).progress;
+  return loadedBook;
 }
 
 function normalizeChapterTitleSize(value: unknown): BookChapterTitleSize {

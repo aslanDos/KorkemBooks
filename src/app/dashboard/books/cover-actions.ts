@@ -18,7 +18,7 @@ const selectCoverSchema = z.object({
   fontStyle: z.enum(["playfair", "forum", "manrope"]),
   textTone: z.enum(["dark", "light"]),
   overlayStrength: z.number().min(0).max(0.6),
-  colorKey: z.enum(["wine", "berry", "terracotta", "navy", "umber", "olive", "ochre"]),
+  colorKey: z.enum(["black", "gray", "burgundy", "olive", "navy", "terracotta"]),
   coverStyle: z.enum(["solid", "template"]),
   coloredBack: z.boolean(),
   backgroundInsideFrame: z.boolean().default(false),
@@ -31,10 +31,9 @@ const selectCoverSchema = z.object({
   titleSize: z.union([z.literal(16), z.literal(20), z.literal(24), z.literal(28), z.literal(32)]).default(24),
   authorSize: z.union([z.literal(8), z.literal(10), z.literal(12), z.literal(14), z.literal(16)]).default(10),
   backTextTone: z.enum(["dark", "light"]),
-  adminMode: z.boolean().default(false),
 });
 
-export async function selectBookCoverAction(input: { bookId: string; templateId: string; showAuthor: boolean; showRecipient: boolean; title: string; authorName: string; recipientName: string; customBackgroundPath: string | null; titlePosition: "top" | "center" | "bottom"; fontStyle: "playfair" | "forum" | "manrope"; textTone: "dark" | "light"; overlayStrength: number; colorKey: "wine" | "berry" | "terracotta" | "navy" | "umber" | "olive" | "ochre"; coverStyle: "solid" | "template"; coloredBack: boolean; backgroundInsideFrame?: boolean; showFrame: boolean; frameStyle: "ver1" | "ver2"; frameColor?: string | null; showBackText: boolean; spineLetterSpacing: number; spineAuthorName?: string; titleSize?: number; authorSize?: number; backTextTone: "dark" | "light"; adminMode?: boolean }) {
+export async function selectBookCoverAction(input: { bookId: string; templateId: string; showAuthor: boolean; showRecipient: boolean; title: string; authorName: string; recipientName: string; customBackgroundPath: string | null; titlePosition: "top" | "center" | "bottom"; fontStyle: "playfair" | "forum" | "manrope"; textTone: "dark" | "light"; overlayStrength: number; colorKey: "black" | "gray" | "burgundy" | "olive" | "navy" | "terracotta"; coverStyle: "solid" | "template"; coloredBack: boolean; backgroundInsideFrame?: boolean; showFrame: boolean; frameStyle: "ver1" | "ver2"; frameColor?: string | null; showBackText: boolean; spineLetterSpacing: number; spineAuthorName?: string; titleSize?: number; authorSize?: number; backTextTone: "dark" | "light" }) {
   const parsed = selectCoverSchema.safeParse(input);
   if (!parsed.success) return { error: "Некорректный шаблон обложки" };
   const supabase = await createSupabaseServerClient();
@@ -42,18 +41,16 @@ export async function selectBookCoverAction(input: { bookId: string; templateId:
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Сессия истекла" };
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  if (parsed.data.adminMode && profile?.role !== "admin") return { error: "Недостаточно прав" };
-  const database = parsed.data.adminMode ? createSupabaseAdminClient() : supabase;
+  if (profile?.role !== "admin") return { error: "Недостаточно прав" };
+  const database = createSupabaseAdminClient();
   if (!database) return { error: "Supabase не настроен" };
 
-  let bookQuery = database.from("books").select("id, owner_id, production_status").eq("id", parsed.data.bookId).is("deleted_at", null);
-  if (!parsed.data.adminMode) bookQuery = bookQuery.eq("owner_id", user.id);
   const [{ data: book }, { data: template }] = await Promise.all([
-    bookQuery.maybeSingle(),
+    database.from("books").select("id, owner_id, production_status").eq("id", parsed.data.bookId).is("deleted_at", null).maybeSingle(),
     database.from("cover_templates").select("id").eq("id", parsed.data.templateId).eq("is_active", true).maybeSingle(),
   ]);
   if (!book || !template) return { error: "Книга или шаблон не найдены" };
-  if (!parsed.data.adminMode && book.production_status !== "writing") return { error: "Книга уже отправлена на редактуру и доступна только для просмотра" };
+  if (book.production_status !== "writing" && book.production_status !== "editing") return { error: "Обложка уже на согласовании или в производстве" };
 
   const { data: previousCover } = await database.from("book_covers").select("custom_background_path").eq("book_id", parsed.data.bookId).maybeSingle();
   if (parsed.data.customBackgroundPath && parsed.data.customBackgroundPath !== previousCover?.custom_background_path) {
@@ -129,12 +126,9 @@ export async function selectBookCoverAction(input: { bookId: string; templateId:
   }
 
   revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
-  revalidatePath(`/dashboard/books/${parsed.data.bookId}/cover`);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
-  if (parsed.data.adminMode) {
-    revalidatePath(`/admin/books/${parsed.data.bookId}`);
-    revalidatePath(`/admin/books/${parsed.data.bookId}/cover`);
-    revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
-  }
+  revalidatePath(`/admin/books/${parsed.data.bookId}`);
+  revalidatePath(`/admin/books/${parsed.data.bookId}/cover`);
+  revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
   return { success: true, previousCustomBackgroundPath: previousCover?.custom_background_path ?? null };
 }

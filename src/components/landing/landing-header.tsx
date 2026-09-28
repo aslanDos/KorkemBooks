@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,7 +11,8 @@ const links = [
   { href: "#questions", label: "Вопросы" },
 ];
 
-export function LandingHeader() {
+export function LandingHeader({ isSignedIn }: { isSignedIn: boolean }) {
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -28,6 +30,12 @@ export function LandingHeader() {
       desktop.removeEventListener("change", onResize);
     };
   }, []);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") router.refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [router]);
 
   useEffect(() => {
     if (!open) return;
@@ -59,7 +67,7 @@ export function LandingHeader() {
         <nav className="landing-desktop-nav" aria-label="Основная навигация">
           {links.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
         </nav>
-        <Link href="/login" className="landing-button landing-header-login">Войти</Link>
+        <Link href={isSignedIn ? "/dashboard" : "/login"} className="landing-button landing-header-login">{isSignedIn ? "Кабинет" : "Войти"}</Link>
         <button ref={toggleRef} type="button" className="landing-menu-toggle" aria-label={open ? "Закрыть меню" : "Открыть меню"} aria-expanded={open} aria-controls="landing-mobile-menu" onClick={() => setOpen(!open)}>
           {open ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
         </button>
@@ -69,7 +77,7 @@ export function LandingHeader() {
           setOpen(false);
           document.querySelector<HTMLElement>(link.href)?.focus({ preventScroll: true });
         }}>{link.label}</a>)}
-        <Link href="/login" className="landing-button" onClick={() => setOpen(false)}>Войти в аккаунт</Link>
+        <Link href={isSignedIn ? "/dashboard" : "/login"} className="landing-button" onClick={() => setOpen(false)}>{isSignedIn ? "Кабинет" : "Войти в аккаунт"}</Link>
       </nav>
     </header>
   );

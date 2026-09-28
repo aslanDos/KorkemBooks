@@ -10,7 +10,7 @@ import type { BookWithContent, CoverColorKey, CoverStyle, CoverTemplate } from "
 
 import { COVER_PALETTES as PALETTES, FRAME_COLOR_OPTIONS } from "@/lib/books/cover-palettes";
 
-export function BookCoverDesigner({ book, templates, adminMode = false, readOnly = false }: { book: BookWithContent; templates: CoverTemplate[]; adminMode?: boolean; readOnly?: boolean }) {
+export function BookCoverDesigner({ book, templates, readOnly = false }: { book: BookWithContent; templates: CoverTemplate[]; readOnly?: boolean }) {
   const [title, setTitle] = useState(book.title);
   const [authorName, setAuthorName] = useState(book.author_name);
   const [titleSize, setTitleSize] = useState(book.cover?.titleSize ?? 24);
@@ -22,7 +22,7 @@ export function BookCoverDesigner({ book, templates, adminMode = false, readOnly
   const [customBackgroundPath, setCustomBackgroundPath] = useState(book.cover?.customBackgroundPath ?? null);
   const [useCustomBackground, setUseCustomBackground] = useState(Boolean(book.cover?.customBackgroundPath));
   const [showAuthor, setShowAuthor] = useState(book.cover?.showAuthor ?? true);
-  const [colorKey, setColorKey] = useState<CoverColorKey>(book.cover?.colorKey ?? "wine");
+  const [colorKey, setColorKey] = useState<CoverColorKey>(book.cover?.colorKey ?? "burgundy");
   const [coverStyle, setCoverStyle] = useState<CoverStyle>(book.cover?.style ?? "solid");
   const [coloredBack, setColoredBack] = useState(book.cover?.coloredBack ?? false);
   const [backgroundInsideFrame, setBackgroundInsideFrame] = useState(book.cover?.backgroundInsideFrame ?? false);
@@ -35,7 +35,7 @@ export function BookCoverDesigner({ book, templates, adminMode = false, readOnly
   const [spineTextOverflow, setSpineTextOverflow] = useState(false);
   const backTextTone = book.cover?.backTextTone ?? "dark";
   const [templateId, setTemplateId] = useState(book.cover?.templateId ?? templates[0]?.id ?? "");
-  const [savedChoice, setSavedChoice] = useState(book.cover?.style === "template" && book.cover.customBackgroundPath ? `custom:${book.cover.customBackgroundPath}` : `${book.cover?.style ?? "solid"}:${book.cover?.templateId ?? ""}:${book.cover?.colorKey ?? "wine"}`);
+  const [savedChoice, setSavedChoice] = useState(book.cover?.style === "template" && book.cover.customBackgroundPath ? `custom:${book.cover.customBackgroundPath}` : `${book.cover?.style ?? "solid"}:${book.cover?.templateId ?? ""}:${book.cover?.colorKey ?? "burgundy"}`);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const selected = templates.find((template) => template.id === templateId) ?? templates[0];
@@ -126,7 +126,6 @@ export function BookCoverDesigner({ book, templates, adminMode = false, readOnly
         spineLetterSpacing,
         spineAuthorName,
         backTextTone,
-        adminMode,
       });
       if (result.error) { setError(result.error); return; }
       setSavedChoice(backgroundPath ? `custom:${backgroundPath}` : `${coverStyle}:${selected.id}:${colorKey}`);

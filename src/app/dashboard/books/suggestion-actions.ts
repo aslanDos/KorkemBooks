@@ -57,5 +57,6 @@ export async function submitQuestionSuggestionAction(input: { bookId: string; qu
   if (error) return { error: "Не удалось отправить предложение" };
 
   revalidatePath("/dashboard/suggestions");
+  revalidatePath("/dashboard/my-suggestions");
   return { success: true };
 }

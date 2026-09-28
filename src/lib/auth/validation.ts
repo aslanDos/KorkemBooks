@@ -24,6 +24,18 @@ export const newPasswordSchema = z.object({
   message: "Пароли не совпадают",
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Введите текущий пароль"),
+  password: z.string().min(8, "Новый пароль должен содержать минимум 8 символов"),
+  passwordConfirmation: z.string().min(1, "Повторите новый пароль"),
+}).refine((value) => value.password === value.passwordConfirmation, {
+  path: ["passwordConfirmation"],
+  message: "Пароли не совпадают",
+}).refine((value) => value.currentPassword !== value.password, {
+  path: ["password"],
+  message: "Новый пароль должен отличаться от текущего",
+});
+
 export const emailSchema = z.object({
   email: emailSchemaValue,
 });

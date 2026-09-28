@@ -138,7 +138,8 @@
  .book-editor-controls .book-editor-savebar { min-height:20px; flex-direction:row; }
  .book-editor-controls .book-spread-action-buttons { justify-content:flex-start; }
 }
-.book-editor-controls .book-spread-toolbar { flex:0 0 auto; margin-left:auto; }
+.book-editor-controls .book-spread-toolbar { flex:0 0 auto; max-width:none; margin-left:auto; }
+.book-spread-toolbar > .book-spread-toolbar__settings { color:var(--primary); white-space:nowrap; }
 .book-spread-toolbar > button span { color:var(--muted); margin-left:6px; font-size:12px; }
 .book-spread-viewer .writer-outline > button { display:block; font-size:14px; }
 .book-spread-viewer .writer-outline button strong { font-size:14px; }

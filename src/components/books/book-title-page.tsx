@@ -4,7 +4,7 @@ export function BookTitlePage({ authorName, title, titleSize }: { authorName: st
   const publicationYear = new Date().getFullYear();
 
   return (
-    <div className={`preview-title-page preview-title-page--title-size-${titleSize}`}>
+    <div className={`preview-title-page preview-title-page--title-size-${titleSize}`} data-no-translate>
       <p className="preview-title-page__author">{authorName}</p>
       <h1>{title}</h1>
       <div className="preview-title-page__imprint">

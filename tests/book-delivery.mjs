@@ -32,6 +32,7 @@ function fixture(overrides = {}) {
   const mocks = {
     '@/lib/books/delivery': deliveryModule,
     '@/lib/books/language': { isBookLanguage: value => ['ru', 'kk', 'en'].includes(value) },
+    '@/lib/books/queries': { refreshBookPageProgress: async () => 0 },
     '@/lib/auth/current-user': { getCurrentUser: async () => state.role ? { role: state.role } : null },
     '@/lib/supabase/admin': { createSupabaseAdminClient: () => state.configured ? client : null },
     'next/cache': { revalidatePath: path => calls.push(['revalidate', path]) },
@@ -59,6 +60,8 @@ test('admin language change confirms the saved value and reports RPC failures', 
       const query = {
         select() { return query; },
         eq() { return query; },
+        is() { return query; },
+        async maybeSingle() { return { data: { production_status: 'editing' }, error: null }; },
         async single() { return { data: { language: savedLanguage }, error: null }; },
       };
       return query;
@@ -67,6 +70,7 @@ test('admin language change confirms the saved value and reports RPC failures', 
   const action = load('src/app/admin/books/[bookId]/actions.ts', {
     '@/lib/books/delivery': deliveryModule,
     '@/lib/books/language': { isBookLanguage: value => ['ru', 'kk', 'en'].includes(value) },
+    '@/lib/books/queries': { refreshBookPageProgress: async () => 0 },
     '@/lib/auth/current-user': { getCurrentUser: async () => ({ role: 'admin' }) },
     '@/lib/supabase/admin': { createSupabaseAdminClient: () => client },
     'next/cache': { revalidatePath: path => calls.push(['revalidate', path]) },
@@ -75,14 +79,15 @@ test('admin language change confirms the saved value and reports RPC failures', 
   assert.equal(savedLanguage, 'kk');
   assert.ok(calls.some(([kind]) => kind === 'revalidate'));
   rpcError = { message: 'Database error' };
-  assert.match((await action(bookId, 'en')).error, /Database error/);
+  assert.match((await action(bookId, 'ru')).error, /Database error/);
   assert.equal(savedLanguage, 'kk');
+  assert.match((await action(bookId, 'en')).error, /Некорректный/);
   assert.match((await action(bookId, 'invalid')).error, /Некорректный/);
 });
 
 test('delivery saves trimmed city/address and reloads them for the same book', async () => {
   const f = fixture();
-  assert.deepEqual(await f.saveBookDeliveryAction({}, form()), { success: true });
+  assert.deepEqual(await f.saveBookDeliveryAction({}, form()), { success: true, delivery: { pickup: false, city: 'Алматы', address: 'Абая, 10' } });
   assert.deepEqual(f.calls.find(call => call[0] === 'upsert'), ['upsert', { book_id: bookId, pickup: false, city: 'Алматы', address: 'Абая, 10' }, { onConflict: 'book_id' }]);
   assert.ok(f.calls.some(call => call[0] === 'is' && call[2] === 'deleted_at' && call[3] === null));
   assert.ok(f.calls.some(call => call[0] === 'revalidate' && call[1] === `/admin/books/${bookId}`));
@@ -90,9 +95,9 @@ test('delivery saves trimmed city/address and reloads them for the same book', a
 });
 test('pickup needs no address and clears obsolete delivery details', async () => {
   const f = fixture();
-  assert.deepEqual(await f.saveBookDeliveryAction({}, form({ pickup: 'on', city: '', address: '' })), { success: true });
+  assert.deepEqual(await f.saveBookDeliveryAction({}, form({ pickup: 'on', city: '', address: '' })), { success: true, delivery: { pickup: true, city: '', address: '' } });
   assert.deepEqual(f.state.delivery, { book_id: bookId, pickup: true, city: '', address: '' });
-  assert.deepEqual(await f.saveBookDeliveryAction({}, form({ pickup: 'on' })), { success: true });
+  assert.deepEqual(await f.saveBookDeliveryAction({}, form({ pickup: 'on' })), { success: true, delivery: { pickup: true, city: '', address: '' } });
   assert.equal(f.state.delivery.address, '');
 });
 test('missing, whitespace-only and oversized delivery fields are rejected without writes', async () => {
@@ -150,17 +155,17 @@ test('migration enforces valid delivery data and restricts access through RLS', 
   } finally { await db.close(); }
 });
 
-test('pickup hides and disables address fields; toggling back retains typed text', () => {
+test('pickup hides address fields and saved delivery becomes a read-only summary', async () => {
   const values = [];
   let cursor = 0;
-  let actionState = {};
-  let pending = false;
+  let finishSave;
+  let refreshed = 0;
   const { BookDeliveryForm } = load('src/components/admin/book-delivery-form.tsx', {
     react: {
       useState(initial) { const index = cursor++; if (!(index in values)) values[index] = initial; return [values[index], next => { values[index] = next; }]; },
-      useActionState: () => [actionState, () => {}, pending],
     },
-    '@/app/admin/books/[bookId]/actions': { saveBookDeliveryAction: () => {} },
+    'next/navigation': { useRouter: () => ({ refresh: () => { refreshed++; } }) },
+    '@/app/admin/books/[bookId]/actions': { saveBookDeliveryAction: () => new Promise(resolve => { finishSave = resolve; }) },
   });
   const render = (props = {}) => { cursor = 0; return BookDeliveryForm({ bookId, delivery: null, ...props }); };
   function find(node, predicate) {
@@ -185,14 +190,21 @@ test('pickup hides and disables address fields; toggling back retains typed text
   assert.equal(named(tree, 'city').props.value, 'Алматы');
   assert.equal(named(tree, 'address').props.value, 'Абая, 10');
   assert.equal(named(tree, 'address').props.required, true);
-  actionState = { error: 'Ошибка сохранения' };
-  tree = render();
-  assert.equal(named(tree, 'address').props.value, 'Абая, 10');
-  assert.equal(find(tree, node => node.props?.role === 'status').props.children, actionState.error);
-  pending = true;
-  assert.equal(find(render(), node => node.type === 'button').props.disabled, true);
-  pending = false;
   const unavailable = render({ loadError: 'Примените миграцию' });
   assert.equal(find(unavailable, node => node.type === 'fieldset').props.disabled, true);
   assert.equal(find(unavailable, node => node.type === 'button').props.disabled, true);
+  find(render(), node => node.type === 'form').props.onSubmit({ preventDefault() {} });
+  assert.equal(find(render(), node => node.type === 'button').props.disabled, true);
+  finishSave({ success: true, delivery: { pickup: false, city: 'Алматы', address: 'Абая, 10' } });
+  await new Promise(resolve => setImmediate(resolve));
+  tree = render();
+  assert.equal(named(tree, 'city'), undefined);
+  assert.equal(find(tree, node => node.type === 'button').props.children, 'Изменить детали');
+  assert.equal(refreshed, 1);
+  find(tree, node => node.type === 'button').props.onClick();
+  tree = render();
+  assert.equal(named(tree, 'city').props.value, 'Алматы');
+  assert.equal(named(tree, 'address').props.value, 'Абая, 10');
+  find(tree, node => node.props?.className === 'book-delivery-cancel').props.onClick();
+  assert.equal(named(render(), 'city'), undefined);
 });

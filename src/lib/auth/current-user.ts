@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type AppRole = "admin" | "manager" | "user";
 
 export type CurrentUser = {
+  id: string | null;
   email: string;
   phone?: string;
   role: AppRole;
@@ -18,7 +19,7 @@ function isAppRole(value: unknown): value is AppRole {
 // Deduplicate within one server render; never share session data across requests.
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const devUser = await getDevUser();
-  if (devUser) return { ...devUser, role: "admin", isDevelopmentUser: true };
+  if (devUser) return { ...devUser, id: null, role: "admin", isDevelopmentUser: true };
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
@@ -33,6 +34,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     .maybeSingle();
 
   return {
+    id: user.id,
     email: user.email,
     phone: profile?.phone_e164 ?? user.phone,
     role: isAppRole(profile?.role) ? profile.role : "user",

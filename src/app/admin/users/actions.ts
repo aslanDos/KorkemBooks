@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { isBookTypeReady } from "@/lib/books/catalog";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/auth/phone";
 import { issuePasswordSetupToken, type PasswordSetupPurpose } from "@/lib/auth/password-setup-tokens";
@@ -13,9 +14,13 @@ const schema = z.object({
   phone: z.string().trim().min(1, "Укажите номер телефона"),
   role: z.enum(["user", "manager"]),
   bookTypeId: z.string().trim().optional(),
+  bookLanguage: z.enum(["ru", "kk"]).optional(),
 }).superRefine((value, context) => {
   if (value.role === "user" && !z.uuid().safeParse(value.bookTypeId).success) {
     context.addIssue({ code: "custom", path: ["bookTypeId"], message: "Выберите тип получателя" });
+  }
+  if (value.role === "user" && !value.bookLanguage) {
+    context.addIssue({ code: "custom", path: ["bookLanguage"], message: "Выберите язык книги" });
   }
 });
 
@@ -53,9 +58,10 @@ async function createPasswordLink(userId: string, purpose: PasswordSetupPurpose)
 
 export async function createUserAction(_state: CreateUserState, formData: FormData): Promise<CreateUserState> {
   const currentUser = await getCurrentUser();
-  if (currentUser?.role !== "admin") return { error: "Недостаточно прав" };
-  const parsed = schema.safeParse({ phone: formData.get("phone"), role: formData.get("role"), bookTypeId: formData.get("bookTypeId") });
+  if (currentUser?.role !== "admin" && currentUser?.role !== "manager") return { error: "Недостаточно прав" };
+  const parsed = schema.safeParse({ phone: formData.get("phone"), role: formData.get("role"), bookTypeId: formData.get("bookTypeId"), bookLanguage: formData.get("bookLanguage") });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Проверьте данные" };
+  if (currentUser.role === "manager" && parsed.data.role !== "user") return { error: "Менеджер может создавать только аккаунты пользователей" };
   const phone = normalizePhone(parsed.data.phone);
   if (!phone) return { error: "Введите корректный номер телефона" };
   const admin = createSupabaseAdminClient();
@@ -67,10 +73,10 @@ export async function createUserAction(_state: CreateUserState, formData: FormDa
   if (parsed.data.role === "user") {
     bookTypeId = parsed.data.bookTypeId ?? null;
     const [{ data: bookType }, { count: questionCount }] = await Promise.all([
-      admin.from("book_types").select("id").eq("id", bookTypeId).eq("is_active", true).maybeSingle(),
+      admin.from("book_types").select("id, slug").eq("id", bookTypeId).eq("is_active", true).maybeSingle(),
       admin.from("question_catalog").select("id", { count: "exact", head: true }).eq("book_type_id", bookTypeId),
     ]);
-    if (!bookType || questionCount !== 100) return { error: "Выбранный тип получателя пока недоступен" };
+    if (!bookType || !isBookTypeReady({ slug: bookType.slug, questionCount: questionCount ?? 0 })) return { error: "Выбранный тип получателя пока недоступен" };
   }
 
   const id = crypto.randomUUID();
@@ -78,7 +84,7 @@ export async function createUserAction(_state: CreateUserState, formData: FormDa
   const inaccessiblePassword = `${randomBytes(48).toString("base64url")}Aa1!`;
   const { data, error } = await admin.auth.admin.createUser({ id, email: technicalEmail, password: inaccessiblePassword, email_confirm: true, user_metadata: { phone_e164: phone } });
   if (error || !data.user) return { error: error?.message ?? "Не удалось создать аккаунт" };
-  const { error: profileError } = await admin.from("profiles").update({ role: parsed.data.role, phone_e164: phone, book_type_id: bookTypeId }).eq("id", data.user.id);
+  const { error: profileError } = await admin.from("profiles").update({ role: parsed.data.role, phone_e164: phone, book_type_id: bookTypeId, book_language: parsed.data.role === "user" ? parsed.data.bookLanguage : null }).eq("id", data.user.id);
   if (profileError) {
     await admin.auth.admin.deleteUser(data.user.id);
     return { error: "Не удалось сохранить профиль пользователя" };
@@ -128,13 +134,13 @@ export async function assignUserBookTypeAction(_state: AssignBookTypeState, form
   if (!admin) return { error: "Добавьте SUPABASE_SERVICE_ROLE_KEY" };
   const [{ data: profile }, { data: bookType }, { count: questionCount }] = await Promise.all([
     admin.from("profiles").select("role, book_type_id").eq("id", parsed.data.userId).maybeSingle(),
-    admin.from("book_types").select("id, name").eq("id", parsed.data.bookTypeId).eq("is_active", true).maybeSingle(),
+    admin.from("book_types").select("id, name, slug").eq("id", parsed.data.bookTypeId).eq("is_active", true).maybeSingle(),
     admin.from("question_catalog").select("id", { count: "exact", head: true }).eq("book_type_id", parsed.data.bookTypeId),
   ]);
 
   if (!profile || profile.role !== "user") return { error: "Тип можно назначить только пользователю" };
   if (profile.book_type_id) return { error: "Тип получателя уже назначен" };
-  if (!bookType || questionCount !== 100) return { error: "Выбранный тип пока недоступен" };
+  if (!bookType || !isBookTypeReady({ slug: bookType.slug, questionCount: questionCount ?? 0 })) return { error: "Выбранный тип пока недоступен" };
 
   const { data: updated, error } = await admin
     .from("profiles")

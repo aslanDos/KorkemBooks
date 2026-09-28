@@ -93,6 +93,7 @@
 .book-inline-editor .question-suggestion-form__body label { font-size:13px; font-weight:650; }
 .book-inline-editor .question-suggestion-form__body textarea { min-height:100px; padding:12px; background:var(--surface); font-size:13px; line-height:1.5; }
 .question-suggestion-form__body small, .question-suggestion-form > p { margin:0; color:var(--muted); font-size:12px; line-height:1.5; }
+.question-suggestion-form > p a { color:var(--primary); text-decoration:underline; text-underline-offset:2px; }
 .book-inline-editor .question-suggestion-form__body button { width:fit-content; padding:10px 14px; color:var(--primary-ink); background:var(--primary); border-color:var(--primary); }
 .book-inline-editor .question-suggestion-form__body button:disabled { opacity:.5; }
 .book-question-pages { display:grid; gap:10px; padding-bottom:18px; border-bottom:1px solid var(--line); }

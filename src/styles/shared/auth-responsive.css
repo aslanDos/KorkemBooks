@@ -1,0 +1,13 @@
+@media (max-width: 860px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-story { display: none; }
+  .auth-panel { align-content: start; padding: 28px 24px 48px; }
+  .auth-panel__theme { top: 26px; right: 24px; }
+  .auth-panel__mobile-brand { display: block; width: min(100%, 440px); margin-bottom: clamp(70px, 16vh, 130px); }
+}
+
+@media (max-width: 440px) {
+  .auth-panel { padding-inline: 20px; }
+  .auth-heading { margin-bottom: 32px; }
+  .auth-invite-summary { grid-template-columns: 1fr; margin-top: -8px; }
+}

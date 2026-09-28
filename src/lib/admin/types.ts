@@ -1,4 +1,5 @@
 import type { AppRole } from "@/lib/auth/current-user";
+import type { BookProductionStatus } from "@/lib/books/production-status";
 
 export type AdminUser = {
   id: string;
@@ -23,7 +24,7 @@ export type AdminOrder = {
 
 export type SalesPoint = { label: string; value: number };
 
-export type BookProductionStatus = "writing" | "editing" | "printing" | "ready" | "delivery" | "received";
+export type { BookProductionStatus } from "@/lib/books/production-status";
 
 export type AdminBook = {
   id: string;
@@ -43,8 +44,7 @@ export type AdminOverview = {
   managerCount: number;
   adminCount: number;
   activeBooks: number;
-  salesTotal: number;
-  salesChange: number;
+  salesTotal: number | null;
   sales: SalesPoint[];
   recentBooks: AdminBook[];
 };

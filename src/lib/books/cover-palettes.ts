@@ -1,13 +1,12 @@
 import type { BookPageBackground, CoverColorKey } from "./types";
 
 export const COVER_PALETTES: { key: CoverColorKey; name: string; background: string; detail: string }[] = [
-  { key: "wine", name: "Винный", background: "#592B33", detail: "#421F25" },
-  { key: "berry", name: "Ягодный", background: "#633943", detail: "#4A2930" },
-  { key: "terracotta", name: "Терракотовый", background: "#613A2D", detail: "#492A20" },
-  { key: "navy", name: "Ночной синий", background: "#303F4D", detail: "#222D38" },
-  { key: "umber", name: "Умбра", background: "#3B2F21", detail: "#2C2317" },
+  { key: "black", name: "Чёрный", background: "#2F2F2F", detail: "#1C1C1C" },
+  { key: "gray", name: "Серый", background: "#8A8A8A", detail: "#686868" },
+  { key: "burgundy", name: "Бордовый", background: "#592B33", detail: "#421F25" },
   { key: "olive", name: "Оливковый", background: "#49452C", detail: "#34311F" },
-  { key: "ochre", name: "Охра", background: "#594928", detail: "#42351E" },
+  { key: "navy", name: "Тёмно-синий", background: "#303F4D", detail: "#222D38" },
+  { key: "terracotta", name: "Терракотовый", background: "#613A2D", detail: "#492A20" },
 ];
 
 export const FRAME_COLOR_OPTIONS = [
@@ -18,15 +17,21 @@ export const FRAME_COLOR_OPTIONS = [
 ];
 
 export const PAGE_BACKGROUND_OPTIONS: { key: BookPageBackground; name: string; background: string }[] = [
-  { key: "white", name: "Белый", background: "#FFFFFF" },
-  { key: "primary", name: "Зелёный", background: "#244A3D" },
   ...COVER_PALETTES.map(({ key, name, background }) => ({ key, name, background })),
 ];
 
 export function normalizePageBackground(value: unknown): BookPageBackground {
-  return PAGE_BACKGROUND_OPTIONS.some((option) => option.key === value) ? value as BookPageBackground : "white";
+  if (PAGE_BACKGROUND_OPTIONS.some((option) => option.key === value)) return value as BookPageBackground;
+  if (value === "wine" || value === "berry") return "burgundy";
+  if (value === "umber") return "black";
+  if (value === "primary" || value === "ochre") return "olive";
+  return "burgundy";
+}
+
+export function normalizeCoverColor(value: unknown): CoverColorKey {
+  return normalizePageBackground(value);
 }
 
 export function getPageBackgroundColor(value: BookPageBackground) {
-  return PAGE_BACKGROUND_OPTIONS.find((option) => option.key === value)?.background ?? "#FFFFFF";
+  return PAGE_BACKGROUND_OPTIONS.find((option) => option.key === value)?.background ?? "#592B33";
 }

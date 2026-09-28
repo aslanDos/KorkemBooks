@@ -1,6 +1,7 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { formatPhone } from "@/lib/auth/phone";
+import { getFinanceAnalytics } from "./finance";
 import type { AdminBook, AdminOrder, AdminOverview, AdminUser, BookProductionStatus, OrderStatus } from "./types";
 
 const demoUsers: AdminUser[] = [
@@ -45,38 +46,41 @@ export async function getAdminOrders(): Promise<AdminOrder[]> {
 export async function getAdminBooks(): Promise<AdminBook[]> {
   const admin = createSupabaseAdminClient();
   if (!admin) return demoBooks;
-  const { data: books, error } = await admin.from("books").select("id, owner_id, title, author_name, recipient_name, progress, production_status, created_at, updated_at, profiles!books_owner_id_fkey(phone_e164), book_types(name)").is("deleted_at", null).order("created_at", { ascending: false });
-  if (error || !books) return [];
-  return books.map((book) => {
-    const profile = Array.isArray(book.profiles) ? book.profiles[0] : book.profiles;
-    const bookType = Array.isArray(book.book_types) ? book.book_types[0] : book.book_types;
-    return {
-      id: book.id,
-      title: book.title,
-      typeName: bookType?.name ?? "Не указан",
-      authorName: book.author_name,
-      recipientName: book.recipient_name,
-      ownerPhone: profile?.phone_e164 ? formatPhone(profile.phone_e164) : "Телефон не указан",
-      progress: book.progress,
-      status: (book.production_status ?? "writing") as BookProductionStatus,
-      createdAt: book.created_at,
-      updatedAt: book.updated_at,
-    };
-  });
+  const books: AdminBook[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await admin.from("books").select("id, owner_id, title, author_name, recipient_name, progress, production_status, created_at, updated_at, profiles!books_owner_id_fkey(phone_e164), book_types(name)").is("deleted_at", null).order("created_at", { ascending: false }).order("id").range(offset, offset + 999);
+    if (error) return [];
+    books.push(...(data ?? []).map((book) => {
+      const profile = Array.isArray(book.profiles) ? book.profiles[0] : book.profiles;
+      const bookType = Array.isArray(book.book_types) ? book.book_types[0] : book.book_types;
+      return {
+        id: book.id,
+        title: book.title,
+        typeName: bookType?.name ?? "Не указан",
+        authorName: book.author_name,
+        recipientName: book.recipient_name,
+        ownerPhone: profile?.phone_e164 ? formatPhone(profile.phone_e164) : "Телефон не указан",
+        progress: book.progress,
+        status: (book.production_status ?? "writing") as BookProductionStatus,
+        createdAt: book.created_at,
+        updatedAt: book.updated_at,
+      };
+    }));
+    if (!data || data.length < 1000) break;
+  }
+  return books;
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
-  const [users, orders, books] = await Promise.all([getAdminUsers(), getAdminOrders(), getAdminBooks()]);
-  const completed = orders.filter((order) => order.status !== "cancelled");
-  const salesTotal = completed.reduce((sum, order) => sum + order.total, 0);
-  const sales = [128000, 176000, 149000, 218000, 194000, 267000, Math.max(salesTotal, 231000)].map((value, index) => ({ label: ["Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен"][index], value }));
+  const [users, books, finances] = await Promise.all([getAdminUsers(), getAdminBooks(), getFinanceAnalytics("month")]);
+  const salesTotal = "error" in finances ? null : finances.allReceived;
+  const sales = "error" in finances ? [] : finances.buckets.slice(-7).map((bucket) => ({ label: bucket.label, value: bucket.received }));
   return {
     userCount: users.filter((user) => user.role === "user").length,
     managerCount: users.filter((user) => user.role === "manager").length,
     adminCount: users.filter((user) => user.role === "admin").length,
     activeBooks: books.filter((book) => book.status !== "received").length,
     salesTotal,
-    salesChange: 18.4,
     sales,
     recentBooks: books.slice(0, 5),
   };

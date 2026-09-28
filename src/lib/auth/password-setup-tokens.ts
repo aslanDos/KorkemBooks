@@ -5,6 +5,12 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export type PasswordSetupPurpose = "invite" | "reset";
 
+export type PasswordSetupAccountSummary = {
+  phone: string | null;
+  bookTypeName: string | null;
+  isBookUser: boolean;
+};
+
 type PasswordSetupToken = {
   id: string;
   userId: string;
@@ -73,6 +79,34 @@ export async function getValidPasswordSetupToken(
     userId: data.user_id,
     purpose: data.purpose as PasswordSetupPurpose,
     expiresAt: data.expires_at,
+  };
+}
+
+export async function getPasswordSetupAccountSummary(userId: string): Promise<PasswordSetupAccountSummary | null> {
+  const admin = createSupabaseAdminClient();
+  if (!admin) return null;
+
+  const { data: profile, error } = await admin
+    .from("profiles")
+    .select("phone_e164, book_type_id, role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error || !profile) return null;
+
+  let bookTypeName: string | null = null;
+  if (profile.role === "user" && profile.book_type_id) {
+    const { data: bookType } = await admin
+      .from("book_types")
+      .select("name")
+      .eq("id", profile.book_type_id)
+      .maybeSingle();
+    bookTypeName = bookType?.name ?? null;
+  }
+
+  return {
+    phone: profile.phone_e164,
+    bookTypeName,
+    isBookUser: profile.role === "user",
   };
 }
 

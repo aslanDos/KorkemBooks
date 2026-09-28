@@ -10,7 +10,7 @@ export function PrintBookSheet({ children, className = "", background = "#FFFFFF
   pageNumber?: number;
 }) {
   return <div className="print-book-sheet" style={{ backgroundColor: background }} data-print-mode={printMode} data-page-number={pageNumber}>
-    <div className={`print-preview-page preview-page ${className}`} aria-label={ariaLabel}>
+    <div data-no-translate className={`print-preview-page preview-page ${className}`} aria-label={ariaLabel}>
       {children}
     </div>
   </div>;

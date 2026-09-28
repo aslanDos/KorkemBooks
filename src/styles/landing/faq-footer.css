@@ -3,8 +3,8 @@
 .landing-faq-column { display: flex; flex-direction: column; gap: 8px; }
 .landing-faq details { background: var(--landing-surface); border: 1px solid var(--landing-line); border-radius: var(--landing-radius); transition: background 180ms ease; }
 .landing-faq details[open] { background: rgb(255 255 255 / 62%); }
-:root[data-theme="dark"] .landing-faq details[open] { background: rgb(41 66 56 / 82%); }
-:root[data-theme="dark"] .landing-button:not(.landing-button-secondary) { color: #16231e; }
+:root[data-theme="dark"] .landing-faq details[open] { background: rgb(70 43 49 / 82%); }
+:root[data-theme="dark"] .landing-button:not(.landing-button-secondary) { color: #32181d; }
 .landing-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 24px; cursor: pointer; list-style: none; font-size: 15px; line-height: 1.5; font-weight: 650; }
 .landing-faq summary::-webkit-details-marker { display: none; }
 .landing-faq summary svg { flex-shrink: 0; color: var(--landing-muted); transition: transform 220ms ease; }

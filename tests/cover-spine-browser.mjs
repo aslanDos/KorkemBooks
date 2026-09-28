@@ -19,11 +19,15 @@ function loadTS(filename) {
   } }).outputText;
   const loadedModule = { exports: {} };
   new Function('require', 'module', 'exports', source)(name => {
+    if (name === 'server-only') return {};
     if (name === '@/lib/books/queries') return { getAdminBookWithContent: async id => id === 'admin-fixture' ? adminFixtureBook : printFixtureBook };
     if (name === '@/app/admin/books/actions') return { updateBookProductionStatus: async () => {} };
     if (name === '@/app/admin/books/[bookId]/actions') return { saveAdminAnswerAction: async () => ({ success: true }), saveBookDeliveryAction: async () => ({ success: true }) };
     if (name === '@/lib/admin/book-delivery') return { getAdminBookDelivery: async () => ({ delivery: { pickup: false, city: 'Алматы', address: 'Улица Абая, дом 10, квартира 5' } }) };
-    if (name === 'next/navigation') return { notFound: () => { throw new Error('Print fixture missing'); } };
+    if (name === 'next/navigation') return {
+      notFound: () => { throw new Error('Print fixture missing'); },
+      useRouter: () => ({ refresh: () => {}, push: () => {}, replace: () => {} }),
+    };
     if (name === '@/app/dashboard/books/cover-actions') return { selectBookCoverAction: async () => ({ success: true }) };
     if (name.startsWith('@/')) {
       const path = join(root, 'src', name.slice(2));
@@ -42,7 +46,7 @@ const { BookChapterPage } = loadTS(join(root, 'src/components/books/book-chapter
 const photoSettings = { enabled: true, content: 'История фотографии', size: 14, placement: 'overlay', position: 'bottom', tone: 'light', darkening: 20, textShadow: 30 };
 const printFixtureBook = {
   title: 'Моя история', author_name: 'Аслан', pageFont: 'literata', questionTextSize: 12, answerTextSize: 16,
-  titlePageTitleSize: 24, chapterPageStyle: 'vertical', chapterTitleSize: 14, pageBackground: 'terracotta', showFooterAuthor: true, showFooterTitle: true,
+  titlePageTitleSize: 24, chapterPageStyle: 'vertical', chapterTitleSize: 14, pageBackground: 'terracotta', showFooterAuthor: true, showFooterTitle: true, roundPhotos: true, hidePhotoFooters: false, productionStatus: 'printing', language: 'ru',
   chapters: [{ id: 'print-chapter', title: 'Наши воспоминания', questions: [{
     id: 'print-question', prompt: 'Что вы хотите сохранить?', answer: 'Воспоминания о важных моментах.', answerFormat: { version: 1, marks: [] },
     images: ['full', 'contain'].map((displayMode, index) => ({ id: 'print-photo-' + index, signedUrl: '/covers/turquoise-almond.jpg', displayMode, placement: 'after', position: index + 1, cropX: 2, cropY: -3, cropScale: 1.1, roundedCorners: true, hideFooter: false, photoText: { ...photoSettings, placement: displayMode === 'full' ? 'overlay' : 'below' } })),
@@ -53,7 +57,7 @@ const PrintPage = loadTS(join(root, 'src/app/admin/books/[bookId]/print/page.tsx
 const adminFixtureBook = {
   ...printFixtureBook, id: 'admin-fixture', title: 'Махаббатым', author_name: 'Аслан Досымжан', recipient_name: 'Аружан Базарбаева',
   progress: 5, productionStatus: 'writing', updated_at: '2026-09-15T10:00:00Z',
-  cover: { style: 'solid', colorKey: 'wine', frameStyle: 'ver2', showFrame: true },
+  cover: { style: 'solid', colorKey: 'burgundy', frameStyle: 'ver2', showFrame: true },
   chapters: [0, 1].map(index => ({ id: 'admin-chapter-' + index, title: index ? 'Наши воспоминания' : 'С чего всё началось', questions: [0, 1].map(question => ({
     id: 'admin-question-' + index + '-' + question, prompt: question ? 'Что вы лучше всего помните о дне вашей первой встречи?' : 'Каким было ваше первое впечатление о ней?', answer: question ? 'Очень тёплые воспоминания.' : '', answerFormat: { version: 1, marks: [] }, images: [], blankPages: [],
   })) })),
@@ -520,23 +524,24 @@ try {
       check(root.querySelector('progress').value === 5, 'progress changed');
       check(root.querySelector('.admin-book-metadata').textContent.includes('2 из 4'), 'answer count lost');
       check(root.querySelector('time').dateTime === '2026-09-15T10:00:00Z', 'update date lost');
-      check(root.querySelector('select').options.length === 6 && root.querySelector('select').value === 'writing', 'status selector changed');
-      const status = root.querySelector('.book-status-select');
-      const arrow = root.querySelector('.book-status-control > svg');
+      const status = root.querySelector('.book-status-wrapper .book-status-select');
+      check(status.options.length === 2 && status.value === 'writing', 'status selector changed');
+      const arrow = status.closest('.book-status-control').querySelector('svg');
       check(arrow && getComputedStyle(arrow).pointerEvents==='none', 'status arrow intercepts clicks');
       check(getComputedStyle(status).appearance==='none', 'native status arrow remains');
+      const unfocusedBorder = getComputedStyle(status).borderColor;
       status.focus();
       const focus = getComputedStyle(status);
       check(status.matches(':focus-visible'), 'keyboard focus missing');
       check(focus.boxShadow==='none', 'extra status focus ring remains');
       check(focus.outlineWidth==='2px' && focus.outlineOffset==='2px' && focus.outlineStyle==='solid', 'status focus outline incorrect');
-      check(focus.borderColor===getComputedStyle(root).getPropertyValue('--line').trim() || focus.borderColor==='rgb(217, 222, 212)', 'status focus adds another colored border');
+      check(focus.borderColor===unfocusedBorder, 'status focus adds another colored border');
       const bounds = status.getBoundingClientRect();
       const arrowBounds = arrow.getBoundingClientRect();
       check(Math.abs(bounds.right-arrowBounds.right-14)<1 && Math.abs((bounds.top+bounds.bottom-arrowBounds.top-arrowBounds.bottom)/2)<1, 'status arrow not aligned');
       const links = [...root.querySelectorAll('nav a')];
       check(links.some(link => link.getAttribute('href') === '/admin/books/admin-fixture/cover'), 'admin cover route lost');
-      check(links.some(link => link.getAttribute('href') === '/admin/books/admin-fixture/print' && link.target === '_blank'), 'print route lost');
+      check(!links.some(link => link.getAttribute('href') === '/admin/books/admin-fixture/print'), 'print route shown before production');
       check(root.querySelector('[data-print-count=color]').textContent==='6','admin color count wrong');
       check(root.querySelector('[data-print-count=monochrome]').textContent==='2','admin monochrome count wrong');
       check(root.querySelector('[data-print-count=total]').textContent==='8','admin total count wrong');
@@ -548,29 +553,24 @@ try {
       check(chapters.length === 2 && chapters[0].open && !chapters[1].open, 'initial chapter state changed');
       for(const chapter of chapters){
         chapter.open = true;
-        for(const form of chapter.querySelectorAll('.admin-answer-form')){
-          check(form.querySelector('[name=bookId]').value === 'admin-fixture', 'answer form points to wrong book');
-          check(form.querySelector('label').htmlFor === form.querySelector('textarea').id, 'textarea label broken');
-          check(form.querySelector('[name=questionId]').value.startsWith('admin-question-'), 'question identity lost');
+        for(const answer of chapter.querySelectorAll('.admin-answer-form')){
+          check(answer.querySelector('h4').textContent.length > 0, 'answer prompt missing');
+          check(answer.querySelector('.admin-answer-form__answer').textContent === 'Очень тёплые воспоминания.', 'answer text changed');
+          check(answer.querySelector('.admin-answer-form__edit').textContent === 'Изменить', 'answer edit control missing');
         }
         chapter.querySelector('summary').click(); check(!chapter.open, 'chapter does not close');
         chapter.querySelector('summary').click(); check(chapter.open, 'chapter does not open');
       }
-      check(root.querySelectorAll('.admin-answer-form textarea').length === 4, 'answer editor missing');
-      check(root.querySelectorAll('.admin-answer-form textarea')[1].value === 'Очень тёплые воспоминания.', 'answer text changed');
+      check(root.querySelectorAll('.admin-answer-form').length === 2, 'answered questions missing');
       const delivery = root.querySelector('.book-delivery');
-      check(delivery && delivery.querySelector('h2').textContent==='Доставка', 'delivery section missing');
-      check(delivery.querySelector('[name=city]').value==='Алматы', 'saved city missing');
-      check(delivery.querySelector('[name=address]').value==='Улица Абая, дом 10, квартира 5', 'saved address missing');
-      check(delivery.querySelector('[name=city]').required && delivery.querySelector('[name=address]').required, 'delivery fields are optional');
-      check(!delivery.querySelector('[name=pickup]').checked, 'pickup unexpectedly enabled');
-      check(delivery.querySelector('[name=bookId]').value==='admin-fixture', 'delivery bound to wrong book');
+      check(delivery && root.querySelector('#book-delivery-heading h2').textContent==='Доставка', 'delivery section missing');
+      const deliverySummary = delivery.querySelector('.book-delivery-summary');
+      check(deliverySummary.textContent.includes('Доставка'), 'saved delivery method missing');
+      check(deliverySummary.textContent.includes('Алматы'), 'saved city missing');
+      check(deliverySummary.textContent.includes('Улица Абая, дом 10, квартира 5'), 'saved address missing');
+      check(deliverySummary.querySelector('.book-delivery-summary__edit').textContent==='Изменить детали', 'delivery edit control missing');
       const deliveryBounds=delivery.getBoundingClientRect();
       check(Math.abs(deliveryBounds.width-root.getBoundingClientRect().width)<1, 'delivery is not full width');
-      const cityBounds=delivery.querySelector('[name=city]').getBoundingClientRect();
-      const addressBounds=delivery.querySelector('[name=address]').getBoundingClientRect();
-      if(innerWidth<=600)check(addressBounds.top>=cityBounds.bottom,'delivery fields not stacked');
-      else check(addressBounds.left>=cityBounds.right,'delivery fields not horizontal');
       if(innerWidth > 1100)check(Math.abs(card.top - stats.top) < 1 && stats.left >= card.right, 'wide overview is not horizontal');
       else check(stats.top >= card.bottom, 'small overview is not stacked');
       check(document.documentElement.scrollWidth <= innerWidth, 'admin page overflows');

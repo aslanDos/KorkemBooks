@@ -15,8 +15,6 @@
   .preview-thumbnail-grid { grid-template-columns: repeat(4, minmax(112px, 1fr)); }
   .cover-designer { grid-template-columns: 1fr; }
   .cover-preview-panel { position: static; width: min(100%, 500px); margin-inline: auto; grid-row: 1; }
-  .skeleton-cover-layout, .skeleton-workspace { grid-template-columns: 1fr; }
-  .skeleton-cover-preview, .skeleton-workspace > aside { width: min(100%, 500px); margin-inline: auto; grid-row: 1; }
 }
 
 @media (max-width: 760px) {
@@ -28,7 +26,7 @@
   .dashboard-sidebar, .dashboard-sidebar--collapsed { width: min(300px, 86vw); padding: 30px 22px 22px; transform: translateX(-102%); box-shadow: 18px 0 45px rgb(0 0 0 / 18%); }
   .dashboard-sidebar--open { transform: translateX(0); }
   .dashboard-sidebar--collapsed .dashboard-sidebar__top { justify-content: space-between; padding: 0 8px; }
-  .dashboard-sidebar--collapsed .brand-mark { width: 190px; height: 42px; }
+  .dashboard-sidebar--collapsed .brand-mark { width: 190px; height: 42px; padding: 0; color: var(--accent); background: transparent; border: 0; border-radius: 0; }
   .dashboard-sidebar--collapsed .brand-mark__logo { mask-image: url("/brand/logo.svg"); -webkit-mask-image: url("/brand/logo.svg"); }
   .dashboard-sidebar--collapsed .sidebar-create span, .dashboard-sidebar--collapsed .sidebar-nav__item span, .dashboard-sidebar--collapsed .sidebar-signout span { display: initial; }
   .dashboard-sidebar--collapsed .sidebar-create { width: auto; margin-inline: 0; }
@@ -53,11 +51,6 @@
   .book-hero__stats { position: static; grid-column: 2; flex-wrap: wrap; }
   .profile-grid { gap: 16px; }
   .writer-page-header { align-items: flex-start; flex-direction: column; }
-  .skeleton-overview { grid-template-columns: 1fr; }
-  .skeleton-stat { min-height: 160px; }
-  .skeleton-book-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .skeleton-book-hero { grid-template-columns: auto 1fr; padding: 28px; }
-  .skeleton-book-hero > div:last-child { grid-column: 2; }
 }
 
 @media (max-width: 480px) {
@@ -73,9 +66,6 @@
   .book-hero__meta { grid-column: 1; }
   .cover-customization__row { grid-template-columns: 1fr; }
   .cover-segmented-control { flex-wrap: wrap; }
-  .skeleton-book-grid, .skeleton-cover-cards { grid-template-columns: 1fr; }
-  .skeleton-section__heading { align-items: flex-start; flex-direction: column; }
-  .skeleton-header .skeleton-circle { display: none; }
   .preview-font-picker { align-items: stretch; flex-direction: column; }
   .preview-font-picker > button { min-width: 0; width: 100%; }
   .book-hero__stats { grid-column: 1; }
@@ -90,17 +80,4 @@
   .chapter-heading, .chapter-heading__actions { align-items: stretch; flex-direction: column; }
   .chapter-heading__actions > *, .secondary-content-button { width: 100%; }
   .chapter-card summary > span:last-child { font-size: 0; }
-}
-
-@media (max-width: 860px) {
-  .auth-page { grid-template-columns: 1fr; }
-  .auth-story { display: none; }
-  .auth-panel { align-content: start; padding: 28px 24px 48px; }
-  .auth-panel__theme { top: 26px; right: 24px; }
-  .auth-panel__mobile-brand { display: block; width: min(100%, 440px); margin-bottom: clamp(70px, 16vh, 130px); }
-}
-
-@media (max-width: 440px) {
-  .auth-panel { padding-inline: 20px; }
-  .auth-heading { margin-bottom: 32px; }
 }

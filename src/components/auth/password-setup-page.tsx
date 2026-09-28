@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PasswordSetupForm } from "@/components/auth/password-setup-form";
-import { getValidPasswordSetupToken, type PasswordSetupPurpose } from "@/lib/auth/password-setup-tokens";
+import { getPasswordSetupAccountSummary, getValidPasswordSetupToken, type PasswordSetupPurpose } from "@/lib/auth/password-setup-tokens";
+import { formatPhone } from "@/lib/auth/phone";
 
 const copy: Record<PasswordSetupPurpose, { eyebrow: string; title: string; description: string }> = {
   invite: {
@@ -33,8 +34,13 @@ export async function PasswordSetupPage({ token, purpose }: { token: string; pur
   }
 
   const content = copy[purpose];
+  const account = purpose === "invite" ? await getPasswordSetupAccountSummary(passwordToken.userId) : null;
   return (
     <AuthShell eyebrow={content.eyebrow} title={content.title} description={content.description}>
+      {account && <dl className="auth-invite-summary" aria-label="Данные приглашения">
+        {account.phone && <div><dt>Номер телефона</dt><dd>{formatPhone(account.phone)}</dd></div>}
+        {account.isBookUser && <div><dt>Книга посвящается</dt><dd>{account.bookTypeName ?? "Не назначено"}</dd></div>}
+      </dl>}
       <PasswordSetupForm token={token} purpose={purpose} />
     </AuthShell>
   );

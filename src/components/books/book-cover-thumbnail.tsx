@@ -4,7 +4,7 @@ import { COVER_PALETTES } from "@/lib/books/cover-palettes";
 
 export function BookCoverThumbnail({ book }: { book: BookWithContent }) {
   const cover = book.cover;
-  const palette = COVER_PALETTES.find(item => item.key === cover?.colorKey) ?? COVER_PALETTES[0];
+  const palette = COVER_PALETTES.find(item => item.key === cover?.colorKey) ?? COVER_PALETTES.find(item => item.key === "burgundy") ?? COVER_PALETTES[0];
   const template = cover?.style === "template";
   const background = template ? cover.customBackgroundUrl ?? cover.template.backgroundPath : null;
   return (

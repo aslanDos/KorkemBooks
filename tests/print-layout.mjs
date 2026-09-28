@@ -17,6 +17,7 @@ function loadTS(filename) {
 }
 const root = resolve(import.meta.dirname, '..');
 const { getBookPrintLayout, formatPrintPageRanges } = loadTS(resolve(root, 'src/lib/books/print-layout.ts'));
+const { getBookPageProgress } = loadTS(resolve(root, 'src/lib/books/progress.ts'));
 const { paginateBookAnswer } = loadTS(resolve(root, 'src/lib/books/pagination.ts'));
 const question = (overrides = {}) => ({ id: 'q', prompt: 'Вопрос', answer: '', answerFormat: { version: 1, marks: [] }, images: [], blankPages: [], ...overrides });
 const book = (questions = [], overrides = {}) => ({ chapters: [{ id: 'c', title: 'Глава', questions }], questionTextSize: 12, answerTextSize: 16, ...overrides });
@@ -62,6 +63,15 @@ test('empty books still contain the four existing front pages', () => {
   assert.equal(layout.totalPages, 4);
   assert.deepEqual(layout.monochromePages, []);
   checkPartition(layout);
+});
+test('book progress is based on printed pages with 100 pages as the target', () => {
+  const pages = count => Array.from({ length: count }, (_, index) => ({ id: `blank-${index}`, placement: 'after', position: index + 1 }));
+  const fiftyPageBook = book([question({ blankPages: pages(45) })]);
+  assert.equal(getBookPrintLayout(fiftyPageBook).totalPages, 50);
+  assert.deepEqual(getBookPageProgress(fiftyPageBook), { progress: 50, totalPages: 50 });
+
+  const overTargetBook = book([question({ blankPages: pages(120) })]);
+  assert.equal(getBookPageProgress(overTargetBook).progress, 100);
 });
 test('page ranges are valid for the browser print dialog without mutating inputs', () => {
   const pages = [9, 2, 1, 3, 7, 8, 9];

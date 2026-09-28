@@ -13,11 +13,16 @@ new Function('require', 'module', 'exports', ts.transpileModule(
   readFileSync(new URL('../src/lib/books/types.ts', import.meta.url), 'utf8'),
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
 ).outputText)(require, bookTypes, bookTypes.exports);
+const palettes = { exports: {} };
+new Function('require', 'module', 'exports', ts.transpileModule(
+  readFileSync(new URL('../src/lib/books/cover-palettes.ts', import.meta.url), 'utf8'),
+  { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+).outputText)(name => name === './types' ? bookTypes.exports : require(name), palettes, palettes.exports);
 
 function fixture({ missing = false } = {}) {
   const calls = [];
   const rows = {
-    books: missing ? null : { id: 'book', title: 'Book', book_types: { name: 'Memoir' } },
+    books: missing ? null : { id: 'book', title: 'Book', round_photos: true, hide_photo_footers: true, page_background_style: 'burgundy', book_types: { name: 'Memoir' } },
     chapters: [{ id: 'chapter', title: 'Childhood', position: 1 }],
     questions: [{ id: 'question', chapter_id: 'chapter', catalog_id: 'catalog', prompt: 'Home?', position: 1 }],
     answers: [{ question_id: 'question', answer_text: 'My home' }],
@@ -26,7 +31,7 @@ function fixture({ missing = false } = {}) {
       { id: 'image2', question_id: 'question', storage_path: 'photo', position: 2 },
     ],
     book_question_pages: [
-      { id: 'page1', question_id: 'question', image_id: 'image1', kind: 'photo', placement: 'after', position: 1, background_style: 'wine' },
+      { id: 'page1', question_id: 'question', image_id: 'image1', kind: 'photo', placement: 'after', position: 1, background_style: 'burgundy' },
       { id: 'blank1', question_id: 'question', image_id: null, kind: 'blank', placement: 'after', position: 2, background_style: 'olive' },
       { id: 'page2', question_id: 'question', image_id: 'image2', kind: 'photo', placement: 'after', position: 3 },
     ],
@@ -36,7 +41,7 @@ function fixture({ missing = false } = {}) {
     from(table) {
       calls.push(table);
       const query = { then(resolve) { return Promise.resolve({ data: rows[table] }).then(resolve); } };
-      for (const method of ['select', 'eq', 'is', 'in', 'order', 'maybeSingle']) query[method] = () => query;
+      for (const method of ['select', 'update', 'eq', 'neq', 'is', 'in', 'order', 'maybeSingle']) query[method] = () => query;
       return query;
     },
     storage: { from: () => ({
@@ -49,7 +54,12 @@ function fixture({ missing = false } = {}) {
     : name === './types' ? bookTypes.exports
     : name === './language' ? { isBookLanguage: value => ['ru', 'kk', 'en'].includes(value) }
     : name === './answer-format' ? { normalizeAnswerFormat: value => value ?? { version: 1, marks: [] } }
-    : name === './cover-palettes' ? { normalizePageBackground: value => ['white', 'primary', 'wine', 'berry', 'terracotta', 'navy', 'umber', 'olive', 'ochre'].includes(value) ? value : 'white' }
+    : name === './progress' ? { getBookPageProgress: book => ({ progress: book.progress ?? 0 }) }
+    : name === './catalog' ? { getExpectedChapterCount: slug => slug === 'boyfriend' ? 5 : 4 }
+    : name === './cover-palettes' ? {
+      normalizePageBackground: value => ['black', 'gray', 'burgundy', 'olive', 'navy', 'terracotta'].includes(value) ? value : 'burgundy',
+      normalizeCoverColor: value => ['black', 'gray', 'burgundy', 'olive', 'navy', 'terracotta'].includes(value) ? value : 'burgundy',
+    }
     : require(name);
   new Function('require', 'module', 'exports', source)(mockedRequire, loadedModule, loadedModule.exports);
   return { load: loadedModule.exports.getBookWithContent, calls };
@@ -78,7 +88,48 @@ test('editor preserves answers and ordered images with duplicate storage paths',
   const book = await load('book');
   const question = book.chapters[0].questions[0];
   assert.equal(question.answer, 'My home');
-  assert.deepEqual(question.images.map(image => [image.id, image.pageId, image.position, image.signedUrl, image.pageBackground, image.roundedCorners]), [['image1', 'page1', 1, 'signed:photo', 'wine', true], ['image2', 'page2', 3, 'signed:photo', 'white', false]]);
+  assert.deepEqual(question.images.map(image => [image.id, image.pageId, image.position, image.signedUrl, image.pageBackground, image.roundedCorners]), [['image1', 'page1', 1, 'signed:photo', 'burgundy', true], ['image2', 'page2', 3, 'signed:photo', 'burgundy', false]]);
+  assert.equal(book.roundPhotos, true);
+  assert.equal(book.hidePhotoFooters, true);
   assert.deepEqual(question.blankPages, [{ id: 'blank1', pageBackground: 'olive', placement: 'after', position: 2 }]);
   assert.deepEqual(calls.filter(Array.isArray), [['photo']]);
+});
+
+test('summary loads page counts without signing every book image', async () => {
+  const { load, calls } = fixture();
+  const book = await load('book', 'summary');
+  assert.equal(book.chapters[0].questions[0].images.length, 2);
+  assert.equal(book.chapters[0].questions[0].images[0].signedUrl, '');
+  assert.ok(calls.includes('book_page_images'));
+  assert.ok(calls.includes('book_question_pages'));
+  assert.deepEqual(calls.filter(Array.isArray), []);
+  assert.equal(calls.filter(call => call === 'books').length, 1);
+});
+
+test('book colors are limited to the six production palettes', () => {
+  assert.deepEqual(palettes.exports.COVER_PALETTES.map(({ key, background, detail }) => [key, background, detail]), [
+    ['black', '#2F2F2F', '#1C1C1C'],
+    ['gray', '#8A8A8A', '#686868'],
+    ['burgundy', '#592B33', '#421F25'],
+    ['olive', '#49452C', '#34311F'],
+    ['navy', '#303F4D', '#222D38'],
+    ['terracotta', '#613A2D', '#492A20'],
+  ]);
+  assert.equal(palettes.exports.normalizePageBackground('wine'), 'burgundy');
+  assert.equal(palettes.exports.normalizePageBackground('white'), 'burgundy');
+});
+
+test('photo defaults migration persists settings and applies them to new photos', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/202609230001_book_photo_defaults_and_palette.sql', import.meta.url), 'utf8');
+  assert.match(migration, /add column if not exists round_photos boolean not null default false/);
+  assert.match(migration, /add column if not exists hide_photo_footers boolean not null default false/);
+  assert.match(migration, /rounded_corners, hide_footer/);
+  assert.match(migration, /coalesce\(book_round_photos, false\), coalesce\(book_hide_photo_footers, false\)/);
+  assert.match(migration, /create or replace function public\.set_book_photo_defaults/);
+});
+
+test('navigation indexes match the optimized book and suggestion lookups', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/202609260002_navigation_performance_indexes.sql', import.meta.url), 'utf8');
+  assert.match(migration, /questions \(book_id, position\)/);
+  assert.match(migration, /question_prompt_suggestions \(book_id, owner_id, language, created_at desc\)/);
 });

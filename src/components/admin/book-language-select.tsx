@@ -4,17 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { updateBookLanguageAction } from "@/app/admin/books/[bookId]/actions";
-import { BOOK_LANGUAGES, isBookLanguage } from "@/lib/books/language";
+import { BOOK_LANGUAGES } from "@/lib/books/language";
 import type { BookLanguage } from "@/lib/books/types";
 
-export function BookLanguageSelect({ bookId, language }: { bookId: string; language: BookLanguage }) {
+export function BookLanguageSelect({ bookId, language, disabled = false }: { bookId: string; language: BookLanguage; disabled?: boolean }) {
   const router = useRouter();
   const [selected, setSelected] = useState(language);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function changeLanguage(value: string) {
-    if (!isBookLanguage(value) || value === selected || saving) return;
+    if ((value !== "ru" && value !== "kk") || value === selected || saving) return;
     setSelected(value);
     setSaving(true);
     setError("");
@@ -36,7 +36,8 @@ export function BookLanguageSelect({ bookId, language }: { bookId: string; langu
 
   return <div className="book-language-control">
     <div className="book-status-control">
-      <select className="book-status-select" value={selected} disabled={saving} onChange={(event) => void changeLanguage(event.currentTarget.value)} aria-label="Язык книги" aria-describedby={error ? "book-language-error" : undefined}>
+      <select className="book-status-select" value={selected} disabled={saving || disabled} onChange={(event) => void changeLanguage(event.currentTarget.value)} aria-label="Язык книги" aria-describedby={error ? "book-language-error" : undefined}>
+        {language === "en" && <option value="en" disabled hidden>EN — English</option>}
         {BOOK_LANGUAGES.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
       </select>
       <ChevronDown size={16} aria-hidden="true" />
