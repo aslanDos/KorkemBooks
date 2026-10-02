@@ -33,6 +33,8 @@ body:has(.writer-drawer[open]) { overflow: hidden; }
 .book-overview__progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .book-overview__progress-heading > strong { font-family: var(--font-forum), serif; font-size: 36px; font-weight: 400; }
 .book-overview__progress-heading small { margin-left: 3px; color: var(--muted); font-family: var(--font-forum), serif; font-size: 22px; }
+.book-overview__progress-hint { margin:-6px 0 0; color:var(--muted); font-size:11px; line-height:1.5; }
+.book-overview__progress-hint.is-ready { color:var(--primary); }
 .book-overview progress { display: block; width: 100%; height: 6px; overflow: hidden; appearance: none; border: 0; border-radius: 99px; background: var(--line); }
 .book-overview progress::-webkit-progress-bar { background: var(--line); border-radius: 99px; }
 .book-overview progress::-webkit-progress-value { background: var(--primary); border-radius: 99px; }

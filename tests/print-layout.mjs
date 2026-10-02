@@ -28,9 +28,9 @@ function checkPartition(layout) {
 
 test('front matter and chapters are color; only printed answers are monochrome', () => {
   const layout = getBookPrintLayout(book([question(), question({ id: 'answered', answer: 'Мой ответ' })]));
-  assert.deepEqual(layout.colorPages, [1, 2, 3, 4, 5]);
-  assert.deepEqual(layout.monochromePages, [6]);
-  assert.equal(layout.totalPages, 6);
+  assert.deepEqual(layout.colorPages, [1, 2, 3, 4]);
+  assert.deepEqual(layout.monochromePages, [5]);
+  assert.equal(layout.totalPages, 5);
   checkPartition(layout);
 });
 test('long answers count every continuation and respond to font sizes', () => {
@@ -48,25 +48,25 @@ test('attachments retain their exact before/after order without creating an empt
     question({ id: 'mixed', answer: 'Ответ', images: [{ id: 'after', placement: 'after', position: 2 }], blankPages: [{ id: 'before', placement: 'before', position: 1 }, { id: 'last', placement: 'after', position: 3 }] }),
   ]));
   assert.deepEqual(layout.storyPages.map(page => page.key), ['chapter-c', 'photo-only-photo', 'blank-before', 'question-mixed', 'photo-after', 'blank-last']);
-  assert.deepEqual(layout.monochromePages, [8]);
-  assert.deepEqual(layout.colorPages, [1, 2, 3, 4, 5, 6, 7, 9, 10]);
+  assert.deepEqual(layout.monochromePages, [7]);
+  assert.deepEqual(layout.colorPages, [1, 2, 3, 4, 5, 6, 8, 9]);
   checkPartition(layout);
 });
 test('classification is a printing policy, not inferred from background color', () => {
   const layout = getBookPrintLayout(book([question({ answer: 'Ответ' })], { pageBackground: 'white' }));
-  assert.deepEqual(layout.colorPages, [1, 2, 3, 4, 5]);
-  assert.deepEqual(layout.monochromePages, [6]);
+  assert.deepEqual(layout.colorPages, [1, 2, 3, 4]);
+  assert.deepEqual(layout.monochromePages, [5]);
   checkPartition(layout);
 });
-test('empty books still contain the four existing front pages', () => {
+test('empty print PDFs contain the three printable front pages', () => {
   const layout = getBookPrintLayout(book([], { chapters: [] }));
-  assert.equal(layout.totalPages, 4);
+  assert.equal(layout.totalPages, 3);
   assert.deepEqual(layout.monochromePages, []);
   checkPartition(layout);
 });
 test('book progress is based on printed pages with 100 pages as the target', () => {
   const pages = count => Array.from({ length: count }, (_, index) => ({ id: `blank-${index}`, placement: 'after', position: index + 1 }));
-  const fiftyPageBook = book([question({ blankPages: pages(45) })]);
+  const fiftyPageBook = book([question({ blankPages: pages(46) })]);
   assert.equal(getBookPrintLayout(fiftyPageBook).totalPages, 50);
   assert.deepEqual(getBookPageProgress(fiftyPageBook), { progress: 50, totalPages: 50 });
 

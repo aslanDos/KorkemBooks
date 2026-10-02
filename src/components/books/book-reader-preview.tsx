@@ -4,11 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, Info, LayoutGrid, RectangleVertical } from "lucide-react";
 import { RichAnswerText } from "@/components/books/rich-answer-editor";
 import { BookPagePhoto } from "@/components/books/book-page-photo";
-import { BookPhotoText, hasVisiblePhotoText } from "@/components/books/book-photo-text";
+import { BookPhotoText } from "@/components/books/book-photo-text";
 import { BookTitlePage } from "@/components/books/book-title-page";
 import { BookChapterPage } from "@/components/books/book-chapter-page";
 import { BookPrefacePage } from "@/components/books/book-preface-page";
-import { BookPreviewSettings, type BookPreviewSettingsGroup } from "@/components/books/book-preview-settings";
 import { paginateBookAnswer } from "@/lib/books/pagination";
 import type { AnswerFormat, BookBlankPage, BookChapter, BookPageImage, BookQuestion, BookWithContent } from "@/lib/books/types";
 import { getPageBackgroundColor } from "@/lib/books/cover-palettes";
@@ -27,10 +26,10 @@ type ReaderPage =
   | { kind: "photo"; key: string; pageNumber: number; chapter: BookChapter; question: BookQuestion; image: BookPageImage }
   | { kind: "blank"; key: string; pageNumber: number; chapter: BookChapter; question: BookQuestion; blankPage: BookBlankPage };
 
-export function BookReaderPreview({ book, initialQuestionId, initialPageKey, initialSettingsGroup }: { book: BookWithContent; initialQuestionId?: string; initialPageKey?: string; initialSettingsGroup?: BookPreviewSettingsGroup }) {
-  const [titlePageTitleSize, setTitlePageTitleSize] = useState(book.titlePageTitleSize);
-  const [questionTextSize, setQuestionTextSize] = useState(book.questionTextSize);
-  const [answerTextSize, setAnswerTextSize] = useState(book.answerTextSize);
+export function BookReaderPreview({ book, initialQuestionId, initialPageKey }: { book: BookWithContent; initialQuestionId?: string; initialPageKey?: string }) {
+  const titlePageTitleSize = book.titlePageTitleSize;
+  const questionTextSize = book.questionTextSize;
+  const answerTextSize = book.answerTextSize;
   const pages = useMemo<ReaderPage[]>(() => {
     const visibleChapters = book.chapters
       .map((chapter) => ({ ...chapter, questions: chapter.questions.filter((question) => question.answer.trim() || question.images.length || question.blankPages.length || initialPageKey === `question-${question.id}`) }))
@@ -75,12 +74,12 @@ export function BookReaderPreview({ book, initialQuestionId, initialPageKey, ini
       ? pages.findIndex((page) => page.kind === "question" && page.question.id === initialQuestionId)
       : 0;
   const [mode, setMode] = useState<"single" | "all">("single");
-  const [chapterPageStyle, setChapterPageStyle] = useState(book.chapterPageStyle);
-  const [chapterTitleSize, setChapterTitleSize] = useState(book.chapterTitleSize);
-  const [showFooterAuthor, setShowFooterAuthor] = useState(book.showFooterAuthor);
-  const [showFooterTitle, setShowFooterTitle] = useState(book.showFooterTitle);
-  const [roundPhotos, setRoundPhotos] = useState(book.roundPhotos);
-  const [pageBackground, setPageBackground] = useState(book.pageBackground);
+  const chapterPageStyle = book.chapterPageStyle;
+  const chapterTitleSize = book.chapterTitleSize;
+  const showFooterAuthor = book.showFooterAuthor;
+  const showFooterTitle = book.showFooterTitle;
+  const roundPhotos = book.roundPhotos;
+  const pageBackground = book.pageBackground;
   const [activeIndex, setActiveIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
   const [scale, setScale] = useState(1);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -121,32 +120,6 @@ export function BookReaderPreview({ book, initialQuestionId, initialPageKey, ini
           ? <p><strong>Этот вопрос пока не заполнен.</strong><span>Он показан для настройки страницы, но без ответа не войдёт в готовую книгу.</span></p>
           : <p><strong>Здесь отображаются только заполненные истории.</strong><span>Вопросы без ответа не показываются в предпросмотре и не войдут в книгу.</span></p>}
       </div>
-      <BookPreviewSettings initialOpenGroup={initialSettingsGroup} bookId={book.id} bookLanguage={book.language} titlePageTitleSize={titlePageTitleSize} chapterStyle={chapterPageStyle} chapterTitleSize={chapterTitleSize} questionTextSize={questionTextSize} answerTextSize={answerTextSize} showFooterAuthor={showFooterAuthor} showFooterTitle={showFooterTitle} roundPhotos={roundPhotos} pageBackground={pageBackground} sampleTitle={active.kind === "chapter" ? active.chapter.title : book.chapters[0]?.title ?? "Название главы"} disabled={book.productionStatus !== "writing"} onTitlePageTitleSizeChange={(size) => {
-        setTitlePageTitleSize(size);
-        const titlePageIndex = pages.findIndex((page) => page.kind === "title");
-        if (titlePageIndex >= 0) setActiveIndex(titlePageIndex);
-      }} onChapterStyleChange={(style) => {
-        setChapterPageStyle(style);
-        const firstChapterIndex = pages.findIndex((page) => page.kind === "chapter");
-        if (firstChapterIndex >= 0) setActiveIndex(firstChapterIndex);
-      }} onChapterTitleSizeChange={(size) => {
-        setChapterTitleSize(size);
-        const firstChapterIndex = pages.findIndex((page) => page.kind === "chapter");
-        if (firstChapterIndex >= 0) setActiveIndex(firstChapterIndex);
-      }} onQuestionTextSizeChange={(size) => {
-        setQuestionTextSize(size);
-        const firstQuestionIndex = pages.findIndex((page) => page.kind === "question");
-        if (firstQuestionIndex >= 0) setActiveIndex(firstQuestionIndex);
-      }} onAnswerTextSizeChange={(size) => {
-        setAnswerTextSize(size);
-        const firstQuestionIndex = pages.findIndex((page) => page.kind === "question");
-        if (firstQuestionIndex >= 0) setActiveIndex(firstQuestionIndex);
-      }} onFooterAuthorChange={setShowFooterAuthor} onFooterTitleChange={setShowFooterTitle} onRoundPhotosChange={setRoundPhotos} onPageBackgroundChange={(background) => {
-        setPageBackground(background);
-        const firstBackgroundPageIndex = pages.findIndex((page) => page.kind === "photo" || page.kind === "blank");
-        if (firstBackgroundPageIndex >= 0) setActiveIndex(firstBackgroundPageIndex);
-      }} />
-
       {mode === "single" ? <>
         <div className="book-reader__stage" ref={viewportRef}>
           <div className="book-spread-paper book-spread-paper--single" style={{ zoom: scale }}>
@@ -188,9 +161,9 @@ function ReaderPageContent({ page, book, titlePageTitleSize, chapterPageStyle, c
   if (page.kind === "opening-blank") return <div className="preview-opening-blank" aria-label="Первая пустая страница" />;
   if (page.kind === "title") return <BookTitlePage authorName={book.author_name} title={book.title} titleSize={titlePageTitleSize} />;
   if (page.kind === "preface") return <BookPrefacePage language={book.language} />;
-  if (page.kind === "contents") return <div className="preview-contents-page"><h2>{content.contents}</h2><ol>{page.contents.map((entry) => <li key={entry.id}><span className="preview-contents-page__chapter-number">{String(entry.chapterNumber).padStart(2, "0")}</span><span className="preview-contents-page__title">{entry.title}</span><i aria-hidden="true" /><b>{entry.pageNumber ?? "—"}</b></li>)}</ol></div>;
+  if (page.kind === "contents") return <div className="preview-contents-page"><h2>{content.contents}</h2><ol>{page.contents.map((entry) => <li key={entry.id}><span className="preview-contents-page__heading"><span className="preview-contents-page__chapter-number">{String(entry.chapterNumber).padStart(2, "0")}</span><span className="preview-contents-page__title">{entry.title}</span></span><i aria-hidden="true" /><b>{entry.pageNumber ?? "—"}</b></li>)}</ol></div>;
   if (page.kind === "chapter") return <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={chapterPageStyle} titleSize={chapterTitleSize} background={pageBackground} language={book.language} />;
-  if (page.kind === "photo") return <div className={`preview-photo-page preview-photo-page--${page.image.displayMode} preview-page-background--colored${roundPhotos ? " preview-photo-page--rounded" : ""}${page.image.displayMode === "contain" && hasVisiblePhotoText(page.image.photoText) && page.image.photoText.placement === "below" ? " preview-photo-page--text-below" : ""}`} style={{ background: getPageBackgroundColor(pageBackground) }}><BookPagePhoto image={{ ...page.image, roundedCorners: roundPhotos }} pageNumber={page.pageNumber} /><BookPhotoText settings={page.image.photoText} displayMode={page.image.displayMode} /></div>;
+  if (page.kind === "photo") return <div className={`preview-photo-page preview-photo-page--${page.image.displayMode} preview-page-background--colored${roundPhotos ? " preview-photo-page--rounded" : ""}`} style={{ background: getPageBackgroundColor(pageBackground) }}><BookPagePhoto image={{ ...page.image, roundedCorners: roundPhotos }} pageNumber={page.pageNumber} /><BookPhotoText settings={page.image.photoText} /></div>;
   if (page.kind === "blank") return <div className="preview-blank-page preview-page-background--colored" style={{ background: getPageBackgroundColor(pageBackground) }} aria-label={`Пустая страница ${page.pageNumber}`} />;
   return <div className="preview-page__content"><div className="preview-page__body">{page.answerPageIndex === 0 && <p className="preview-page__question">{page.question.prompt}</p>}{page.answerPart.trim() && <p className="preview-page__answer"><RichAnswerText text={page.answerPart} format={page.answerPageFormat} /></p>}</div></div>;
 }

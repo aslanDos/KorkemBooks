@@ -60,7 +60,7 @@
   .dashboard-shell .chapter-card ol { padding-inline: 16px; }
   .dashboard-shell .chapter-card li { grid-template-columns: minmax(0, 1fr); }
   .dashboard-shell .chapter-question-link { grid-template-columns: 24px minmax(0, 1fr); }
-  .dashboard-shell .chapter-question-status { grid-column: 2; justify-self: end; }
+  .dashboard-shell .chapter-question-indicators { grid-column: 2; justify-self: end; }
   .dashboard-shell .chapter-controls { opacity: 1; }
   .dashboard-shell .chapter-card__actions { flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
   .dashboard-shell .chapter-controls > button { min-height: 38px; min-width: 34px; }
@@ -73,6 +73,9 @@
   .dashboard-shell :is(.edit-book-dialog__panel, .question-dialog__panel, .book-photo-dialog__panel) { padding: 22px; }
   .workspace-info-dialog__panel { padding: 22px; }
   .dashboard-shell :is(.edit-book-dialog, .question-dialog, .book-photo-dialog) { max-height: calc(100dvh - 32px); overflow-y: auto; border-radius: var(--workspace-radius); }
+  .dashboard-shell .submit-book-dialog { max-height:calc(100dvh - 32px); overflow-y:auto; border-radius:var(--workspace-radius); }
+  .dashboard-shell .submit-book-dialog__panel { padding:22px; }
+  .dashboard-shell .submit-book-dialog__actions { grid-template-columns:1fr; }
   .dashboard-shell .form-field input, .dashboard-shell .cover-data-fields input, .dashboard-shell .admin-create-form .form-field input { font-size: 16px; }
 }
 @media (max-width: 480px) {

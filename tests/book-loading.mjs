@@ -27,7 +27,7 @@ function fixture({ missing = false } = {}) {
     questions: [{ id: 'question', chapter_id: 'chapter', catalog_id: 'catalog', prompt: 'Home?', position: 1 }],
     answers: [{ question_id: 'question', answer_text: 'My home' }],
     book_page_images: [
-      { id: 'image1', question_id: 'question', storage_path: 'photo', position: 1, rounded_corners: true },
+      { id: 'image1', question_id: 'question', storage_path: 'photo', position: 1, rounded_corners: true, collage_layout: 'two_columns', collage_images: [{ id: 'collage2', slot: 2, storagePath: 'collage-photo', mimeType: 'image/jpeg', sizeBytes: 1200, cropX: 4, cropY: -2, cropScale: 1.2 }] },
       { id: 'image2', question_id: 'question', storage_path: 'photo', position: 2 },
     ],
     book_question_pages: [
@@ -91,8 +91,10 @@ test('editor preserves answers and ordered images with duplicate storage paths',
   assert.deepEqual(question.images.map(image => [image.id, image.pageId, image.position, image.signedUrl, image.pageBackground, image.roundedCorners]), [['image1', 'page1', 1, 'signed:photo', 'burgundy', true], ['image2', 'page2', 3, 'signed:photo', 'burgundy', false]]);
   assert.equal(book.roundPhotos, true);
   assert.equal(book.hidePhotoFooters, true);
+  assert.equal(question.images[0].collageLayout, 'two_columns');
+  assert.deepEqual(question.images[0].collageImages.map(image => [image.id, image.slot, image.signedUrl, image.cropX, image.cropY, image.cropScale]), [['collage2', 2, 'signed:collage-photo', 4, -2, 1.2]]);
   assert.deepEqual(question.blankPages, [{ id: 'blank1', pageBackground: 'olive', placement: 'after', position: 2 }]);
-  assert.deepEqual(calls.filter(Array.isArray), [['photo']]);
+  assert.deepEqual(calls.filter(Array.isArray), [['photo', 'collage-photo']]);
 });
 
 test('summary loads page counts without signing every book image', async () => {
@@ -128,8 +130,19 @@ test('photo defaults migration persists settings and applies them to new photos'
   assert.match(migration, /create or replace function public\.set_book_photo_defaults/);
 });
 
-test('navigation indexes match the optimized book and suggestion lookups', () => {
-  const migration = readFileSync(new URL('../supabase/migrations/202609260002_navigation_performance_indexes.sql', import.meta.url), 'utf8');
-  assert.match(migration, /questions \(book_id, position\)/);
-  assert.match(migration, /question_prompt_suggestions \(book_id, owner_id, language, created_at desc\)/);
+test('photo collage migration keeps one printable page with up to four image slots', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/202609300001_add_photo_collages.sql', import.meta.url), 'utf8');
+  assert.match(migration, /collage_layout text not null default 'single'/);
+  assert.match(migration, /'two_columns', 'two_rows', 'four_grid'/);
+  assert.match(migration, /jsonb_array_length\(collage_images\) <= 3/);
+});
+
+test('question editing migration replaces the suggestion queue with direct owner edits', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/202609290005_allow_owner_question_edits.sql', import.meta.url), 'utf8');
+  const transitionFix = readFileSync(new URL('../supabase/migrations/202609290006_fix_book_editing_transition.sql', import.meta.url), 'utf8');
+  assert.match(migration, /add column prompt_edited_by_owner boolean not null default false/);
+  assert.match(migration, /create function public\.update_own_book_question_prompt/);
+  assert.match(migration, /drop table if exists public\.question_prompt_suggestions/);
+  assert.match(transitionFix, /after update of language on public\.books/);
+  assert.doesNotMatch(transitionFix, /after update of language, production_status/);
 });

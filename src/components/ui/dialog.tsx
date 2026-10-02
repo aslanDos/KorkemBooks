@@ -9,6 +9,7 @@ type DialogProps = Omit<DialogHTMLAttributes<HTMLDialogElement>, "title"> & {
   title?: string;
   eyebrow?: string;
   closeIconSize?: number;
+  closeDisabled?: boolean;
 };
 
 export function Dialog({
@@ -17,6 +18,7 @@ export function Dialog({
   title,
   eyebrow,
   closeIconSize = 20,
+  closeDisabled = false,
   children,
   onClick,
   ...props
@@ -30,7 +32,7 @@ export function Dialog({
       aria-labelledby={title ? titleId : props["aria-labelledby"]}
       onClick={(event) => {
         onClick?.(event);
-        if (!event.defaultPrevented && event.target === event.currentTarget) {
+        if (!closeDisabled && !event.defaultPrevented && event.target === event.currentTarget) {
           event.currentTarget.close();
         }
       }}
@@ -45,6 +47,7 @@ export function Dialog({
             <button
               type="button"
               aria-label="Закрыть"
+              disabled={closeDisabled}
               onClick={(event) => event.currentTarget.closest("dialog")?.close()}
             >
               <X size={closeIconSize} aria-hidden="true" />

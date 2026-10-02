@@ -69,6 +69,7 @@ export async function saveBookTitlePageTitleSizeAction(input: { bookId: string; 
   }
 
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/write`);
   revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
   return { success: true };
@@ -99,6 +100,7 @@ export async function saveChapterPageStyleAction(input: { bookId: string; style:
   }
 
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
   revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
   return { success: true };
 }
@@ -128,6 +130,7 @@ export async function saveChapterTitleSizeAction(input: { bookId: string; size: 
   }
 
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
   revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
   return { success: true };
 }
@@ -159,6 +162,7 @@ export async function saveBookPageTextSizeAction(input: { bookId: string; target
 
   await refreshBookPageProgress(supabase, parsed.data.bookId);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/write`);
   revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
   return { success: true };
@@ -190,6 +194,7 @@ export async function saveBookFooterVisibilityAction(input: { bookId: string; ta
   }
 
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/write`);
   revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
   return { success: true };
@@ -220,6 +225,7 @@ export async function saveBookPageBackgroundAction(input: { bookId: string; back
   }
 
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/write`);
   revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
   return { success: true };
@@ -247,6 +253,7 @@ export async function saveBookPhotoDefaultsAction(input: { bookId: string; targe
   }
 
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/preview`);
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}`);
   revalidatePath(`/dashboard/books/${parsed.data.bookId}/write`);
   revalidatePath(`/admin/books/${parsed.data.bookId}/print`);
   return { success: true };

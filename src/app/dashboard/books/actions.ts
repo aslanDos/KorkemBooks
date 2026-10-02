@@ -8,20 +8,33 @@ import { refreshBookPageProgress } from "@/lib/books/queries";
 import { isAvailableBookLanguage, isBookLanguage } from "@/lib/books/language";
 import { isRemovedBookTypeSlug } from "@/lib/books/catalog";
 
-export async function submitBookForEditingAction(formData: FormData) {
+export type SubmitBookForEditingState = { error?: string; success?: boolean };
+
+export async function submitBookForEditingAction(_: SubmitBookForEditingState, formData: FormData): Promise<SubmitBookForEditingState> {
   const bookId = z.string().uuid().safeParse(formData.get("bookId"));
-  if (!bookId.success) return;
+  if (!bookId.success) return { error: "Книга не найдена" };
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return;
+  if (!supabase) return { error: "Сервис временно недоступен" };
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return { error: "Сессия истекла. Войдите снова" };
 
   const progress = await refreshBookPageProgress(supabase, bookId.data);
-  if (progress === null || progress < 50) return;
+  if (progress === null) return { error: "Не удалось проверить готовность книги" };
+  if (progress < 50) return { error: "В книге должно быть минимум 50 страниц" };
 
-  await supabase.from("books").update({ production_status: "editing" }).eq("id", bookId.data).eq("owner_id", user.id).eq("production_status", "writing").is("deleted_at", null);
+  const { data: updated, error } = await supabase.from("books")
+    .update({ production_status: "editing" })
+    .eq("id", bookId.data)
+    .eq("owner_id", user.id)
+    .eq("production_status", "writing")
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+  if (error) return { error: `Не удалось отправить книгу: ${error.message}` };
+  if (!updated) return { error: "Книга уже отправлена или недоступна" };
   revalidatePath(`/dashboard/books/${bookId.data}`, "layout");
   revalidatePath("/admin/books", "layout");
+  return { success: true };
 }
 import { createBookSchema } from "@/lib/books/validation";
 import { updateBookSchema } from "@/lib/books/validation";

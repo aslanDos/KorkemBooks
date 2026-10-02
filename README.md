@@ -13,7 +13,7 @@ npm ci
 cp .env.example .env.local
 ```
 
-Заполните `.env.local` настройками своего проекта Supabase. Примените SQL-файлы из `supabase/migrations` в порядке их названий. Ключ `SUPABASE_SERVICE_ROLE_KEY` предназначен только для сервера.
+Заполните `.env.local` настройками своего проекта Supabase. Примените SQL-файлы из `supabase/migrations` в порядке их названий; короткий индекс по месяцам и версиям находится в [`supabase/migrations/README.md`](supabase/migrations/README.md). Ключ `SUPABASE_SERVICE_ROLE_KEY` предназначен только для сервера.
 
 ```bash
 npm run dev

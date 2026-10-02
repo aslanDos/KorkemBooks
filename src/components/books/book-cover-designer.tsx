@@ -5,6 +5,7 @@ import { Check, ChevronDown, LoaderCircle, Palette, Plus, Settings2 } from "luci
 import { selectBookCoverAction } from "@/app/dashboard/books/cover-actions";
 import { BookCoverSpine } from "@/components/books/book-cover-spine";
 import { fitRenderedCoverTitlePanel } from "@/lib/books/cover-title-layout";
+import { prepareImageUpload, SUPPORTED_IMAGE_INPUT, SUPPORTED_IMAGE_TYPES } from "@/lib/books/image-upload";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { BookWithContent, CoverColorKey, CoverStyle, CoverTemplate } from "@/lib/books/types";
 
@@ -38,6 +39,7 @@ export function BookCoverDesigner({ book, templates, readOnly = false }: { book:
   const [savedChoice, setSavedChoice] = useState(book.cover?.style === "template" && book.cover.customBackgroundPath ? `custom:${book.cover.customBackgroundPath}` : `${book.cover?.style ?? "solid"}:${book.cover?.templateId ?? ""}:${book.cover?.colorKey ?? "burgundy"}`);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const [convertingImage, setConvertingImage] = useState(false);
   const selected = templates.find((template) => template.id === templateId) ?? templates[0];
   const palette = PALETTES.find((item) => item.key === colorKey) ?? PALETTES[0];
   const previewStyle = { "--cover-bg": palette.background, "--cover-detail": frameColor ?? palette.detail, "--cover-title-size": `${titleSize * .11396}cqw`, "--cover-author-size": `${authorSize * .11396}cqw` } as CSSProperties;
@@ -46,15 +48,22 @@ export function BookCoverDesigner({ book, templates, readOnly = false }: { book:
     return () => { if (customPreviewUrl.startsWith("blob:")) URL.revokeObjectURL(customPreviewUrl); };
   }, [customPreviewUrl]);
 
-  function selectCustomFile(file?: File) {
-    if (!file || readOnly || pending) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) { setError("Выберите JPEG, PNG или WebP."); return; }
+  async function selectCustomFile(file?: File) {
+    if (!file || readOnly || pending || convertingImage) return;
     if (file.size > 6 * 1024 * 1024 || !file.size) { setError("Изображение должно быть не больше 6 МБ и не пустым."); return; }
     setError("");
-    setCustomFile(file);
-    setCustomPreviewUrl(URL.createObjectURL(file));
-    setUseCustomBackground(true);
-    setCoverStyle("template");
+    setConvertingImage(true);
+    try {
+      const preparedFile = await prepareImageUpload(file);
+      if (!SUPPORTED_IMAGE_TYPES.has(preparedFile.type)) throw new Error("Выберите HEIC, JPEG, PNG или WebP.");
+      if (preparedFile.size > 6 * 1024 * 1024) throw new Error("После обработки изображение превышает 6 МБ.");
+      setCustomFile(preparedFile);
+      setCustomPreviewUrl(URL.createObjectURL(preparedFile));
+      setUseCustomBackground(true);
+      setCoverStyle("template");
+    } catch (conversionError) {
+      setError(conversionError instanceof Error ? conversionError.message : "Не удалось обработать изображение.");
+    } finally { setConvertingImage(false); }
   }
 
   useEffect(() => {
@@ -147,7 +156,7 @@ export function BookCoverDesigner({ book, templates, readOnly = false }: { book:
         <span><strong>Настройки обложки</strong><small>Текст, стиль, цвет и корешок</small></span>
         <ChevronDown className="book-preview-settings__chevron" size={18} aria-hidden="true" />
       </summary>
-      <div className="book-preview-settings__body cover-template-panel__body" inert={readOnly || pending}>
+      <div className="book-preview-settings__body cover-template-panel__body" inert={readOnly || pending || convertingImage}>
         <details className="book-preview-settings__group" open>
           <summary><span><strong>Текст обложки</strong><small>Название, автор и задняя сторона</small></span><ChevronDown className="book-preview-settings__chevron" size={17} aria-hidden="true" /></summary>
           <div className="book-preview-settings__group-body">
@@ -176,10 +185,10 @@ export function BookCoverDesigner({ book, templates, readOnly = false }: { book:
               <button className={`cover-style-card cover-style-card--solid${coverStyle === "solid" ? " is-selected" : ""}`} type="button" aria-pressed={coverStyle === "solid"} onClick={() => { setCoverStyle("solid"); setUseCustomBackground(false); setError(""); }}><span style={{ background: palette.background }} /><strong>Однотонная</strong>{savedChoice.startsWith("solid:") && <Check size={15} aria-label="Сохранено" />}</button>
               {templates.map((template) => <button className={`cover-style-card${coverStyle === "template" && !useCustomBackground && selected.id === template.id ? " is-selected" : ""}`} type="button" key={template.id} aria-pressed={coverStyle === "template" && !useCustomBackground && selected.id === template.id} onClick={() => { setCoverStyle("template"); setUseCustomBackground(false); setTemplateId(template.id); setError(""); }}><span style={{ backgroundImage: `url(${template.backgroundPath})` }} /><strong>{template.name}</strong>{!useCustomBackground && savedChoice.startsWith(`template:${template.id}:`) && <Check size={15} aria-label="Сохранено" />}</button>)}
               {(customPreviewUrl || customBackgroundPath) && <button className={`cover-style-card${coverStyle === "template" && useCustomBackground ? " is-selected" : ""}`} type="button" aria-pressed={coverStyle === "template" && useCustomBackground} onClick={() => { setCoverStyle("template"); setUseCustomBackground(true); setError(""); }}><span style={{ backgroundImage: customPreviewUrl ? `url(${JSON.stringify(customPreviewUrl)})` : undefined }} /><strong>Свой фон</strong>{savedChoice === `custom:${customBackgroundPath}` && <Check size={15} aria-label="Сохранено" />}</button>}
-              <button className="cover-style-card cover-style-card--add" type="button" aria-label="Добавить свой фон обложки" disabled={readOnly || pending} onClick={() => fileInputRef.current?.click()}><span><Plus size={22} aria-hidden="true" /></span><strong>Добавить</strong></button>
+              <button className="cover-style-card cover-style-card--add" type="button" aria-label="Добавить свой фон обложки" disabled={readOnly || pending || convertingImage} onClick={() => fileInputRef.current?.click()}><span>{convertingImage ? <LoaderCircle className="spin" size={22} /> : <Plus size={22} aria-hidden="true" />}</span><strong>{convertingImage ? "Обработка…" : "Добавить"}</strong></button>
             </div>
-            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={readOnly || pending} onChange={(event) => { selectCustomFile(event.target.files?.[0]); event.target.value = ""; }} />
-            <p className="cover-upload-hint">Свой фон: JPEG, PNG или WebP до 6 МБ. Загрузится после нажатия «Сохранить обложку».</p>
+            <input ref={fileInputRef} type="file" accept={SUPPORTED_IMAGE_INPUT} hidden disabled={readOnly || pending || convertingImage} onChange={(event) => { void selectCustomFile(event.target.files?.[0]); event.target.value = ""; }} />
+            <p className="cover-upload-hint">Свой фон: HEIC, JPEG, PNG или WebP до 6 МБ. HEIC автоматически преобразуется в JPEG.</p>
             <div className="cover-toggle-list">
               <div className="book-footer-option"><span><strong>Декоративная рамка</strong><small>Показывать рамку на лицевой и задней сторонах</small></span><button className="book-footer-toggle" type="button" role="switch" aria-label="Показывать рамку на обложке" aria-checked={showFrame} onClick={() => setShowFrame((value) => !value)}><span /></button></div>
               {showFrame && <fieldset className="book-size-options"><legend>Вариант рамки</legend><div>
@@ -217,7 +226,7 @@ export function BookCoverDesigner({ book, templates, readOnly = false }: { book:
             <p>Для предельно длинных текстов используется многоточие. Полное название и имя автора в данных книги не обрезаются.</p>
           </div>
         </details>
-        <div className="cover-actions"><button className="cover-save-button" type="button" onClick={saveCover} disabled={readOnly || pending || !title.trim() || !authorName.trim()}>{pending ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}Сохранить обложку</button></div>
+        <div className="cover-actions"><button className="cover-save-button" type="button" onClick={saveCover} disabled={readOnly || pending || convertingImage || !title.trim() || !authorName.trim()}>{pending || convertingImage ? <LoaderCircle className="spin" size={17} /> : <Check size={17} />}Сохранить обложку</button></div>
         {error && <p className="cover-save-error" role="alert">{error}</p>}
       </div>
     </details>

@@ -34,15 +34,16 @@
 .preview-preface-page { position: relative; display: flex; min-height: 100%; padding: 58px 18px 28px; flex: 1; flex-direction: column; }
 .preview-preface-page h2 { margin: 0 0 34px; font-family: var(--font-literata), serif; font-size: 26px; font-weight: 400; letter-spacing: .025em; text-align: center; }
 .preview-preface-page__text { display: grid; width:88%; margin-inline:auto; gap:13px; }
-.preview-preface-page__text p { margin: 0; font-size: 10.5px; line-height: 1.58; text-align: justify; }
+.preview-preface-page__text p { margin: 0; font-size: 10.5px; line-height: 1.58; text-align: center; }
 .preview-preface-page__signature { margin: auto auto 6px; padding-top: 24px; font-size: 11px; font-style: normal; line-height: 1.45; text-align: center; }
 .preview-preface-page > .preview-page__number { position: absolute; right: 0; bottom: 0; font-size: 9px; }
-.preview-contents-page { position: relative; display: flex; min-height: 100%; padding: 58px 18px 28px; flex: 1; flex-direction: column; }
+.preview-contents-page { position: relative; display: flex; min-height: 100%; padding: 58px 11px 28px; flex: 1; flex-direction: column; }
 .preview-contents-page h2 { margin: 0 0 34px; font-family: var(--font-literata), serif; font-size: 26px; font-weight: 400; letter-spacing: .025em; text-align: center; }
-.preview-contents-page ol { display: grid; width: 88%; gap: 13px; margin: 0 auto; padding: 0; list-style: none; }
-.preview-contents-page li { display: flex; min-width: 0; align-items: baseline; gap: 8px; font-size: 10.5px; line-height: 1.58; }
+.preview-contents-page ol { display: grid; width: 100%; gap: 13px; margin: 0; padding: 0; list-style: none; }
+.preview-contents-page li { display: flex; min-width: 0; align-items: last baseline; gap: 8px; font-size: 10.5px; line-height: 1.58; }
+.preview-contents-page__heading { display: flex; min-width: 0; max-width: calc(72% + 26px); align-items: baseline; gap: 8px; }
 .preview-contents-page__chapter-number { flex: 0 0 18px; color: #aa9275; font-size: 7px; letter-spacing: .08em; }
-.preview-contents-page__title { max-width: 72%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preview-contents-page__title { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
 .preview-contents-page li i { min-width: 12px; height: 1px; flex: 1; border-bottom: 1px dotted #b6aa9b; }
 .preview-contents-page li b { flex: 0 0 auto; font-size: 9px; font-weight: 500; }
 .preview-contents-page > .preview-page__number { position: absolute; right: 0; bottom: 0; font-size: 9px; }

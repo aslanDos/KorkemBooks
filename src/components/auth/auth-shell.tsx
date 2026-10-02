@@ -20,7 +20,6 @@ export function AuthShell({ eyebrow, title, description, children, footer }: Aut
           <h1>Сохраните то, что действительно важно.</h1>
           <p>Отвечайте на простые вопросы, а мы поможем превратить ваши воспоминания в красивую книгу для семьи и будущих поколений.</p>
         </div>
-        <p className="auth-story__quote">«Истории связывают поколения. Начните свою сегодня»</p>
       </section>
       <section className="auth-panel">
         <div className="auth-panel__theme"><ThemeToggle /></div>

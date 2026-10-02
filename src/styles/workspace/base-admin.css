@@ -98,7 +98,9 @@
 .admin-chapter > div { display: grid; gap: 1px; background: var(--line); }
 .admin-answer-form { display: grid; gap: 10px; padding: 20px 24px; background: var(--surface); }
 .admin-answer-form__heading { display: flex; min-width: 0; align-items: start; justify-content: space-between; gap: 20px; }
+.admin-answer-form__heading > div { display:grid; min-width:0; justify-items:start; gap:7px; }
 .admin-answer-form__heading h4 { margin: 0; font-size: 13px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+.admin-answer-form__owner-edit { display:inline-flex; padding:5px 8px; color:#936c25; background:rgb(191 145 58 / 13%); border-radius:999px; font-size:9px; font-weight:750; line-height:1; }
 .admin-answer-form__answer { margin: 0; color: var(--ink); font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .admin-answer-form form { display: grid; gap: 10px; }
 .admin-answer-form textarea { width: 100%; padding: 14px; color: var(--ink); background: var(--surface-raised); border: 1px solid var(--line); border-radius: 11px; resize: vertical; font: inherit; font-size: 14px; line-height: 1.65; }
@@ -112,10 +114,3 @@
 .book-readonly-badge, .book-readonly-notice { color: #72571f; background: #fff3d2; border: 1px solid #ead49d; border-radius: 10px; }
 .book-readonly-badge { padding: 8px 11px; font-size: 11px; }
 .book-readonly-notice { margin: 0 0 14px; padding: 11px 14px; font-size: 12px; line-height: 1.5; }
-.readonly-structure { display: grid; gap: 12px; }
-.readonly-structure section { overflow: hidden; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
-.readonly-structure header { display: flex; padding: 16px 18px; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); }
-.readonly-structure header span { color: var(--muted); font-size: 11px; }
-.readonly-structure ol { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
-.readonly-structure li { padding: 12px 18px; color: var(--muted); border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.5; }
-.readonly-structure li:last-child { border-bottom: 0; }

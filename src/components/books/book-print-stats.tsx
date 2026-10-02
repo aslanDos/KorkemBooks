@@ -11,7 +11,7 @@ export function BookPrintStats({ layout }: { layout: BookPrintLayout }) {
     <details><summary>Номера страниц для печати</summary>
       <p>Цветные: <span data-print-ranges="color">{formatPrintPageRanges(layout.colorPages) || "Нет"}</span></p>
       <p>Ч/Б: <span data-print-ranges="monochrome">{formatPrintPageRanges(layout.monochromePages) || "Нет"}</span></p>
-      <p>Это номера листов PDF, начиная с первой пустой страницы. Для раздельной печати используйте эти диапазоны в двух заданиях: цветном и чёрно-белом.</p>
+      <p>Это номера листов PDF, начиная с титульной страницы. Белая задняя сторона обложки в PDF не входит. Для раздельной печати используйте эти диапазоны в двух заданиях: цветном и чёрно-белом.</p>
     </details>
   </section>;
 }

@@ -1,5 +1,8 @@
-const TEXT_WIDTH = 352;
-const TEXT_AREA_HEIGHT = 482;
+// A 20 mm editorial margin measured from the PDF edge includes the 2 mm bleed.
+// These preview-space dimensions match the remaining 18 mm trim-safe area and
+// reserve room below the answer for the footer.
+const TEXT_WIDTH = 303;
+const TEXT_AREA_HEIGHT = 451;
 const QUESTION_ANSWER_GAP = 12;
 
 function characterWidth(character: string, fontSize: number) {
@@ -11,7 +14,7 @@ function characterWidth(character: string, fontSize: number) {
   return fontSize * 0.6;
 }
 
-function wrapIntoLines(text: string, fontSize: number) {
+function wrapIntoLines(text: string, fontSize: number, textWidth = TEXT_WIDTH) {
   const lines: string[] = [];
   for (const paragraph of text.replace(/\r\n?/g, "\n").split("\n")) {
     if (!paragraph) {
@@ -23,7 +26,7 @@ function wrapIntoLines(text: string, fontSize: number) {
     let lastSpace = -1;
     for (const character of paragraph) {
       const nextWidth = width + characterWidth(character, fontSize);
-      if (nextWidth <= TEXT_WIDTH || !line) {
+      if (nextWidth <= textWidth || !line) {
         line += character;
         width = nextWidth;
         if (character === " ") lastSpace = line.length - 1;
@@ -45,15 +48,15 @@ function wrapIntoLines(text: string, fontSize: number) {
   return lines;
 }
 
-export function paginateBookAnswer(prompt: string, answer: string, sizes: { question: number; answer: number } = { question: 12, answer: 18 }) {
+export function paginateBookAnswer(prompt: string, answer: string, sizes: { question: number; answer: number } = { question: 12, answer: 18 }, pageArea: { width: number; height: number } = { width: TEXT_WIDTH, height: TEXT_AREA_HEIGHT }) {
   const questionLineHeight = sizes.question * 1.5;
   const answerLineHeight = sizes.answer * 1.42;
-  const answerLines = wrapIntoLines(answer.trim(), sizes.answer);
+  const answerLines = wrapIntoLines(answer.trim(), sizes.answer, pageArea.width);
   if (!answer.trim()) return [""];
 
-  const questionLines = Math.max(1, wrapIntoLines(prompt, sizes.question).length);
-  const firstPageLines = Math.max(1, Math.floor((TEXT_AREA_HEIGHT - questionLines * questionLineHeight - QUESTION_ANSWER_GAP) / answerLineHeight));
-  const continuationLines = Math.max(1, Math.floor(TEXT_AREA_HEIGHT / answerLineHeight));
+  const questionLines = Math.max(1, wrapIntoLines(prompt, sizes.question, pageArea.width).length);
+  const firstPageLines = Math.max(1, Math.floor((pageArea.height - questionLines * questionLineHeight - QUESTION_ANSWER_GAP) / answerLineHeight));
+  const continuationLines = Math.max(1, Math.floor(pageArea.height / answerLineHeight));
   const pages: string[] = [];
   let cursor = 0;
   let capacity = firstPageLines;

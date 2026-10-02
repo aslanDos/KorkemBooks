@@ -195,5 +195,19 @@ for (const sourceType of updatedSource.types) {
   assert.deepEqual((await db.query('select title from chapters where book_id=$1 order by position',[localizedBook])).rows.map(row=>row.title),sourceType.locales.kk.chapters.map(chapter=>chapter.title));
   assert.equal((await db.query('select prompt from questions where book_id=$1 and catalog_id=(select id from question_catalog where book_type_id=$2 and number=150)',[localizedBook,type.id])).rows[0].prompt,sourceType.locales.kk.questions[149]);
 }
-console.log('PASS: 11 RU/KK catalogs, admin catalog editing, per-book overrides and answers preserved, approval frozen, assignment, pool, deletion, progress and ownership.');
+await db.exec('reset role;'+await readFile(root+'/supabase/migrations/202609290005_allow_owner_question_edits.sql','utf8'));
+const ownerEditedQuestion=(await db.query('select id from questions where book_id=$1 order by position limit 1',[boyfriendBook])).rows[0].id;
+await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);
+assert.equal((await db.query("select update_own_book_question_prompt($1,$2,'Мой вопрос?') ok",[boyfriendBook,ownerEditedQuestion])).rows[0].ok,true);
+assert.deepEqual((await db.query('select prompt,prompt_edited_by_owner from questions where id=$1',[ownerEditedQuestion])).rows[0],{prompt:'Мой вопрос?',prompt_edited_by_owner:true});
+await db.exec(`set request.jwt.claim.sub='${other}';`);
+assert.equal((await db.query("select update_own_book_question_prompt($1,$2,'Чужое изменение?') ok",[boyfriendBook,ownerEditedQuestion])).rows[0].ok,false);
+await db.exec('reset role;');
+assert.equal((await db.query('select prompt from questions where id=$1',[ownerEditedQuestion])).rows[0].prompt,'Мой вопрос?');
+assert.equal((await db.query("select set_book_language($1,'ru') ok",[boyfriendBook])).rows[0].ok,true);
+assert.equal((await db.query('select prompt_edited_by_owner from questions where id=$1',[ownerEditedQuestion])).rows[0].prompt_edited_by_owner,false);
+assert.equal((await db.query("select set_book_language($1,'kk') ok",[boyfriendBook])).rows[0].ok,true);
+assert.deepEqual((await db.query('select prompt,prompt_edited_by_owner from questions where id=$1',[ownerEditedQuestion])).rows[0],{prompt:'Мой вопрос?',prompt_edited_by_owner:true});
+assert.equal((await db.query("select to_regclass('public.question_prompt_suggestions') table_name")).rows[0].table_name,null);
+console.log('PASS: 11 RU/KK catalogs, direct owner question edits, per-book overrides and answers preserved, approval frozen, assignment, pool, deletion, progress and ownership.');
 await db.close();

@@ -79,7 +79,7 @@ export async function deleteBookAction(bookIdValue: string): Promise<{ error?: s
   if (!admin) return { error: "Подключение к базе данных не настроено" };
   const [{ data: book }, { data: images }, { data: cover }] = await Promise.all([
     admin.from("books").select("id").eq("id", bookId.data).is("deleted_at", null).maybeSingle(),
-    admin.from("book_page_images").select("storage_path").eq("book_id", bookId.data),
+    admin.from("book_page_images").select("storage_path, collage_images").eq("book_id", bookId.data),
     admin.from("book_covers").select("custom_background_path").eq("book_id", bookId.data).maybeSingle(),
   ]);
   if (!book) return { error: "Книга не найдена или уже удалена" };
@@ -93,7 +93,10 @@ export async function deleteBookAction(bookIdValue: string): Promise<{ error?: s
     .maybeSingle();
   if (error || !deleted) return { error: "Не удалось удалить книгу. Проверьте, что применены последние миграции" };
 
-  const imagePaths = [...new Set((images ?? []).map((image) => image.storage_path).filter(Boolean))];
+  const imagePaths = [...new Set((images ?? []).flatMap((image) => [
+    image.storage_path,
+    ...(Array.isArray(image.collage_images) ? image.collage_images.flatMap((item) => item && typeof item === "object" && "storagePath" in item && typeof item.storagePath === "string" ? [item.storagePath] : []) : []),
+  ]).filter(Boolean))];
   const cleanupResults = await Promise.all([
     imagePaths.length ? admin.storage.from("book-images").remove(imagePaths) : Promise.resolve({ error: null }),
     cover?.custom_background_path ? admin.storage.from("book-cover-images").remove([cover.custom_background_path]) : Promise.resolve({ error: null }),

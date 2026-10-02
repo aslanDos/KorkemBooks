@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, LoaderCircle } from "lucide-react";
 import { saveAdminAnswerAction } from "@/app/admin/books/[bookId]/actions";
 
-export function AdminAnswerForm({ bookId, questionId, prompt, answer, readOnly = false }: { bookId: string; questionId: string; prompt: string; answer: string; readOnly?: boolean }) {
+export function AdminAnswerForm({ bookId, questionId, prompt, answer, promptEditedByOwner = false, readOnly = false }: { bookId: string; questionId: string; prompt: string; answer: string; promptEditedByOwner?: boolean; readOnly?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(answer);
@@ -33,7 +33,7 @@ export function AdminAnswerForm({ bookId, questionId, prompt, answer, readOnly =
 
   return <article className="admin-answer-form">
     <div className="admin-answer-form__heading">
-      <h4>{prompt}</h4>
+      <div><h4>{prompt}</h4>{promptEditedByOwner && <span className="admin-answer-form__owner-edit">Изменено пользователем</span>}</div>
       {!readOnly && !editing && <button className="admin-answer-form__edit" type="button" onClick={() => { setDraft(savedAnswer); setError(""); setEditing(true); }}>Изменить</button>}
     </div>
     {editing ? <form onSubmit={(event) => void save(event)}>

@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
-import { DEFAULT_BOOK_PHOTO_TEXT, type BookAnswerTextSize, type BookBlankPage, type BookChapter, type BookChapterTitleSize, type BookCover, type BookPageImage, type BookPhotoText, type BookQuestion, type BookQuestionTextSize, type BookSummary, type BookTitlePageTitleSize, type BookType, type BookWithContent, type CoverTemplate } from "./types";
+import { DEFAULT_BOOK_PHOTO_TEXT, type BookAnswerTextSize, type BookBlankPage, type BookChapter, type BookChapterTitleSize, type BookCollageImage, type BookCover, type BookPageImage, type BookPhotoLayout, type BookPhotoText, type BookQuestion, type BookQuestionTextSize, type BookSummary, type BookTitlePageTitleSize, type BookType, type BookWithContent, type CoverTemplate } from "./types";
 import { normalizeCoverColor, normalizePageBackground } from "./cover-palettes";
 import { normalizeAnswerFormat } from "./answer-format";
 import { isBookLanguage } from "./language";
@@ -129,7 +129,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
   if (!book) return null;
 
   // The book lookup above remains the access boundary; RLS applies to every query.
-  const [{ data: chapterRows }, { data: coverRow }, { data: answerRows }, { data: imageRows }, { data: pageRows }, { data: questionData }] = await Promise.all([
+  const [{ data: chapterRows }, { data: coverRow }, { data: answerRows }, { data: imageRows }, { data: pageRows }, { data: questionData }, { data: questionEditData }] = await Promise.all([
     !includeChapters ? Promise.resolve({ data: [] }) : supabase
     .from("chapters")
     .select("id, title, position")
@@ -142,13 +142,16 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     .eq("book_id", bookId)
     .maybeSingle(),
     includeChapters ? supabase.from("answers").select("question_id, answer_text, answer_format").eq("book_id", bookId) : Promise.resolve({ data: [] }),
-    includeAttachments ? supabase.from("book_page_images").select("id, question_id, storage_path, mime_type, size_bytes, display_mode, placement, crop_x, crop_y, crop_scale, rounded_corners, hide_footer, position, book_photo_texts(enabled, content, text_size, placement, position, tone, image_darkening, text_shadow)").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
+    includeAttachments ? supabase.from("book_page_images").select("id, question_id, storage_path, mime_type, size_bytes, display_mode, placement, crop_x, crop_y, crop_scale, rounded_corners, hide_footer, position, collage_layout, collage_images, book_photo_texts(enabled, content, text_size, position, tone, image_darkening, text_shadow)").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
     includeAttachments ? supabase.from("book_question_pages").select("id, question_id, image_id, kind, placement, position, background_style").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
     includeChapters ? supabase.from("questions").select("id, chapter_id, catalog_id, prompt, position").eq("book_id", bookId).is("deleted_at", null).order("position") : Promise.resolve({ data: [] }),
+    // Kept separate so books still load while the owner-edit migration is being deployed.
+    includeChapters ? supabase.from("questions").select("id, prompt_edited_by_owner").eq("book_id", bookId).is("deleted_at", null) : Promise.resolve({ data: [] }),
   ]);
 
   const chapters = (chapterRows ?? []) as Omit<BookChapter, "questions">[];
-  const paths = [...new Set((imageRows ?? []).map((image) => image.storage_path))];
+  const collageRows = (imageRows ?? []).flatMap((image) => normalizeCollageImages(image.collage_images));
+  const paths = [...new Set([...(imageRows ?? []).map((image) => image.storage_path), ...collageRows.map((image) => image.storagePath)])];
   const [{ data: signed }, customBackgroundSigned] = await Promise.all([
     content === "full" && paths.length
       ? supabase.storage.from("book-images").createSignedUrls(paths, 3600)
@@ -160,13 +163,15 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
   let questions: (BookQuestion & { chapter_id: string })[] = [];
 
   if (chapters.length > 0) {
-    const questionRows = (questionData ?? []) as (Omit<BookQuestion & { chapter_id: string }, "answer" | "images" | "blankPages"> & { catalog_id: string | null })[];
+    const questionRows = (questionData ?? []) as (Omit<BookQuestion & { chapter_id: string }, "answer" | "images" | "blankPages" | "promptEditedByOwner"> & { catalog_id: string | null })[];
+    const ownerEditedQuestionIds = new Set((questionEditData ?? []).filter((question) => question.prompt_edited_by_owner).map((question) => question.id));
     const answersByQuestion = new Map((answerRows ?? []).map((answer) => [answer.question_id, answer.answer_text]));
     const formatsByQuestion = new Map((answerRows ?? []).map((answer) => [answer.question_id, normalizeAnswerFormat(answer.answer_format, answer.answer_text.length)]));
     const urls = new Map((signed ?? []).map((image) => [image.path, image.signedUrl]));
     const pageByImageId = new Map((pageRows ?? []).filter((page) => page.kind === "photo" && page.image_id).map((page) => [page.image_id, page]));
     const signedImages = (imageRows ?? []).map((image) => {
       const page = pageByImageId.get(image.id);
+      const collageImages = normalizeCollageImages(image.collage_images).map((item) => ({ ...item, signedUrl: urls.get(item.storagePath) ?? "" }));
       return [image.question_id, {
         id: image.id,
         pageId: page?.id ?? image.id,
@@ -183,6 +188,8 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
         cropX: Number(image.crop_x ?? 0),
         cropY: Number(image.crop_y ?? 0),
         cropScale: Number(image.crop_scale ?? 1),
+        collageLayout: normalizePhotoLayout(image.collage_layout),
+        collageImages,
         position: page?.position ?? image.position,
       } satisfies BookPageImage] as const;
     });
@@ -203,6 +210,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     questions = questionRows.map((question) => ({
       ...question,
       catalogId: question.catalog_id,
+      promptEditedByOwner: ownerEditedQuestionIds.has(question.id),
       answer: answersByQuestion.get(question.id) ?? "",
       answerFormat: formatsByQuestion.get(question.id) ?? normalizeAnswerFormat(null),
       images: imagesByQuestion.get(question.id) ?? [],
@@ -279,6 +287,32 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
   return loadedBook;
 }
 
+function normalizePhotoLayout(value: unknown): BookPhotoLayout {
+  return value === "two_columns" || value === "two_rows" || value === "four_grid" ? value : "single";
+}
+
+function normalizeCollageImages(value: unknown): BookCollageImage[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Record<string, unknown>;
+    if (typeof row.id !== "string" || typeof row.storagePath !== "string" || typeof row.mimeType !== "string") return [];
+    const slot = Number(row.slot);
+    if (!Number.isInteger(slot) || slot < 2 || slot > 4) return [];
+    return [{
+      id: row.id,
+      slot,
+      storagePath: row.storagePath,
+      signedUrl: "",
+      mimeType: row.mimeType,
+      sizeBytes: Number(row.sizeBytes ?? 0),
+      cropX: Number(row.cropX ?? 0),
+      cropY: Number(row.cropY ?? 0),
+      cropScale: Number(row.cropScale ?? 1),
+    } satisfies BookCollageImage];
+  }).sort((a, b) => a.slot - b.slot);
+}
+
 function normalizeChapterTitleSize(value: unknown): BookChapterTitleSize {
   const size = Number(value) as BookChapterTitleSize;
   return ([6, 8, 10, 12, 14] as const).includes(size) ? size : 10;
@@ -295,7 +329,6 @@ function normalizeBookPhotoText(value: unknown): BookPhotoText {
   const row = relation as Record<string, unknown>;
   const numericSize = Number(row.text_size);
   const size = ([10, 12, 14, 16, 20] as const).find((option) => option === numericSize) ?? 12;
-  const placement = row.placement === "below" ? "below" : "overlay";
   const position = typeof row.position === "string" && row.position.startsWith("top")
     ? "top"
     : typeof row.position === "string" && row.position.startsWith("middle")
@@ -306,7 +339,6 @@ function normalizeBookPhotoText(value: unknown): BookPhotoText {
     enabled: row.enabled === true,
     content: typeof row.content === "string" ? row.content : "",
     size,
-    placement,
     position,
     tone,
     darkening: Math.max(0, Math.min(50, Math.round(Number(row.image_darkening) || 0))),

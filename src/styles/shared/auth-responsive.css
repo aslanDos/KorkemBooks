@@ -11,3 +11,7 @@
   .auth-heading { margin-bottom: 32px; }
   .auth-invite-summary { grid-template-columns: 1fr; margin-top: -8px; }
 }
+
+@media (max-width: 340px) {
+  .auth-panel__mobile-brand .brand-mark { width: 150px; height: 34px; }
+}

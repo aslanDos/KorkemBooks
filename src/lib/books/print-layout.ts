@@ -3,12 +3,15 @@ import { sliceAnswerFormat } from "./answer-format";
 import type { BookWithContent } from "./types";
 
 // Keep statistics and the rendered PDF on the same page sequence.
-export function getBookPrintLayout(book: Pick<BookWithContent, "chapters" | "questionTextSize" | "answerTextSize">) {
+export function getBookPrintLayout(book: Pick<BookWithContent, "chapters" | "questionTextSize" | "answerTextSize">, format: "a5" | "compact" = "a5") {
+  const pageArea = format === "compact"
+    ? { width: 303 * (99 / 112), height: 451 * (162.3 / 167.3) }
+    : undefined;
   const storyPages = book.chapters.flatMap((chapter, chapterIndex) => [
     { kind: "chapter" as const, key: `chapter-${chapter.id}`, chapter, chapterIndex },
     ...chapter.questions.filter(question => question.answer.trim() || question.images.length || question.blankPages.length).flatMap(question => {
       let answerOffset = 0;
-      const questionPages = (question.answer.trim() ? paginateBookAnswer(question.prompt, question.answer, { question: book.questionTextSize, answer: book.answerTextSize }) : []).map((answerPart, answerPageIndex) => {
+      const questionPages = (question.answer.trim() ? paginateBookAnswer(question.prompt, question.answer, { question: book.questionTextSize, answer: book.answerTextSize }, pageArea) : []).map((answerPart, answerPageIndex) => {
         const answerPageFormat = sliceAnswerFormat(question.answerFormat, answerOffset, answerOffset + answerPart.length);
         const page = { kind: "question" as const, key: answerPageIndex === 0 ? `question-${question.id}` : `question-${question.id}-continuation-${answerPageIndex}`, chapter, question, answerPart, answerPageFormat, answerPageIndex };
         answerOffset += answerPart.length + 1;
@@ -20,13 +23,20 @@ export function getBookPrintLayout(book: Pick<BookWithContent, "chapters" | "que
       ].sort((a, b) => a.position - b.position);
       return [...attachmentPages.filter(page => page.placement === "before"), ...questionPages, ...attachmentPages.filter(page => page.placement === "after")];
     }),
-  ]).map((page, index) => ({ ...page, pageNumber: index + 5 }));
+  ]).map((page, index) => ({
+    ...page,
+    // Keep the book's logical numbering aligned with the reader preview. The
+    // opening blank is the back of the cover, so it is not a sheet in the PDF.
+    pageNumber: index + 5,
+    pdfPageNumber: index + 4,
+  }));
 
   // User's printing policy: only question/answer pages are monochrome.
-  // The first four pages are opening blank, title, preface, and contents.
-  const colorPages = [1, 2, 3, 4, ...storyPages.filter(page => page.kind !== "question").map(page => page.pageNumber)];
-  const monochromePages = storyPages.filter(page => page.kind === "question").map(page => page.pageNumber);
-  return { storyPages, colorPages, monochromePages, totalPages: storyPages.length + 4 };
+  // The PDF starts with title, preface, and contents; the opening blank exists
+  // only in the reader preview as the white back side of the cover.
+  const colorPages = [1, 2, 3, ...storyPages.filter(page => page.kind !== "question").map(page => page.pdfPageNumber)];
+  const monochromePages = storyPages.filter(page => page.kind === "question").map(page => page.pdfPageNumber);
+  return { storyPages, colorPages, monochromePages, totalPages: storyPages.length + 3 };
 }
 
 export type BookPrintLayout = ReturnType<typeof getBookPrintLayout>;

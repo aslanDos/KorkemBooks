@@ -1,3 +1,12 @@
+.book-view-tabs { display:inline-flex; margin:20px 0; padding:4px; gap:4px; background:var(--surface); border:1px solid var(--line); border-radius:999px; }
+.book-view-tabs a { display:inline-flex; min-height:42px; padding:9px 18px; align-items:center; justify-content:center; gap:8px; color:var(--muted); border-radius:999px; font-size:12px; font-weight:700; text-decoration:none; transition:color 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
+.book-view-tabs a:hover { color:var(--ink); background:var(--background); }
+.book-view-tabs a.is-active { color:var(--primary-ink); background:var(--primary); box-shadow:0 4px 12px rgb(52 35 27 / 10%); }
+.book-view-tabs a:focus-visible { outline:3px solid var(--focus-ring); outline-offset:1px; }
+.book-preview-loading { display:flex; min-height:180px; align-items:center; justify-content:center; gap:12px; padding:32px; color:var(--muted); background:var(--surface); border:1px solid var(--line); border-radius:var(--workspace-radius); }
+.book-preview-loading > span { display:grid; gap:4px; }
+.book-preview-loading strong { color:var(--ink); font-size:14px; }
+.book-preview-loading small { font-size:12px; }
 .book-reader { min-width:0; }
 .book-reader__toolbar { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:20px; padding:16px 18px; background:var(--surface); border:1px solid var(--line); border-radius:var(--workspace-radius); }
 .book-reader__toolbar > div:first-child { display:flex; min-width:0; align-items:center; gap:10px; }
@@ -109,6 +118,8 @@
 .cover-preview-stage__canvas { width:min(100%, 960px); }
 .cover-designer--preview-layout .cover-preview-note { width:min(100%, 960px); margin:12px auto 0; padding-inline:4px; font-size:10px; }
 @media(max-width:700px) {
+ .book-view-tabs { display:grid; width:100%; grid-template-columns:1fr 1fr; }
+ .book-view-tabs a { padding-inline:10px; }
  .book-reader__toolbar { align-items:stretch; flex-direction:column; }
  .book-reader__modes { display:grid; grid-template-columns:1fr 1fr; }
  .book-reader__modes button { padding-inline:10px; }

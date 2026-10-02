@@ -49,7 +49,7 @@ const printFixtureBook = {
   titlePageTitleSize: 24, chapterPageStyle: 'vertical', chapterTitleSize: 14, pageBackground: 'terracotta', showFooterAuthor: true, showFooterTitle: true, roundPhotos: true, hidePhotoFooters: false, productionStatus: 'printing', language: 'ru',
   chapters: [{ id: 'print-chapter', title: 'Наши воспоминания', questions: [{
     id: 'print-question', prompt: 'Что вы хотите сохранить?', answer: 'Воспоминания о важных моментах.', answerFormat: { version: 1, marks: [] },
-    images: ['full', 'contain'].map((displayMode, index) => ({ id: 'print-photo-' + index, signedUrl: '/covers/turquoise-almond.jpg', displayMode, placement: 'after', position: index + 1, cropX: 2, cropY: -3, cropScale: 1.1, roundedCorners: true, hideFooter: false, photoText: { ...photoSettings, placement: displayMode === 'full' ? 'overlay' : 'below' } })),
+    images: ['full', 'contain'].map((displayMode, index) => ({ id: 'print-photo-' + index, signedUrl: '/covers/turquoise-almond.jpg', displayMode, placement: 'after', position: index + 1, cropX: 2, cropY: -3, cropScale: 1.1, roundedCorners: true, hideFooter: false, collageLayout: index ? 'four_grid' : 'single', collageImages: index ? [2, 3, 4].map(slot => ({ id: 'collage-' + slot, slot, signedUrl: '/covers/turquoise-almond.jpg', cropX: slot, cropY: -slot, cropScale: 1.05 })) : [], photoText: { ...photoSettings, placement: displayMode === 'full' ? 'overlay' : 'below' } })),
     blankPages: [{ id: 'print-blank', pageBackground: 'terracotta', placement: 'after', position: 3 }],
   }] }],
 };
@@ -64,6 +64,16 @@ const adminFixtureBook = {
 };
 const AdminBookPage = loadTS(join(root, 'src/app/admin/books/[bookId]/page.tsx')).default;
 const adminMarkup = renderToStaticMarkup(await AdminBookPage({ params: Promise.resolve({ bookId: 'admin-fixture' }) }));
+const adminFinanceMarkup = renderToStaticMarkup(await AdminBookPage({ params: Promise.resolve({ bookId: 'admin-fixture' }), searchParams: Promise.resolve({ tab: 'finance' }) }));
+const adminDeliveryMarkup = renderToStaticMarkup(await AdminBookPage({ params: Promise.resolve({ bookId: 'admin-fixture' }), searchParams: Promise.resolve({ tab: 'delivery' }) }));
+const adminContentMarkup = renderToStaticMarkup(await AdminBookPage({ params: Promise.resolve({ bookId: 'admin-fixture' }), searchParams: Promise.resolve({ tab: 'content' }) }));
+assert.doesNotMatch(adminMarkup, /Финансы книги|id="book-delivery-heading"|class="admin-chapter"/, 'overview still contains secondary sections');
+assert.match(adminFinanceMarkup, /Финансы книги/, 'finance tab is empty');
+assert.match(adminDeliveryMarkup, /id="book-delivery-heading"/, 'delivery tab is empty');
+assert.match(adminContentMarkup, /class="admin-chapter"/, 'content tab is empty');
+assert.match(adminContentMarkup, /\/admin\/books\/admin-fixture\/cover/, 'cover action missing from content tab');
+const writingPrintMarkup = renderToStaticMarkup(await PrintPage({ params: Promise.resolve({ bookId: 'admin-fixture' }) }));
+assert.match(writingPrintMarkup, /Печать книги/, 'admin cannot print a book that is still being written');
 const adminPage = `<!doctype html><html lang="ru"><head><meta name="viewport" content="width=device-width, initial-scale=1">${fontSheetsForPrint()}<link rel="stylesheet" href="/globals.css"><link rel="stylesheet" href="/workspace.css"><style>body{--font-manrope:Manrope}</style></head><body><div class="dashboard-shell admin-shell"><aside class="dashboard-sidebar">Админ-панель</aside><main class="dashboard-main"><header class="workspace-topbar"><nav>Админ-панель → Структура книги</nav></header><div class="workspace-content">${adminMarkup}</div></main></div></body></html>`;
 const bleedMarkup = renderToStaticMarkup(await PrintPage({ params: Promise.resolve({ bookId: 'print-fixture' }) }));
 const bleedPage = `<!doctype html><html lang="ru"><head><meta name="viewport" content="width=device-width, initial-scale=1">${fontSheetsForPrint()}<link rel="stylesheet" href="/globals.css"><link rel="stylesheet" href="/workspace.css"><style>body{--font-literata:Literata}#result{display:none}</style></head><body><div class="dashboard-shell admin-shell"><aside class="dashboard-sidebar">Sidebar</aside><main class="dashboard-main"><div class="workspace-topbar">Toolbar</div><div class="workspace-content">${bleedMarkup}</div></main></div><pre id="result">pending</pre><script type="module">
@@ -142,7 +152,7 @@ try {
     const add = designer.querySelector('.cover-style-card--add');
     check(add?.textContent === 'Добавить', 'add background card missing');
     const input = designer.querySelector('input[type="file"]');
-    check(input?.hidden && input.accept === 'image/jpeg,image/png,image/webp', 'upload input types incorrect');
+    check(input?.hidden && input.accept === 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif', 'upload input types incorrect');
     check(add.getBoundingClientRect().height === designer.querySelector('.cover-style-card').getBoundingClientRect().height, 'add card height differs');
     if (innerWidth >= 768) check(add.getBoundingClientRect().width <= 155, 'style cards are still too wide');
   }
@@ -435,17 +445,18 @@ try {
         const near = (actual, expected) => Math.abs(actual - expected) < 1;
         const check = (value, message) => {if(!value)throw new Error(message);};
         const sheets = document.querySelectorAll('.print-book-sheet');
-        check(sheets.length === 9, 'unexpected content page count');
-        check(document.querySelector('[data-print-count=color]').textContent==='8','print color count wrong');
+        check(sheets.length === 8, 'unexpected content page count: '+sheets.length);
+        check(document.querySelector('[data-print-count=color]').textContent==='7','print color count wrong');
         check(document.querySelector('[data-print-count=monochrome]').textContent==='1','print monochrome count wrong');
         check(document.querySelector('[data-print-count=total]').textContent===String(sheets.length),'print total differs from actual pages');
-        check(document.querySelector('[data-print-ranges=color]').textContent==='1-5, 7-9','color print ranges wrong');
-        check(document.querySelector('[data-print-ranges=monochrome]').textContent==='6','monochrome print ranges wrong');
+        check(document.querySelector('[data-print-ranges=color]').textContent==='1-4, 6-8','color print ranges wrong');
+        check(document.querySelector('[data-print-ranges=monochrome]').textContent==='5','monochrome print ranges wrong');
         for(const [index,sheet] of [...sheets].entries()){
           check(Number(sheet.dataset.pageNumber)===index+1,'PDF sheet numbers shifted');
           check(sheet.dataset.printMode===(sheet.querySelector('.preview-page__content')?'monochrome':'color'),'sheet mode differs from statistics');
         }
         check(document.querySelector('.print-book-toolbar').textContent.includes('152 × 214'), 'old A5 print instruction remains');
+        check(document.querySelectorAll('.book-photo-collage--four_grid .book-photo-collage__slot').length===4,'four-photo collage is incomplete');
         for(const sheet of sheets){
           const outer=sheet.getBoundingClientRect();
           const trim=sheet.querySelector('.print-preview-page').getBoundingClientRect();
@@ -458,11 +469,11 @@ try {
           const full=sheet.querySelector('.preview-photo-page--full .preview-photo-page__frame');
           if(full){const imageBounds=full.getBoundingClientRect();for(const edge of ['left','top','right','bottom'])check(near(imageBounds[edge],outer[edge]),'full photo does not fill bleed');check(full.querySelector('img').style.transform.includes('scale(1.1)'), 'photo crop lost');}
           const contained=sheet.querySelector('.preview-photo-page--contain .preview-photo-page__frame');
-          if(contained){const frame=contained.getBoundingClientRect();check(near(frame.left-trim.left,mm(8.9))&&near(frame.top-trim.top,mm(8.9)), 'contained photo margins changed');}
+          if(contained){const frame=contained.getBoundingClientRect();check(near(frame.left-trim.left,mm(18))&&near(frame.top-trim.top,mm(18)), 'contained photo margin is not 20 mm including bleed');}
           const footer=sheet.querySelector('.preview-page__footer');
-          if(footer){const rect=footer.getBoundingClientRect();check(near(rect.left-trim.left,mm(8.88))&&near(trim.bottom-rect.bottom,mm(8.9)), 'footer moved relative to trim');}
+          if(footer){const rect=footer.getBoundingClientRect();check(near(rect.left-trim.left,mm(18))&&near(trim.bottom-rect.bottom,mm(18)), 'footer margin is not 20 mm including bleed');}
           const body=sheet.querySelector('.preview-page__content');
-          if(body){const rect=body.getBoundingClientRect();check(near(rect.left-trim.left,mm(8.88))&&near(rect.top-trim.top,mm(15.58)), 'answer text moved relative to trim');}
+          if(body){const rect=body.getBoundingClientRect();check(near(rect.left-trim.left,mm(18))&&near(rect.top-trim.top,mm(18)), 'answer margin is not 20 mm including bleed');}
         }
         if(matchMedia('print').matches){
           for(const selector of ['.mobile-menu-button','.sidebar-backdrop','.print-book-toolbar','next-route-announcer'])check(getComputedStyle(document.querySelector(selector)).display==='none',selector+' remains visible in print');
@@ -487,13 +498,13 @@ try {
     const pdf = await command('Page.printToPDF', { preferCSSPageSize: true, printBackground: true }, sessionId);
     const pdfBuffer = Buffer.from(pdf.data, 'base64');
     const pdfText = pdfBuffer.toString('latin1');
-    assert.equal((pdfText.match(/\/Type\s*\/Page\b/g) ?? []).length, 9, 'extra blank PDF sheet');
+    assert.equal((pdfText.match(/\/Type\s*\/Page\b/g) ?? []).length, 8, 'extra blank PDF sheet');
     const boxes = [...pdfText.matchAll(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/g)];
     assert.ok(boxes.length > 0, 'PDF page dimensions missing');
     // Chromium rounds PDF paper dimensions to printer pixels (up to ~0.18 mm).
     // DOM checks above separately verify the exact 2 mm bleed and unchanged A5 trim.
     for (const box of boxes) assert.ok(Math.abs(Number(box[1]) - 152 * 72 / 25.4) < .5 && Math.abs(Number(box[2]) - 214 * 72 / 25.4) < .5, 'PDF not 152 × 214 mm: ' + JSON.stringify(box.slice(1)));
-    console.log(JSON.stringify({ viewport: width, pdfPages: 9, paperMillimeters: boxes[0].slice(1).map(value => Number(value) * 25.4 / 72) }));
+    console.log(JSON.stringify({ viewport: width, pdfPages: (pdfText.match(/\/Type\s*\/Page\b/g) ?? []).length, paperMillimeters: boxes[0].slice(1).map(value => Number(value) * 25.4 / 72) }));
     writeFileSync(join(outputDirectory, width + '-bleed.pdf'), pdfBuffer);
     await command('Emulation.setEmulatedMedia', { media: 'screen' }, sessionId);
     await command('Runtime.evaluate', { expression: `document.querySelector('.sidebar-backdrop').remove();` }, sessionId);
@@ -520,7 +531,7 @@ try {
       const card = root.querySelector('.book-summary-card').getBoundingClientRect();
       const stats = root.querySelector('.book-overview__progress').getBoundingClientRect();
       check(root.querySelector('h1').textContent === 'Махаббатым', 'book identity lost');
-      check(root.querySelector('.book-cover-thumbnail--frame-ver2'), 'cover missing');
+      check(!root.querySelector('.book-summary-cover'), 'decorative cover remains in admin summary');
       check(root.querySelector('progress').value === 5, 'progress changed');
       check(root.querySelector('.admin-book-metadata').textContent.includes('2 из 4'), 'answer count lost');
       check(root.querySelector('time').dateTime === '2026-09-15T10:00:00Z', 'update date lost');
@@ -539,38 +550,18 @@ try {
       const bounds = status.getBoundingClientRect();
       const arrowBounds = arrow.getBoundingClientRect();
       check(Math.abs(bounds.right-arrowBounds.right-14)<1 && Math.abs((bounds.top+bounds.bottom-arrowBounds.top-arrowBounds.bottom)/2)<1, 'status arrow not aligned');
-      const links = [...root.querySelectorAll('nav a')];
-      check(links.some(link => link.getAttribute('href') === '/admin/books/admin-fixture/cover'), 'admin cover route lost');
-      check(!links.some(link => link.getAttribute('href') === '/admin/books/admin-fixture/print'), 'print route shown before production');
-      check(root.querySelector('[data-print-count=color]').textContent==='6','admin color count wrong');
+      const tabs = root.querySelectorAll('.admin-book-section-tabs a');
+      check(tabs.length===4 && tabs[0].getAttribute('aria-current')==='page', 'book tabs missing or overview is not active');
+      check([...tabs].map(tab => tab.textContent.trim()).join('|')==='Обзор|Финансы|Доставка|Главы и ответы', 'book tab labels changed');
+      check(root.querySelector('.print-format-control button')?.textContent.includes('Скачать PDF'), 'download control missing before production');
+      check(root.querySelector('[data-print-count=color]').textContent==='5','admin color count wrong');
       check(root.querySelector('[data-print-count=monochrome]').textContent==='2','admin monochrome count wrong');
-      check(root.querySelector('[data-print-count=total]').textContent==='8','admin total count wrong');
+      check(root.querySelector('[data-print-count=total]').textContent==='7','admin total count wrong');
       const printDetails = root.querySelector('.book-print-stats details');
       printDetails.querySelector('summary').click(); check(printDetails.open, 'print ranges do not open');
-      check(root.querySelector('[data-print-ranges=monochrome]').textContent==='6, 8','admin page ranges wrong');
+      check(root.querySelector('[data-print-ranges=monochrome]').textContent==='5, 7','admin page ranges wrong');
       printDetails.querySelector('summary').click();
-      const chapters = root.querySelectorAll('.admin-chapter');
-      check(chapters.length === 2 && chapters[0].open && !chapters[1].open, 'initial chapter state changed');
-      for(const chapter of chapters){
-        chapter.open = true;
-        for(const answer of chapter.querySelectorAll('.admin-answer-form')){
-          check(answer.querySelector('h4').textContent.length > 0, 'answer prompt missing');
-          check(answer.querySelector('.admin-answer-form__answer').textContent === 'Очень тёплые воспоминания.', 'answer text changed');
-          check(answer.querySelector('.admin-answer-form__edit').textContent === 'Изменить', 'answer edit control missing');
-        }
-        chapter.querySelector('summary').click(); check(!chapter.open, 'chapter does not close');
-        chapter.querySelector('summary').click(); check(chapter.open, 'chapter does not open');
-      }
-      check(root.querySelectorAll('.admin-answer-form').length === 2, 'answered questions missing');
-      const delivery = root.querySelector('.book-delivery');
-      check(delivery && root.querySelector('#book-delivery-heading h2').textContent==='Доставка', 'delivery section missing');
-      const deliverySummary = delivery.querySelector('.book-delivery-summary');
-      check(deliverySummary.textContent.includes('Доставка'), 'saved delivery method missing');
-      check(deliverySummary.textContent.includes('Алматы'), 'saved city missing');
-      check(deliverySummary.textContent.includes('Улица Абая, дом 10, квартира 5'), 'saved address missing');
-      check(deliverySummary.querySelector('.book-delivery-summary__edit').textContent==='Изменить детали', 'delivery edit control missing');
-      const deliveryBounds=delivery.getBoundingClientRect();
-      check(Math.abs(deliveryBounds.width-root.getBoundingClientRect().width)<1, 'delivery is not full width');
+      check(!root.querySelector('.book-finance-panel,.book-delivery,.admin-chapter'), 'inactive tab content remains on overview');
       if(innerWidth > 1100)check(Math.abs(card.top - stats.top) < 1 && stats.left >= card.right, 'wide overview is not horizontal');
       else check(stats.top >= card.bottom, 'small overview is not stacked');
       check(document.documentElement.scrollWidth <= innerWidth, 'admin page overflows');
@@ -579,13 +570,9 @@ try {
     assert.equal(adminResult.exceptionDetails, undefined, JSON.stringify(adminResult.exceptionDetails));
     const adminScreenshot = await command('Page.captureScreenshot', { format: 'png' }, sessionId);
     writeFileSync(join(outputDirectory, width + '-admin.png'), Buffer.from(adminScreenshot.data, 'base64'));
-    await command('Runtime.evaluate', { expression: "document.querySelector('.book-delivery').scrollIntoView({block:'start'}); window.scrollBy(0,-100);" }, sessionId);
-    const deliveryScreenshot = await command('Page.captureScreenshot', { format: 'png' }, sessionId);
-    writeFileSync(join(outputDirectory, width + '-delivery.png'), Buffer.from(deliveryScreenshot.data, 'base64'));
     const longAdminResult = await command('Runtime.evaluate', { expression: `(() => {
       document.querySelector('.admin-book-workspace h1').textContent = 'Воспоминания нашей семьи '.repeat(12);
       document.querySelector('.book-summary-people dd').textContent = 'ДлинноеИмяАвтора'.repeat(15);
-      document.querySelector('.admin-chapter h3').textContent = 'Очень длинное название главы '.repeat(15);
       if(document.documentElement.scrollWidth > innerWidth)throw new Error('Long admin text overflows');
       return {passed:true};
     })()`, returnByValue: true }, sessionId);

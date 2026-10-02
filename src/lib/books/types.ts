@@ -70,6 +70,7 @@ export type BookQuestion = {
   id: string;
   catalogId?: string | null;
   prompt: string;
+  promptEditedByOwner: boolean;
   position: number;
   answer: string;
   answerFormat: AnswerFormat;
@@ -87,7 +88,6 @@ export type AnswerFormat = {
 export type BookPageBackground = CoverColorKey;
 
 export type BookPhotoTextSize = 10 | 12 | 14 | 16 | 20;
-export type BookPhotoTextPlacement = "overlay" | "below";
 export type BookPhotoTextPosition = "top" | "middle" | "bottom";
 export type BookPhotoTextTone = "auto" | "light" | "dark";
 
@@ -95,7 +95,6 @@ export type BookPhotoText = {
   enabled: boolean;
   content: string;
   size: BookPhotoTextSize;
-  placement: BookPhotoTextPlacement;
   position: BookPhotoTextPosition;
   tone: BookPhotoTextTone;
   darkening: number;
@@ -106,11 +105,24 @@ export const DEFAULT_BOOK_PHOTO_TEXT: BookPhotoText = {
   enabled: false,
   content: "",
   size: 12,
-  placement: "overlay",
   position: "bottom",
   tone: "auto",
   darkening: 0,
   textShadow: 40,
+};
+
+export type BookPhotoLayout = "single" | "two_columns" | "two_rows" | "four_grid";
+
+export type BookCollageImage = {
+  id: string;
+  slot: number;
+  storagePath: string;
+  signedUrl: string;
+  mimeType: string;
+  sizeBytes: number;
+  cropX: number;
+  cropY: number;
+  cropScale: number;
 };
 
 export type BookPageImage = {
@@ -129,6 +141,8 @@ export type BookPageImage = {
   cropX: number;
   cropY: number;
   cropScale: number;
+  collageLayout: BookPhotoLayout;
+  collageImages: BookCollageImage[];
   position: number;
 };
 

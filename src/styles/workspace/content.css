@@ -5,6 +5,7 @@
 .dashboard-shell .overview-hero h2 { max-width: 550px; font-size: clamp(25px, 2.6vw, 34px); line-height: 1.28; }
 .dashboard-shell .overview-hero p:not(.eyebrow) { max-width: 500px; line-height: 1.8; }
 .dashboard-shell .overview-hero .content-primary-button, .dashboard-shell .admin-quick-card .content-primary-button { color: var(--primary-ink); background: var(--primary); }
+.dashboard-shell .overview-hero .content-primary-button { border-radius: var(--workspace-small-radius); }
 .dashboard-shell .overview-stat { min-height: 290px; padding: 28px; border-radius: var(--workspace-radius); }
 .dashboard-shell .overview-stat > span { background: transparent; width: auto; justify-content: start; color: var(--accent); }
 .dashboard-shell .overview-stat strong { font-family: var(--font-manrope), sans-serif; font-weight: 650; font-size: 56px; letter-spacing: -.06em; }
