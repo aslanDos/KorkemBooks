@@ -32,7 +32,7 @@
 .preview-text-page--text.preview-text-page--dense p { font-size:calc(var(--text-page-size, 18px) * .67); line-height:1.48; }
 .preview-text-page--quote { text-align:center; }
 .preview-text-page--quote .preview-text-page__content { justify-items:center; }
-.preview-text-page--quote p { max-width:300px; font-size:var(--text-page-size, 24px); line-height:1.42; }
+.preview-text-page--quote p { width:100%; font-size:var(--text-page-size, 24px); line-height:1.42; }
 .preview-text-page--quote.preview-text-page--compact p { font-size:calc(var(--text-page-size, 24px) * .8); }
 .preview-text-page--quote.preview-text-page--dense p { font-size:calc(var(--text-page-size, 24px) * .64); }
 .preview-text-page__mark { height:58px; margin-bottom:12px; opacity:.2; font-family:var(--font-cormorant), serif; font-size:96px; line-height:.8; }
