@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Bold, Italic, Redo2, Underline, Undo2 } from "lucide-react";
 import type { AnswerFormat, AnswerMarkType } from "@/lib/books/types";
 
 export const EMPTY_ANSWER_FORMAT: AnswerFormat = { version: 1, marks: [] };
 
+type EditorSelection = {
+  anchorPath: number[];
+  anchorOffset: number;
+  focusPath: number[];
+  focusOffset: number;
+};
+
 export function RichAnswerEditor({ value, format, readOnly = false, onChange }: { value: string; format: AnswerFormat; readOnly?: boolean; onChange: (value: string, format: AnswerFormat) => void }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialContentRef = useRef({ value, format });
+  const selectionRef = useRef<EditorSelection | null>(null);
+  const composingRef = useRef(false);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -16,9 +25,17 @@ export function RichAnswerEditor({ value, format, readOnly = false, onChange }: 
     editor.innerHTML = answerToHtml(initialContentRef.current.value, initialContentRef.current.format);
   }, []); // The editor is keyed by question, so initial content is applied once per answer.
 
+  useLayoutEffect(() => {
+    const editor = editorRef.current;
+    const saved = selectionRef.current;
+    if (!editor || !saved || document.activeElement !== editor) return;
+    restoreEditorSelection(editor, saved);
+  });
+
   const emitChange = () => {
     const editor = editorRef.current;
-    if (!editor) return;
+    if (!editor || composingRef.current) return;
+    selectionRef.current = captureEditorSelection(editor);
     const next = serializeEditor(editor);
     onChange(next.text, next.format);
   };
@@ -50,6 +67,8 @@ export function RichAnswerEditor({ value, format, readOnly = false, onChange }: 
       suppressContentEditableWarning
       onInput={emitChange}
       onBlur={emitChange}
+      onCompositionStart={() => { composingRef.current = true; }}
+      onCompositionEnd={() => { composingRef.current = false; emitChange(); }}
       onPaste={(event) => {
         if (readOnly) return;
         event.preventDefault();
@@ -57,6 +76,55 @@ export function RichAnswerEditor({ value, format, readOnly = false, onChange }: 
       }}
     />
   </div>;
+}
+
+function captureEditorSelection(root: HTMLElement): EditorSelection | null {
+  const selection = window.getSelection();
+  if (!selection?.anchorNode || !selection.focusNode || !root.contains(selection.anchorNode) || !root.contains(selection.focusNode)) return null;
+  const anchorPath = getNodePath(root, selection.anchorNode);
+  const focusPath = getNodePath(root, selection.focusNode);
+  if (!anchorPath || !focusPath) return null;
+  return { anchorPath, anchorOffset: selection.anchorOffset, focusPath, focusOffset: selection.focusOffset };
+}
+
+function restoreEditorSelection(root: HTMLElement, saved: EditorSelection) {
+  const anchor = getNodeAtPath(root, saved.anchorPath);
+  const focus = getNodeAtPath(root, saved.focusPath);
+  if (!anchor || !focus) return;
+  const selection = window.getSelection();
+  if (!selection) return;
+  try {
+    selection.setBaseAndExtent(
+      anchor,
+      Math.min(saved.anchorOffset, getMaximumOffset(anchor)),
+      focus,
+      Math.min(saved.focusOffset, getMaximumOffset(focus)),
+    );
+  } catch {
+    // The browser may replace contentEditable nodes while normalizing pasted HTML.
+  }
+}
+
+function getNodePath(root: Node, node: Node) {
+  const path: number[] = [];
+  let current: Node | null = node;
+  while (current && current !== root) {
+    const parent: Node | null = current.parentNode;
+    if (!parent) return null;
+    path.unshift(Array.prototype.indexOf.call(parent.childNodes, current));
+    current = parent;
+  }
+  return current === root ? path : null;
+}
+
+function getNodeAtPath(root: Node, path: number[]) {
+  let current: Node | undefined = root;
+  for (const index of path) current = current?.childNodes[index];
+  return current;
+}
+
+function getMaximumOffset(node: Node) {
+  return node.nodeType === Node.TEXT_NODE ? (node.textContent?.length ?? 0) : node.childNodes.length;
 }
 
 function ToolbarButton({ label, disabled, onRun, children }: { label: string; disabled: boolean; onRun: () => void; children: React.ReactNode }) {
