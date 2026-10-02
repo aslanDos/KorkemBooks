@@ -19,7 +19,7 @@ const root = resolve(import.meta.dirname, '..');
 const { getBookPrintLayout, formatPrintPageRanges } = loadTS(resolve(root, 'src/lib/books/print-layout.ts'));
 const { getBookPageProgress } = loadTS(resolve(root, 'src/lib/books/progress.ts'));
 const { paginateBookAnswer } = loadTS(resolve(root, 'src/lib/books/pagination.ts'));
-const question = (overrides = {}) => ({ id: 'q', prompt: 'Вопрос', answer: '', answerFormat: { version: 1, marks: [] }, images: [], blankPages: [], ...overrides });
+const question = (overrides = {}) => ({ id: 'q', prompt: 'Вопрос', answer: '', answerFormat: { version: 1, marks: [] }, images: [], blankPages: [], textPages: [], ...overrides });
 const book = (questions = [], overrides = {}) => ({ chapters: [{ id: 'c', title: 'Глава', questions }], questionTextSize: 12, answerTextSize: 16, ...overrides });
 function checkPartition(layout) {
   assert.equal(layout.colorPages.length + layout.monochromePages.length, layout.totalPages);
@@ -50,6 +50,18 @@ test('attachments retain their exact before/after order without creating an empt
   assert.deepEqual(layout.storyPages.map(page => page.key), ['chapter-c', 'photo-only-photo', 'blank-before', 'question-mixed', 'photo-after', 'blank-last']);
   assert.deepEqual(layout.monochromePages, [7]);
   assert.deepEqual(layout.colorPages, [1, 2, 3, 4, 5, 6, 8, 9]);
+  checkPartition(layout);
+});
+test('text and quote pages keep their ordered positions and print in color', () => {
+  const layout = getBookPrintLayout(book([question({
+    textPages: [
+      { id: 'quote', style: 'quote', content: 'Важная мысль', attribution: 'Автор', fontSize: 28, hideFooter: true, placement: 'before', position: 1 },
+      { id: 'text', style: 'text', content: 'Отдельная история', attribution: '', fontSize: 18, hideFooter: false, placement: 'after', position: 1 },
+    ],
+  })]));
+  assert.deepEqual(layout.storyPages.map(page => page.key), ['chapter-c', 'text-quote', 'text-text']);
+  assert.deepEqual(layout.monochromePages, []);
+  assert.deepEqual(layout.colorPages, [1, 2, 3, 4, 5, 6]);
   checkPartition(layout);
 });
 test('classification is a printing policy, not inferred from background color', () => {

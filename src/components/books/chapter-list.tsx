@@ -15,7 +15,7 @@ export function ChapterList({ bookId, chapters, questionNumbers, answeredOnly = 
             <span className="chapter-card__identity"><b aria-label={`Отвечено вопросов: ${answeredCount}`}>{answeredCount}</b><span><small>Глава {index + 1}</small><strong>{chapter.title}</strong></span></span>
             <span className="chapter-card__actions">{!readOnly && <ChapterControls bookId={bookId} chapterId={chapter.id} title={chapter.title} />}<span>{chapter.questions.length} вопросов</span><ChevronDown className="chapter-card__chevron" size={18} /></span>
           </summary>
-          <ChapterQuestions key={chapter.questions.map((question) => `${question.id}:${question.position}:${question.prompt}:${question.images.length}:${question.blankPages.length}`).join("|")} bookId={bookId} questions={chapter.questions} questionOffset={questionOffset} questionNumbers={questionNumbers} answeredOnly={answeredOnly} readOnly={readOnly} />
+          <ChapterQuestions key={chapter.questions.map((question) => `${question.id}:${question.position}:${question.prompt}:${question.images.length}:${question.blankPages.length}:${question.textPages.length}`).join("|")} bookId={bookId} questions={chapter.questions} questionOffset={questionOffset} questionNumbers={questionNumbers} answeredOnly={answeredOnly} readOnly={readOnly} />
         </details>
       );})}
     </section>

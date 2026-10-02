@@ -77,6 +77,18 @@
 .book-blank-page-settings__preview.preview-page-background--colored svg { color:inherit; }
 .book-blank-page-settings__preview span { font-size:12px; }
 .book-blank-page-settings > p { margin:0; color:var(--muted); font-size:12px; line-height:1.6; }
+.book-text-page-settings { display:grid; gap:18px; }
+.book-text-page-settings__style { min-width:0; margin:0; padding:0; border:0; }
+.book-text-page-settings__style legend, .book-text-page-settings label > span { display:block; margin-bottom:8px; font-size:12px; font-weight:650; }
+.book-text-page-settings label > span small { color:var(--muted); font-size:9px; font-weight:500; }
+.book-text-page-settings__modes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.book-inline-editor .book-text-page-settings__modes button { min-height:40px; border-radius:999px; }
+.book-inline-editor .book-text-page-settings__modes button.is-selected { color:var(--primary-ink); background:var(--primary); border-color:var(--primary); }
+.book-text-page-settings label { position:relative; display:grid; min-width:0; }
+.book-inline-editor .book-text-page-settings textarea, .book-inline-editor .book-text-page-settings input { width:100%; padding:12px 13px; color:var(--ink); background:var(--surface-raised); border:1px solid var(--line); border-radius:10px; font:inherit; font-size:12px; line-height:1.6; }
+.book-inline-editor .book-text-page-settings textarea { min-height:220px; padding-bottom:28px; resize:vertical; }
+.book-inline-editor .book-text-page-settings input { min-height:44px; }
+.book-text-page-settings label > small { position:absolute; right:10px; bottom:7px; color:var(--muted); font-size:9px; }
 .book-inline-editor [aria-busy="true"] button:disabled { opacity:1; }
 .preview-blank-page { position:absolute; inset:0; background:#fff; transition:background-color 180ms ease; }
 .book-spread-leaf .preview-page--photo:has(.preview-photo-page--contain.preview-page-background--colored) .preview-page__footer { color:#fffaf3; }
@@ -85,7 +97,7 @@
  .book-photo-rounding-settings, .book-photo-rounding-settings__apply-all { animation:none; }
  .book-photo-display-picker button, .book-photo-layout-settings button, .book-inline-editor .book-setting-toggle, .book-inline-editor .book-setting-toggle > span, .book-page-background-grid button, .book-footer-toggle, .book-footer-toggle > span, .preview-photo-page, .preview-photo-page--contain .preview-photo-page__image, .preview-blank-page { transition:none; }
 }
-.book-page-type-dialog { width:min(calc(100% - 32px), 660px); max-height:calc(100dvh - 32px); padding:0; overflow:auto; color:var(--ink); background:transparent; border:0; }
+.book-page-type-dialog { width:min(calc(100% - 32px), 860px); max-height:calc(100dvh - 32px); padding:0; overflow:auto; color:var(--ink); background:transparent; border:0; }
 .book-page-type-dialog::backdrop { background:rgb(23 23 19 / 35%); backdrop-filter:blur(3px); }
 .book-page-type-dialog__panel { padding:28px; background:var(--surface); border:1px solid var(--line); border-radius:20px; box-shadow:0 24px 60px rgb(0 0 0 / 15%); }
 .book-page-type-dialog__panel > header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }

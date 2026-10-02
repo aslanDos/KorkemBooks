@@ -76,6 +76,7 @@ export type BookQuestion = {
   answerFormat: AnswerFormat;
   images: BookPageImage[];
   blankPages: BookBlankPage[];
+  textPages: BookTextPage[];
 };
 
 export type AnswerMarkType = "bold" | "italic" | "underline";
@@ -148,6 +149,21 @@ export type BookPageImage = {
 
 export type BookBlankPage = {
   id: string;
+  pageBackground: BookPageBackground;
+  placement: "before" | "after";
+  position: number;
+};
+
+export const BOOK_TEXT_PAGE_FONT_SIZES = [14, 16, 18, 20, 22, 24, 28, 32] as const;
+export type BookTextPageFontSize = (typeof BOOK_TEXT_PAGE_FONT_SIZES)[number];
+
+export type BookTextPage = {
+  id: string;
+  content: string;
+  attribution: string;
+  style: "text" | "quote";
+  fontSize: BookTextPageFontSize;
+  hideFooter: boolean;
   pageBackground: BookPageBackground;
   placement: "before" | "after";
   position: number;

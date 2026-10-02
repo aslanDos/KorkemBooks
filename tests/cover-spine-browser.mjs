@@ -51,6 +51,7 @@ const printFixtureBook = {
     id: 'print-question', prompt: 'Что вы хотите сохранить?', answer: 'Воспоминания о важных моментах.', answerFormat: { version: 1, marks: [] },
     images: ['full', 'contain'].map((displayMode, index) => ({ id: 'print-photo-' + index, signedUrl: '/covers/turquoise-almond.jpg', displayMode, placement: 'after', position: index + 1, cropX: 2, cropY: -3, cropScale: 1.1, roundedCorners: true, hideFooter: false, collageLayout: index ? 'four_grid' : 'single', collageImages: index ? [2, 3, 4].map(slot => ({ id: 'collage-' + slot, slot, signedUrl: '/covers/turquoise-almond.jpg', cropX: slot, cropY: -slot, cropScale: 1.05 })) : [], photoText: { ...photoSettings, placement: displayMode === 'full' ? 'overlay' : 'below' } })),
     blankPages: [{ id: 'print-blank', pageBackground: 'terracotta', placement: 'after', position: 3 }],
+    textPages: [{ id: 'print-quote', content: 'Счастье становится больше, когда им делишься.', attribution: 'KorkemBooks', style: 'quote', fontSize: 28, hideFooter: true, pageBackground: 'terracotta', placement: 'after', position: 4 }],
   }] }],
 };
 const PrintPage = loadTS(join(root, 'src/app/admin/books/[bookId]/print/page.tsx')).default;
@@ -59,7 +60,7 @@ const adminFixtureBook = {
   progress: 5, productionStatus: 'writing', updated_at: '2026-09-15T10:00:00Z',
   cover: { style: 'solid', colorKey: 'burgundy', frameStyle: 'ver2', showFrame: true },
   chapters: [0, 1].map(index => ({ id: 'admin-chapter-' + index, title: index ? 'Наши воспоминания' : 'С чего всё началось', questions: [0, 1].map(question => ({
-    id: 'admin-question-' + index + '-' + question, prompt: question ? 'Что вы лучше всего помните о дне вашей первой встречи?' : 'Каким было ваше первое впечатление о ней?', answer: question ? 'Очень тёплые воспоминания.' : '', answerFormat: { version: 1, marks: [] }, images: [], blankPages: [],
+    id: 'admin-question-' + index + '-' + question, prompt: question ? 'Что вы лучше всего помните о дне вашей первой встречи?' : 'Каким было ваше первое впечатление о ней?', answer: question ? 'Очень тёплые воспоминания.' : '', answerFormat: { version: 1, marks: [] }, images: [], blankPages: [], textPages: [],
   })) })),
 };
 const AdminBookPage = loadTS(join(root, 'src/app/admin/books/[bookId]/page.tsx')).default;
@@ -445,12 +446,15 @@ try {
         const near = (actual, expected) => Math.abs(actual - expected) < 1;
         const check = (value, message) => {if(!value)throw new Error(message);};
         const sheets = document.querySelectorAll('.print-book-sheet');
-        check(sheets.length === 8, 'unexpected content page count: '+sheets.length);
-        check(document.querySelector('[data-print-count=color]').textContent==='7','print color count wrong');
+        check(sheets.length === 9, 'unexpected content page count: '+sheets.length);
+        check(document.querySelector('[data-print-count=color]').textContent==='8','print color count wrong');
         check(document.querySelector('[data-print-count=monochrome]').textContent==='1','print monochrome count wrong');
         check(document.querySelector('[data-print-count=total]').textContent===String(sheets.length),'print total differs from actual pages');
-        check(document.querySelector('[data-print-ranges=color]').textContent==='1-4, 6-8','color print ranges wrong');
+        check(document.querySelector('[data-print-ranges=color]').textContent==='1-4, 6-9','color print ranges wrong');
         check(document.querySelector('[data-print-ranges=monochrome]').textContent==='5','monochrome print ranges wrong');
+        const quotePage=document.querySelector('.preview-text-page--quote');
+        check(quotePage?.style.getPropertyValue('--text-page-size')==='28px','quote font size was not preserved');
+        check(!quotePage.closest('.print-book-sheet').querySelector('.preview-page__footer'),'hidden text-page footer was rendered');
         for(const [index,sheet] of [...sheets].entries()){
           check(Number(sheet.dataset.pageNumber)===index+1,'PDF sheet numbers shifted');
           check(sheet.dataset.printMode===(sheet.querySelector('.preview-page__content')?'monochrome':'color'),'sheet mode differs from statistics');
@@ -464,7 +468,7 @@ try {
           check(near(trim.width,mm(148))&&near(trim.height,mm(210)), 'trim layout changed size');
           for(const edge of ['left','top'])check(near(trim[edge]-outer[edge],mm(2)), 'bleed offset wrong');
           for(const edge of ['right','bottom'])check(near(outer[edge]-trim[edge],mm(2)), 'bleed size wrong');
-          const background=sheet.querySelector('.preview-chapter-page,.preview-photo-page,.preview-blank-page');
+          const background=sheet.querySelector('.preview-chapter-page,.preview-photo-page,.preview-blank-page,.preview-text-page');
           if(background)check(getComputedStyle(sheet).backgroundColor===getComputedStyle(background).backgroundColor,'background not continued into bleed');
           const full=sheet.querySelector('.preview-photo-page--full .preview-photo-page__frame');
           if(full){const imageBounds=full.getBoundingClientRect();for(const edge of ['left','top','right','bottom'])check(near(imageBounds[edge],outer[edge]),'full photo does not fill bleed');check(full.querySelector('img').style.transform.includes('scale(1.1)'), 'photo crop lost');}
@@ -498,7 +502,7 @@ try {
     const pdf = await command('Page.printToPDF', { preferCSSPageSize: true, printBackground: true }, sessionId);
     const pdfBuffer = Buffer.from(pdf.data, 'base64');
     const pdfText = pdfBuffer.toString('latin1');
-    assert.equal((pdfText.match(/\/Type\s*\/Page\b/g) ?? []).length, 8, 'extra blank PDF sheet');
+    assert.equal((pdfText.match(/\/Type\s*\/Page\b/g) ?? []).length, 9, 'extra blank PDF sheet');
     const boxes = [...pdfText.matchAll(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/g)];
     assert.ok(boxes.length > 0, 'PDF page dimensions missing');
     // Chromium rounds PDF paper dimensions to printer pixels (up to ~0.18 mm).

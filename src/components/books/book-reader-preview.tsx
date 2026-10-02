@@ -8,8 +8,9 @@ import { BookPhotoText } from "@/components/books/book-photo-text";
 import { BookTitlePage } from "@/components/books/book-title-page";
 import { BookChapterPage } from "@/components/books/book-chapter-page";
 import { BookPrefacePage } from "@/components/books/book-preface-page";
+import { BookTextPage } from "@/components/books/book-text-page";
 import { paginateBookAnswer } from "@/lib/books/pagination";
-import type { AnswerFormat, BookBlankPage, BookChapter, BookPageImage, BookQuestion, BookWithContent } from "@/lib/books/types";
+import type { AnswerFormat, BookBlankPage, BookChapter, BookPageImage, BookQuestion, BookTextPage as BookTextPageData, BookWithContent } from "@/lib/books/types";
 import { getPageBackgroundColor } from "@/lib/books/cover-palettes";
 import { sliceAnswerFormat } from "@/lib/books/answer-format";
 import { getBookFooterLabel } from "@/lib/books/page-footer";
@@ -24,7 +25,8 @@ type ReaderPage =
   | { kind: "chapter"; key: string; pageNumber: number; chapter: BookChapter; chapterIndex: number }
   | { kind: "question"; key: string; pageNumber: number; chapter: BookChapter; question: BookQuestion; answerPart: string; answerPageFormat: AnswerFormat; answerPageIndex: number }
   | { kind: "photo"; key: string; pageNumber: number; chapter: BookChapter; question: BookQuestion; image: BookPageImage }
-  | { kind: "blank"; key: string; pageNumber: number; chapter: BookChapter; question: BookQuestion; blankPage: BookBlankPage };
+  | { kind: "blank"; key: string; pageNumber: number; chapter: BookChapter; question: BookQuestion; blankPage: BookBlankPage }
+  | { kind: "text"; key: string; pageNumber: number; chapter: BookChapter; question: BookQuestion; textPage: BookTextPageData };
 
 export function BookReaderPreview({ book, initialQuestionId, initialPageKey }: { book: BookWithContent; initialQuestionId?: string; initialPageKey?: string }) {
   const titlePageTitleSize = book.titlePageTitleSize;
@@ -32,7 +34,7 @@ export function BookReaderPreview({ book, initialQuestionId, initialPageKey }: {
   const answerTextSize = book.answerTextSize;
   const pages = useMemo<ReaderPage[]>(() => {
     const visibleChapters = book.chapters
-      .map((chapter) => ({ ...chapter, questions: chapter.questions.filter((question) => question.answer.trim() || question.images.length || question.blankPages.length || initialPageKey === `question-${question.id}`) }))
+      .map((chapter) => ({ ...chapter, questions: chapter.questions.filter((question) => question.answer.trim() || question.images.length || question.blankPages.length || question.textPages.length || initialPageKey === `question-${question.id}`) }))
       .filter((chapter) => chapter.questions.length > 0 || initialPageKey === `chapter-${chapter.id}`);
     const storyPages = visibleChapters.flatMap((chapter, chapterIndex) => [
       { kind: "chapter" as const, key: `chapter-${chapter.id}`, chapter, chapterIndex },
@@ -47,6 +49,7 @@ export function BookReaderPreview({ book, initialQuestionId, initialPageKey }: {
         const attachmentPages = [
           ...question.images.map((image) => ({ kind: "photo" as const, key: `photo-${image.id}`, chapter, question, image, placement: image.placement, position: image.position })),
           ...question.blankPages.map((blankPage) => ({ kind: "blank" as const, key: `blank-${blankPage.id}`, chapter, question, blankPage, placement: blankPage.placement, position: blankPage.position })),
+          ...question.textPages.map((textPage) => ({ kind: "text" as const, key: `text-${textPage.id}`, chapter, question, textPage, placement: textPage.placement, position: textPage.position })),
         ].sort((a, b) => a.position - b.position);
         return [...attachmentPages.filter((page) => page.placement === "before"), ...questionPages, ...attachmentPages.filter((page) => page.placement === "after")];
       }),
@@ -149,9 +152,9 @@ export function BookReaderPreview({ book, initialQuestionId, initialPageKey }: {
 
 function ReaderLeaf({ page, book, titlePageTitleSize, chapterPageStyle, chapterTitleSize, questionTextSize, answerTextSize, showFooterAuthor, showFooterTitle, roundPhotos, pageBackground }: { page: ReaderPage; book: BookWithContent; titlePageTitleSize: BookWithContent["titlePageTitleSize"]; chapterPageStyle: BookWithContent["chapterPageStyle"]; chapterTitleSize: BookWithContent["chapterTitleSize"]; questionTextSize: BookWithContent["questionTextSize"]; answerTextSize: BookWithContent["answerTextSize"]; showFooterAuthor: boolean; showFooterTitle: boolean; roundPhotos: boolean; pageBackground: BookWithContent["pageBackground"] }) {
   return <div className="book-spread-leaf">
-    <div data-no-translate className={`preview-page preview-page--font-${book.pageFont} preview-page--question-size-${questionTextSize} preview-page--answer-size-${answerTextSize}${page.kind === "photo" ? " preview-page--photo" : ""}${page.kind === "title" ? " preview-page--title" : ""}${page.kind === "chapter" ? " preview-page--chapter" : ""}`}>
+    <div data-no-translate className={`preview-page preview-page--font-${book.pageFont} preview-page--question-size-${questionTextSize} preview-page--answer-size-${answerTextSize}${page.kind === "photo" ? " preview-page--photo" : ""}${page.kind === "text" ? " preview-page--text" : ""}${page.kind === "title" ? " preview-page--title" : ""}${page.kind === "chapter" ? " preview-page--chapter" : ""}`}>
       <ReaderPageContent page={page} book={book} titlePageTitleSize={titlePageTitleSize} chapterPageStyle={chapterPageStyle} chapterTitleSize={chapterTitleSize} roundPhotos={roundPhotos} pageBackground={pageBackground} />
-      {page.kind !== "opening-blank" && page.kind !== "title" && page.kind !== "preface" && page.kind !== "contents" && page.kind !== "chapter" && page.kind !== "blank" && !(page.kind === "photo" && page.image.hideFooter) && <footer className="preview-page__footer"><p className="preview-page__chapter">{getBookFooterLabel({ pageNumber: page.pageNumber, authorName: book.author_name, bookTitle: book.title, showAuthor: showFooterAuthor, showTitle: showFooterTitle })}</p><span className="preview-page__number">{page.pageNumber}</span></footer>}
+      {page.kind !== "opening-blank" && page.kind !== "title" && page.kind !== "preface" && page.kind !== "contents" && page.kind !== "chapter" && page.kind !== "blank" && !(page.kind === "photo" && page.image.hideFooter) && !(page.kind === "text" && page.textPage.hideFooter) && <footer className="preview-page__footer"><p className="preview-page__chapter">{getBookFooterLabel({ pageNumber: page.pageNumber, authorName: book.author_name, bookTitle: book.title, showAuthor: showFooterAuthor, showTitle: showFooterTitle })}</p><span className="preview-page__number">{page.pageNumber}</span></footer>}
     </div>
   </div>;
 }
@@ -165,5 +168,6 @@ function ReaderPageContent({ page, book, titlePageTitleSize, chapterPageStyle, c
   if (page.kind === "chapter") return <BookChapterPage chapterNumber={page.chapterIndex + 1} title={page.chapter.title} style={chapterPageStyle} titleSize={chapterTitleSize} background={pageBackground} language={book.language} />;
   if (page.kind === "photo") return <div className={`preview-photo-page preview-photo-page--${page.image.displayMode} preview-page-background--colored${roundPhotos ? " preview-photo-page--rounded" : ""}`} style={{ background: getPageBackgroundColor(pageBackground) }}><BookPagePhoto image={{ ...page.image, roundedCorners: roundPhotos }} pageNumber={page.pageNumber} /><BookPhotoText settings={page.image.photoText} /></div>;
   if (page.kind === "blank") return <div className="preview-blank-page preview-page-background--colored" style={{ background: getPageBackgroundColor(pageBackground) }} aria-label={`Пустая страница ${page.pageNumber}`} />;
+  if (page.kind === "text") return <BookTextPage page={page.textPage} background={pageBackground} />;
   return <div className="preview-page__content"><div className="preview-page__body">{page.answerPageIndex === 0 && <p className="preview-page__question">{page.question.prompt}</p>}{page.answerPart.trim() && <p className="preview-page__answer"><RichAnswerText text={page.answerPart} format={page.answerPageFormat} /></p>}</div></div>;
 }

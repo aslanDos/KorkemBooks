@@ -9,7 +9,7 @@ export function getBookPrintLayout(book: Pick<BookWithContent, "chapters" | "que
     : undefined;
   const storyPages = book.chapters.flatMap((chapter, chapterIndex) => [
     { kind: "chapter" as const, key: `chapter-${chapter.id}`, chapter, chapterIndex },
-    ...chapter.questions.filter(question => question.answer.trim() || question.images.length || question.blankPages.length).flatMap(question => {
+    ...chapter.questions.filter(question => question.answer.trim() || question.images.length || question.blankPages.length || question.textPages?.length).flatMap(question => {
       let answerOffset = 0;
       const questionPages = (question.answer.trim() ? paginateBookAnswer(question.prompt, question.answer, { question: book.questionTextSize, answer: book.answerTextSize }, pageArea) : []).map((answerPart, answerPageIndex) => {
         const answerPageFormat = sliceAnswerFormat(question.answerFormat, answerOffset, answerOffset + answerPart.length);
@@ -20,6 +20,7 @@ export function getBookPrintLayout(book: Pick<BookWithContent, "chapters" | "que
       const attachmentPages = [
         ...question.images.map(image => ({ kind: "photo" as const, key: `photo-${image.id}`, chapter, question, image, placement: image.placement, position: image.position })),
         ...question.blankPages.map(blankPage => ({ kind: "blank" as const, key: `blank-${blankPage.id}`, chapter, question, blankPage, placement: blankPage.placement, position: blankPage.position })),
+        ...(question.textPages ?? []).map(textPage => ({ kind: "text" as const, key: `text-${textPage.id}`, chapter, question, textPage, placement: textPage.placement, position: textPage.position })),
       ].sort((a, b) => a.position - b.position);
       return [...attachmentPages.filter(page => page.placement === "before"), ...questionPages, ...attachmentPages.filter(page => page.placement === "after")];
     }),

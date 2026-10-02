@@ -33,7 +33,8 @@ function fixture({ missing = false } = {}) {
     book_question_pages: [
       { id: 'page1', question_id: 'question', image_id: 'image1', kind: 'photo', placement: 'after', position: 1, background_style: 'burgundy' },
       { id: 'blank1', question_id: 'question', image_id: null, kind: 'blank', placement: 'after', position: 2, background_style: 'olive' },
-      { id: 'page2', question_id: 'question', image_id: 'image2', kind: 'photo', placement: 'after', position: 3 },
+      { id: 'text1', question_id: 'question', image_id: null, kind: 'text', placement: 'after', position: 3, background_style: 'navy', text_content: 'A meaningful quote', text_attribution: 'Author', text_style: 'quote', text_size: 28, hide_footer: true },
+      { id: 'page2', question_id: 'question', image_id: 'image2', kind: 'photo', placement: 'after', position: 4 },
     ],
     book_covers: { template_id: 'template', cover_templates: { id: 'template' } },
   };
@@ -88,12 +89,13 @@ test('editor preserves answers and ordered images with duplicate storage paths',
   const book = await load('book');
   const question = book.chapters[0].questions[0];
   assert.equal(question.answer, 'My home');
-  assert.deepEqual(question.images.map(image => [image.id, image.pageId, image.position, image.signedUrl, image.pageBackground, image.roundedCorners]), [['image1', 'page1', 1, 'signed:photo', 'burgundy', true], ['image2', 'page2', 3, 'signed:photo', 'burgundy', false]]);
+  assert.deepEqual(question.images.map(image => [image.id, image.pageId, image.position, image.signedUrl, image.pageBackground, image.roundedCorners]), [['image1', 'page1', 1, 'signed:photo', 'burgundy', true], ['image2', 'page2', 4, 'signed:photo', 'burgundy', false]]);
   assert.equal(book.roundPhotos, true);
   assert.equal(book.hidePhotoFooters, true);
   assert.equal(question.images[0].collageLayout, 'two_columns');
   assert.deepEqual(question.images[0].collageImages.map(image => [image.id, image.slot, image.signedUrl, image.cropX, image.cropY, image.cropScale]), [['collage2', 2, 'signed:collage-photo', 4, -2, 1.2]]);
   assert.deepEqual(question.blankPages, [{ id: 'blank1', pageBackground: 'olive', placement: 'after', position: 2 }]);
+  assert.deepEqual(question.textPages, [{ id: 'text1', content: 'A meaningful quote', attribution: 'Author', style: 'quote', fontSize: 28, hideFooter: true, pageBackground: 'navy', placement: 'after', position: 3 }]);
   assert.deepEqual(calls.filter(Array.isArray), [['photo', 'collage-photo']]);
 });
 
@@ -135,6 +137,14 @@ test('photo collage migration keeps one printable page with up to four image slo
   assert.match(migration, /collage_layout text not null default 'single'/);
   assert.match(migration, /'two_columns', 'two_rows', 'four_grid'/);
   assert.match(migration, /jsonb_array_length\(collage_images\) <= 3/);
+});
+
+test('text page typography migration stores per-page size and footer visibility', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/202610030001_add_text_page_typography.sql', import.meta.url), 'utf8');
+  assert.match(migration, /text_size integer not null default 24/);
+  assert.match(migration, /hide_footer boolean not null default false/);
+  assert.match(migration, /text_size in \(14, 16, 18, 20, 22, 24, 28, 32\)/);
+  assert.match(migration, /case when target_text_style = 'text' then 18 else 24 end/);
 });
 
 test('question editing migration replaces the suggestion queue with direct owner edits', () => {

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { refreshBookPageProgress } from "@/lib/books/queries";
-import type { BookCollageImage, BookPhotoText } from "@/lib/books/types";
+import type { BookCollageImage, BookPhotoText, BookTextPage } from "@/lib/books/types";
 
 const uuid = z.string().uuid();
 const bookPageSchema = z.object({ bookId: uuid, pageId: uuid });
@@ -37,6 +37,45 @@ export async function appendBlankPageAction(input: { bookId: string; questionId:
   if (error || !data) return { error: "Не удалось добавить пустую страницу" };
   await refreshBookPageProgress(supabase, parsed.data.bookId);
   return { data: data as { id: string; placement: string; position: number; background_style: string } };
+}
+
+export async function appendTextPageAction(input: { bookId: string; questionId: string; placement: "before" | "after"; position: number; style: BookTextPage["style"] }) {
+  const parsed = z.object({ bookId: uuid, questionId: uuid, placement: z.enum(["before", "after"]), position: z.number().int().positive(), style: z.enum(["text", "quote"]) }).safeParse(input);
+  if (!parsed.success) return { error: "Некорректная текстовая страница" };
+  const supabase = await getClient();
+  if (!supabase) return { error: "Supabase не настроен" };
+  const { data, error } = await supabase.rpc("append_book_question_text", {
+    target_book_id: parsed.data.bookId,
+    target_question_id: parsed.data.questionId,
+    target_placement: parsed.data.placement,
+    target_position: parsed.data.position,
+    target_text_style: parsed.data.style,
+  }).single();
+  if (error || !data) return { error: "Не удалось добавить текстовую страницу" };
+  await refreshBookPageProgress(supabase, parsed.data.bookId);
+  return { data: data as { id: string; placement: string; position: number; background_style: string; text_content: string; text_attribution: string; text_style: string; text_size: number; hide_footer: boolean } };
+}
+
+export async function saveBookTextPageAction(input: { pageId: string; content: string; attribution: string; style: BookTextPage["style"]; fontSize: BookTextPage["fontSize"]; hideFooter: boolean }) {
+  const parsed = z.object({
+    pageId: uuid,
+    content: z.string().max(1200),
+    attribution: z.string().max(160),
+    style: z.enum(["text", "quote"]),
+    fontSize: z.union([z.literal(14), z.literal(16), z.literal(18), z.literal(20), z.literal(22), z.literal(24), z.literal(28), z.literal(32)]),
+    hideFooter: z.boolean(),
+  }).safeParse(input);
+  if (!parsed.success) return { error: "Текст страницы слишком длинный" };
+  const supabase = await getClient();
+  if (!supabase) return { error: "Supabase не настроен" };
+  const { data, error } = await supabase.from("book_question_pages").update({
+    text_content: parsed.data.content,
+    text_attribution: parsed.data.attribution,
+    text_style: parsed.data.style,
+    text_size: parsed.data.fontSize,
+    hide_footer: parsed.data.hideFooter,
+  }).eq("id", parsed.data.pageId).eq("kind", "text").select("id").maybeSingle();
+  return error || !data ? { error: "Не удалось сохранить текстовую страницу" } : { success: true };
 }
 
 export async function updatePhotoDisplayModeAction(input: { imageId: string; mode: "contain" | "full" }) {
@@ -106,6 +145,17 @@ export async function deleteBookQuestionBlankAction(input: { bookId: string; pag
   if (!supabase) return { error: "Supabase не настроен" };
   const { data, error } = await supabase.rpc("delete_book_question_blank", { target_page_id: parsed.data.pageId });
   if (error || !data) return { error: "Не удалось удалить пустую страницу" };
+  await refreshBookPageProgress(supabase, parsed.data.bookId);
+  return { success: true };
+}
+
+export async function deleteBookQuestionTextAction(input: { bookId: string; pageId: string }) {
+  const parsed = bookPageSchema.safeParse(input);
+  if (!parsed.success) return { error: "Некорректная текстовая страница" };
+  const supabase = await getClient();
+  if (!supabase) return { error: "Supabase не настроен" };
+  const { data, error } = await supabase.rpc("delete_book_question_text", { target_page_id: parsed.data.pageId });
+  if (error || !data) return { error: "Не удалось удалить текстовую страницу" };
   await refreshBookPageProgress(supabase, parsed.data.bookId);
   return { success: true };
 }

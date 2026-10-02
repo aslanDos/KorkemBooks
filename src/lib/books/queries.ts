@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
-import { DEFAULT_BOOK_PHOTO_TEXT, type BookAnswerTextSize, type BookBlankPage, type BookChapter, type BookChapterTitleSize, type BookCollageImage, type BookCover, type BookPageImage, type BookPhotoLayout, type BookPhotoText, type BookQuestion, type BookQuestionTextSize, type BookSummary, type BookTitlePageTitleSize, type BookType, type BookWithContent, type CoverTemplate } from "./types";
+import { BOOK_TEXT_PAGE_FONT_SIZES, DEFAULT_BOOK_PHOTO_TEXT, type BookAnswerTextSize, type BookBlankPage, type BookChapter, type BookChapterTitleSize, type BookCollageImage, type BookCover, type BookPageImage, type BookPhotoLayout, type BookPhotoText, type BookQuestion, type BookQuestionTextSize, type BookSummary, type BookTextPage, type BookTextPageFontSize, type BookTitlePageTitleSize, type BookType, type BookWithContent, type CoverTemplate } from "./types";
 import { normalizeCoverColor, normalizePageBackground } from "./cover-palettes";
 import { normalizeAnswerFormat } from "./answer-format";
 import { isBookLanguage } from "./language";
@@ -143,7 +143,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     .maybeSingle(),
     includeChapters ? supabase.from("answers").select("question_id, answer_text, answer_format").eq("book_id", bookId) : Promise.resolve({ data: [] }),
     includeAttachments ? supabase.from("book_page_images").select("id, question_id, storage_path, mime_type, size_bytes, display_mode, placement, crop_x, crop_y, crop_scale, rounded_corners, hide_footer, position, collage_layout, collage_images, book_photo_texts(enabled, content, text_size, position, tone, image_darkening, text_shadow)").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
-    includeAttachments ? supabase.from("book_question_pages").select("id, question_id, image_id, kind, placement, position, background_style").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
+    includeAttachments ? supabase.from("book_question_pages").select("id, question_id, image_id, kind, placement, position, background_style, text_content, text_attribution, text_style, text_size, hide_footer").eq("book_id", bookId).order("position") : Promise.resolve({ data: [] }),
     includeChapters ? supabase.from("questions").select("id, chapter_id, catalog_id, prompt, position").eq("book_id", bookId).is("deleted_at", null).order("position") : Promise.resolve({ data: [] }),
     // Kept separate so books still load while the owner-edit migration is being deployed.
     includeChapters ? supabase.from("questions").select("id, prompt_edited_by_owner").eq("book_id", bookId).is("deleted_at", null) : Promise.resolve({ data: [] }),
@@ -163,7 +163,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
   let questions: (BookQuestion & { chapter_id: string })[] = [];
 
   if (chapters.length > 0) {
-    const questionRows = (questionData ?? []) as (Omit<BookQuestion & { chapter_id: string }, "answer" | "images" | "blankPages" | "promptEditedByOwner"> & { catalog_id: string | null })[];
+    const questionRows = (questionData ?? []) as (Omit<BookQuestion & { chapter_id: string }, "answer" | "images" | "blankPages" | "textPages" | "promptEditedByOwner"> & { catalog_id: string | null })[];
     const ownerEditedQuestionIds = new Set((questionEditData ?? []).filter((question) => question.prompt_edited_by_owner).map((question) => question.id));
     const answersByQuestion = new Map((answerRows ?? []).map((answer) => [answer.question_id, answer.answer_text]));
     const formatsByQuestion = new Map((answerRows ?? []).map((answer) => [answer.question_id, normalizeAnswerFormat(answer.answer_format, answer.answer_text.length)]));
@@ -207,6 +207,23 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
       blankPagesByQuestion.set(page.question_id, current);
     }
     for (const current of blankPagesByQuestion.values()) current.sort((a, b) => a.position - b.position);
+    const textPagesByQuestion = new Map<string, BookTextPage[]>();
+    for (const page of (pageRows ?? []).filter((item) => item.kind === "text")) {
+      const current = textPagesByQuestion.get(page.question_id) ?? [];
+      current.push({
+        id: page.id,
+        content: page.text_content ?? "",
+        attribution: page.text_attribution ?? "",
+        style: page.text_style === "text" ? "text" : "quote",
+        fontSize: normalizeTextPageFontSize(page.text_size, page.text_style),
+        hideFooter: Boolean(page.hide_footer),
+        pageBackground: normalizePageBackground(page.background_style),
+        placement: page.placement === "before" ? "before" : "after",
+        position: page.position,
+      });
+      textPagesByQuestion.set(page.question_id, current);
+    }
+    for (const current of textPagesByQuestion.values()) current.sort((a, b) => a.position - b.position);
     questions = questionRows.map((question) => ({
       ...question,
       catalogId: question.catalog_id,
@@ -215,6 +232,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
       answerFormat: formatsByQuestion.get(question.id) ?? normalizeAnswerFormat(null),
       images: imagesByQuestion.get(question.id) ?? [],
       blankPages: blankPagesByQuestion.get(question.id) ?? [],
+      textPages: textPagesByQuestion.get(question.id) ?? [],
     }));
   }
 
@@ -289,6 +307,11 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
 
 function normalizePhotoLayout(value: unknown): BookPhotoLayout {
   return value === "two_columns" || value === "two_rows" || value === "four_grid" ? value : "single";
+}
+
+function normalizeTextPageFontSize(value: unknown, style: unknown): BookTextPageFontSize {
+  const size = Number(value) as BookTextPageFontSize;
+  return BOOK_TEXT_PAGE_FONT_SIZES.includes(size) ? size : style === "text" ? 18 : 24;
 }
 
 function normalizeCollageImages(value: unknown): BookCollageImage[] {

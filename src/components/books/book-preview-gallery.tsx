@@ -3,17 +3,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Crop, FilePlus2, FileText, Grid2X2, GripVertical, ImagePlus, List, Move, Plus, RotateCcw, Rows2, Settings2, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Crop, FilePlus2, FileText, Grid2X2, GripVertical, ImagePlus, List, Move, Plus, Quote, RotateCcw, Rows2, Settings2, Trash2, X } from "lucide-react";
 import { BookPagePhoto } from "@/components/books/book-page-photo";
 import { BookPhotoText } from "@/components/books/book-photo-text";
 import { BookTitlePage } from "@/components/books/book-title-page";
 import { BookChapterPage } from "@/components/books/book-chapter-page";
 import { BookPrefacePage } from "@/components/books/book-preface-page";
+import { BookTextPage } from "@/components/books/book-text-page";
 import { RichAnswerEditor, RichAnswerText } from "@/components/books/rich-answer-editor";
-import type { AnswerFormat, BookBlankPage, BookPageImage, BookPhotoLayout, BookPhotoText as BookPhotoTextSettings, BookWithContent } from "@/lib/books/types";
+import { BOOK_TEXT_PAGE_FONT_SIZES, type AnswerFormat, type BookBlankPage, type BookPageImage, type BookPhotoLayout, type BookPhotoText as BookPhotoTextSettings, type BookTextPage as BookTextPageData, type BookTextPageFontSize, type BookWithContent } from "@/lib/books/types";
 import { saveAnswersAction, saveReadingPositionAction } from "@/app/dashboard/books/write-actions";
 import { saveBookPhotoDefaultsAction } from "@/app/dashboard/books/preview-actions";
-import { appendBlankPageAction, deleteBookPageImageAction, deleteBookQuestionBlankAction, reorderBookCollageImagesAction, reorderBookQuestionPageAction, saveBookCollageImageCropAction, saveBookImageCropAction, savePhotoTextAction, updatePhotoDisplayModeAction, updatePhotoFooterAction } from "@/app/dashboard/books/page-actions";
+import { appendBlankPageAction, appendTextPageAction, deleteBookPageImageAction, deleteBookQuestionBlankAction, deleteBookQuestionTextAction, reorderBookCollageImagesAction, reorderBookQuestionPageAction, saveBookCollageImageCropAction, saveBookImageCropAction, saveBookTextPageAction, savePhotoTextAction, updatePhotoDisplayModeAction, updatePhotoFooterAction } from "@/app/dashboard/books/page-actions";
 import { paginateBookAnswer } from "@/lib/books/pagination";
 import { getPageBackgroundColor, normalizePageBackground } from "@/lib/books/cover-palettes";
 import { sliceAnswerFormat } from "@/lib/books/answer-format";
@@ -42,6 +43,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
   const bookContent = getBookContent(book.language);
   const [images, setImages] = useState<Record<string, BookPageImage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.images]))));
   const [blankPages, setBlankPages] = useState<Record<string, BookBlankPage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.blankPages]))));
+  const [textPages, setTextPages] = useState<Record<string, BookTextPageData[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.textPages]))));
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [formats, setFormats] = useState<Record<string, AnswerFormat>>({});
   const [savedAnswers, setSavedAnswers] = useState<Record<string, string>>(() => Object.fromEntries(book.chapters.flatMap(chapter => chapter.questions.map(question => [question.id, question.answer]))));
@@ -76,6 +78,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
         const attachmentPages = [
           ...(images[question.id] ?? []).map((image) => ({ ...question, image, chapter, kind: "photo" as const, key: `photo-${image.id}`, questionId: question.id, placement: image.placement, position: image.position })),
           ...(blankPages[question.id] ?? []).map((blankPage) => ({ ...question, blankPage, chapter, kind: "blank" as const, key: `blank-${blankPage.id}`, questionId: question.id, placement: blankPage.placement, position: blankPage.position })),
+          ...(textPages[question.id] ?? []).map((textPage) => ({ ...question, textPage, chapter, kind: "text" as const, key: `text-${textPage.id}`, questionId: question.id, placement: textPage.placement, position: textPage.position })),
         ].sort((a, b) => a.position - b.position);
         return [...attachmentPages.filter((page) => page.placement === "before"), ...questionPages, ...attachmentPages.filter((page) => page.placement === "after")];
       }),
@@ -93,7 +96,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
       { kind: "contents" as const, key: "contents", pageNumber: 4, contents },
       ...storyPages,
     ];
-  }, [book.chapters, book.questionTextSize, book.answerTextSize, images, blankPages, answers, formats]);
+  }, [book.chapters, book.questionTextSize, book.answerTextSize, images, blankPages, textPages, answers, formats]);
   const [activePageKey, setActivePageKey] = useState<string | undefined>(() => { const questions = book.chapters.flatMap(chapter => chapter.questions); const question = questions.find(q => q.id === initialQuestionId) ?? questions.find(q => !q.answer.trim()) ?? questions[0]; return question ? `question-${question.id}` : "preface"; });
   const [photoDialogTarget, setPhotoDialogTarget] = useState<{ questionId: string; imageId: string | null; placement: BookPageImage["placement"]; insertPosition?: number; targetSlot?: number; requestedLayout?: BookPhotoLayout } | null>(null);
   const [layoutError, setLayoutError] = useState("");
@@ -114,11 +117,11 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
   const active = pages.find((page) => page.key === activePageKey) ?? pages[0];
   const activePhotoSlots = active.kind === "photo" ? getBookPhotoSlots(active.image) : [];
   type PreviewQuestionPage = Extract<(typeof pages)[number], { kind: "question" }>;
-  type PreviewAttachmentPage = Extract<(typeof pages)[number], { kind: "photo" | "blank" }>;
-  const editable = active.kind === "question" ? active : active.kind === "photo" || active.kind === "blank" ? pages.find((page): page is PreviewQuestionPage => page.kind === "question" && page.questionId === active.questionId) : null;
+  type PreviewAttachmentPage = Extract<(typeof pages)[number], { kind: "photo" | "blank" | "text" }>;
+  const editable = active.kind === "question" ? active : active.kind === "photo" || active.kind === "blank" || active.kind === "text" ? pages.find((page): page is PreviewQuestionPage => page.kind === "question" && page.questionId === active.questionId) : null;
   const questions = pages.filter((page): page is PreviewQuestionPage => page.kind === "question" && page.answerPageIndex === 0);
   const questionIndex = questions.findIndex(page => page.questionId === (editable?.kind === "question" ? editable.questionId : ""));
-  const questionSequence = editable ? pages.filter((page): page is PreviewQuestionPage | PreviewAttachmentPage => (page.kind === "question" || page.kind === "photo" || page.kind === "blank") && page.questionId === editable.questionId) : [];
+  const questionSequence = editable ? pages.filter((page): page is PreviewQuestionPage | PreviewAttachmentPage => (page.kind === "question" || page.kind === "photo" || page.kind === "blank" || page.kind === "text") && page.questionId === editable.questionId) : [];
   const activeQuestionPageIndex = questionSequence.findIndex((page) => page.key === active.key);
 
   useEffect(() => () => {
@@ -176,15 +179,21 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
   const photoDialogPageNumber = photoSourcePage && photoDialogTarget
     ? photoDialogImage
       ? pages.find((page) => page.kind === "photo" && page.image.id === photoDialogImage.id)?.pageNumber ?? photoSourcePage.pageNumber + 1
-      : active.kind === "photo" || active.kind === "blank"
+      : active.kind === "photo" || active.kind === "blank" || active.kind === "text"
         ? Math.max(1, active.pageNumber + (photoDialogTarget.insertPosition === active.position ? -1 : 1))
         : Math.max(1, photoSourcePage.pageNumber + (photoDialogTarget.placement === "before" ? -1 : 1))
     : 0;
 
   function nextAttachmentPosition() {
-    if (active.kind === "photo" || active.kind === "blank") return { questionId: active.questionId, placement: active.placement, position: active.position + 1 };
+    if (active.kind === "photo" || active.kind === "blank" || active.kind === "text") return { questionId: active.questionId, placement: active.placement, position: active.position + 1 };
     if (active.kind === "question") return { questionId: active.questionId, placement: "after" as const, position: 1 };
     return null;
+  }
+
+  function shiftAttachments(questionId: string, placement: "before" | "after", fromPosition: number) {
+    setImages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((image) => image.placement === placement && image.position >= fromPosition ? { ...image, position: image.position + 1 } : image) }));
+    setBlankPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === placement && page.position >= fromPosition ? { ...page, position: page.position + 1 } : page) }));
+    setTextPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === placement && page.position >= fromPosition ? { ...page, position: page.position + 1 } : page) }));
   }
 
   function addPhoto() {
@@ -212,8 +221,42 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
           createdPage,
         ].sort((a, b) => a.position - b.position),
       }));
+      setTextPages((current) => ({ ...current, [target.questionId]: (current[target.questionId] ?? []).map((page) => page.placement === target.placement && page.position >= data.position ? { ...page, position: page.position + 1 } : page) }));
       setActivePageKey(`blank-${data.id}`);
     } catch { setLayoutError("Не удалось добавить пустую страницу."); }
+    finally { setLayoutPending(false); }
+  }
+
+  async function addTextPage(style: BookTextPageData["style"]) {
+    const target = nextAttachmentPosition();
+    pageTypeDialogRef.current?.close();
+    if (!target || layoutPending) return;
+    setLayoutPending(true);
+    setLayoutError("");
+    try {
+      const result = await appendTextPageAction({ bookId: book.id, questionId: target.questionId, placement: target.placement, position: target.position, style });
+      if (result.error || !result.data) throw new Error(result.error);
+      const data = result.data;
+      const textStyle = data.text_style === "text" ? "text" : "quote";
+      const textSize = Number(data.text_size) as BookTextPageFontSize;
+      const createdPage: BookTextPageData = {
+        id: data.id,
+        content: data.text_content ?? "",
+        attribution: data.text_attribution ?? "",
+        style: textStyle,
+        fontSize: BOOK_TEXT_PAGE_FONT_SIZES.includes(textSize) ? textSize : textStyle === "text" ? 18 : 24,
+        hideFooter: Boolean(data.hide_footer),
+        pageBackground: normalizePageBackground(data.background_style),
+        placement: data.placement === "before" ? "before" : "after",
+        position: data.position,
+      };
+      shiftAttachments(target.questionId, target.placement, data.position);
+      setTextPages((current) => ({
+        ...current,
+        [target.questionId]: [...(current[target.questionId] ?? []), createdPage].sort((a, b) => a.position - b.position),
+      }));
+      setActivePageKey(`text-${data.id}`);
+    } catch { setLayoutError("Не удалось добавить текстовую страницу."); }
     finally { setLayoutPending(false); }
   }
 
@@ -357,14 +400,14 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
   }
 
   async function movePage(direction: number) {
-    if ((active.kind !== "photo" && active.kind !== "blank") || layoutPending) return;
+    if ((active.kind !== "photo" && active.kind !== "blank" && active.kind !== "text") || layoutPending) return;
     const questionId = active.questionId;
-    const siblings = pages.filter((page): page is PreviewAttachmentPage => (page.kind === "photo" || page.kind === "blank") && page.questionId === questionId && page.placement === active.placement);
-    const activePageId = active.kind === "photo" ? active.image.pageId : active.blankPage.id;
-    const siblingIndex = siblings.findIndex((page) => (page.kind === "photo" ? page.image.pageId : page.blankPage.id) === activePageId);
+    const siblings = pages.filter((page): page is PreviewAttachmentPage => (page.kind === "photo" || page.kind === "blank" || page.kind === "text") && page.questionId === questionId && page.placement === active.placement);
+    const activePageId = active.kind === "photo" ? active.image.pageId : active.kind === "blank" ? active.blankPage.id : active.textPage.id;
+    const siblingIndex = siblings.findIndex((page) => (page.kind === "photo" ? page.image.pageId : page.kind === "blank" ? page.blankPage.id : page.textPage.id) === activePageId);
     const targetSibling = siblings[siblingIndex + direction];
     if (!targetSibling) return;
-    const targetPageId = targetSibling.kind === "photo" ? targetSibling.image.pageId : targetSibling.blankPage.id;
+    const targetPageId = targetSibling.kind === "photo" ? targetSibling.image.pageId : targetSibling.kind === "blank" ? targetSibling.blankPage.id : targetSibling.textPage.id;
     const previousPosition = active.position;
     const nextPosition = targetSibling.position;
     setLayoutPending(true);
@@ -374,6 +417,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
       if (result.error) throw new Error(result.error);
       setImages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((image) => image.pageId === activePageId ? { ...image, position: nextPosition } : image.pageId === targetPageId ? { ...image, position: previousPosition } : image) }));
       setBlankPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.id === activePageId ? { ...page, position: nextPosition } : page.id === targetPageId ? { ...page, position: previousPosition } : page) }));
+      setTextPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.id === activePageId ? { ...page, position: nextPosition } : page.id === targetPageId ? { ...page, position: previousPosition } : page) }));
     } catch { setLayoutError("Не удалось изменить порядок страниц."); }
     finally { setLayoutPending(false); }
   }
@@ -389,8 +433,36 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
       if (result.error) throw new Error(result.error);
       setImages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((image) => image.placement === deletedPage.placement && image.position > deletedPage.position ? { ...image, position: image.position - 1 } : image) }));
       setBlankPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).filter((page) => page.id !== deletedPage.id).map((page) => page.placement === deletedPage.placement && page.position > deletedPage.position ? { ...page, position: page.position - 1 } : page) }));
+      setTextPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === deletedPage.placement && page.position > deletedPage.position ? { ...page, position: page.position - 1 } : page) }));
       setActivePageKey(`question-${questionId}`);
     } catch { setLayoutError("Не удалось удалить пустую страницу."); }
+    finally { setLayoutPending(false); }
+  }
+
+  async function deleteTextPage() {
+    if (active.kind !== "text" || layoutPending) return;
+    const deletedPage = active.textPage;
+    const questionId = active.questionId;
+    setLayoutPending(true);
+    setLayoutError("");
+    try {
+      const result = await deleteBookQuestionTextAction({ bookId: book.id, pageId: deletedPage.id });
+      if (result.error) throw new Error(result.error);
+      setImages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((image) => image.placement === deletedPage.placement && image.position > deletedPage.position ? { ...image, position: image.position - 1 } : image) }));
+      setBlankPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === deletedPage.placement && page.position > deletedPage.position ? { ...page, position: page.position - 1 } : page) }));
+      setTextPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).filter((page) => page.id !== deletedPage.id).map((page) => page.placement === deletedPage.placement && page.position > deletedPage.position ? { ...page, position: page.position - 1 } : page) }));
+      setActivePageKey(`question-${questionId}`);
+    } catch { setLayoutError("Не удалось удалить текстовую страницу."); }
+    finally { setLayoutPending(false); }
+  }
+
+  async function persistTextPage(page: BookTextPageData) {
+    setLayoutPending(true);
+    setLayoutError("");
+    try {
+      const result = await saveBookTextPageAction({ pageId: page.id, content: page.content, attribution: page.attribution, style: page.style, fontSize: page.fontSize, hideFooter: page.hideFooter });
+      if (result.error) throw new Error(result.error);
+    } catch { setLayoutError("Не удалось сохранить текстовую страницу."); }
     finally { setLayoutPending(false); }
   }
 
@@ -413,6 +485,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
         ...current,
         [questionId]: (current[questionId] ?? []).map((page) => page.placement === deletedImage.placement && page.position > deletedImage.position ? { ...page, position: page.position - 1 } : page),
       }));
+      setTextPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === deletedImage.placement && page.position > deletedImage.position ? { ...page, position: page.position - 1 } : page) }));
       setActivePageKey(`question-${questionId}`);
     } catch { setLayoutError("Не удалось удалить фотографию."); }
     finally { setLayoutPending(false); }
@@ -459,6 +532,8 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
 
     if (page.kind === "blank") return <div className="preview-blank-page preview-page-background--colored" style={{ background: getPageBackgroundColor(book.pageBackground) }} aria-label={`Пустая страница ${page.pageNumber}`} />;
 
+    if (page.kind === "text") return <BookTextPage page={page.textPage} background={book.pageBackground} />;
+
     return <>
       <div className="preview-page__content">
         <div className="preview-page__body">
@@ -489,12 +564,12 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
       {editable && <nav className="book-question-pages" aria-label="Страницы текущего вопроса">
         <div><strong>Страницы вопроса</strong><span>{questionSequence.length}</span></div>
         <div>{questionSequence.map((page) => <button key={page.key} type="button" className={page.key === active.key ? "is-active" : ""} aria-current={page.key === active.key ? "page" : undefined} onClick={() => setActivePageKey(page.key)}>
-          {page.kind === "question" ? <FileText size={15} /> : page.kind === "photo" ? <ImagePlus size={15} /> : <FilePlus2 size={15} />}
-          {page.kind === "question" ? `Текст${page.answerPageIndex ? ` ${page.answerPageIndex + 1}` : ""}` : page.kind === "photo" ? page.image.collageLayout === "single" ? "Фото" : "Коллаж" : "Пустая"}
+          {page.kind === "question" ? <FileText size={15} /> : page.kind === "photo" ? <ImagePlus size={15} /> : page.kind === "text" ? <Quote size={15} /> : <FilePlus2 size={15} />}
+          {page.kind === "question" ? `Текст${page.answerPageIndex ? ` ${page.answerPageIndex + 1}` : ""}` : page.kind === "photo" ? page.image.collageLayout === "single" ? "Фото" : "Коллаж" : page.kind === "text" ? page.textPage.style === "quote" ? "Цитата" : "Текстовая" : "Пустая"}
         </button>)}<button className="book-question-pages__add" type="button" aria-haspopup="dialog" onClick={() => pageTypeDialogRef.current?.showModal()}><Plus size={15} />Добавить</button></div>
       </nav>}
       {active.kind === "chapter" ? <div className="book-page-variant-picker"><span className="book-inline-editor__chapter">Оформление страницы главы</span><strong>Выберите вариант</strong><button className="is-selected" type="button" aria-pressed="true"><span><small>Глава {active.chapterIndex + 1}</small><b>{active.chapter.title}</b></span><em>Классический</em><Check size={15} /></button><p>Сейчас доступен один вариант. Новые оформления можно будет добавить сюда позже.</p></div> : active.kind === "photo" ? <div className="book-photo-page-settings" aria-busy={layoutPending}>
-        <div className="book-page-settings-heading"><span className="book-inline-editor__chapter">Фотография · Страница {active.pageNumber}</span><div><button type="button" aria-label="Переместить страницу раньше" title="Переместить раньше" disabled={layoutPending || active.position <= 1} onClick={() => void movePage(-1)}><ChevronLeft size={18} /></button><button type="button" aria-label="Переместить страницу позже" title="Переместить позже" disabled={layoutPending || !pages.some(page => (page.kind === "photo" || page.kind === "blank") && page.questionId === active.questionId && page.placement === active.placement && page.position > active.position)} onClick={() => void movePage(1)}><ChevronRight size={18} /></button><button className="book-page-settings-heading__delete" type="button" aria-label="Удалить страницу" title="Удалить страницу" disabled={layoutPending} onClick={() => void deletePhotoPage()}><Trash2 size={17} /></button></div></div>
+        <div className="book-page-settings-heading"><span className="book-inline-editor__chapter">Фотография · Страница {active.pageNumber}</span><div><button type="button" aria-label="Переместить страницу раньше" title="Переместить раньше" disabled={layoutPending || active.position <= 1} onClick={() => void movePage(-1)}><ChevronLeft size={18} /></button><button type="button" aria-label="Переместить страницу позже" title="Переместить позже" disabled={layoutPending || !pages.some(page => (page.kind === "photo" || page.kind === "blank" || page.kind === "text") && page.questionId === active.questionId && page.placement === active.placement && page.position > active.position)} onClick={() => void movePage(1)}><ChevronRight size={18} /></button><button className="book-page-settings-heading__delete" type="button" aria-label="Удалить страницу" title="Удалить страницу" disabled={layoutPending} onClick={() => void deletePhotoPage()}><Trash2 size={17} /></button></div></div>
         <p>{active.image.collageLayout === "single" ? "Фото привязано к этому вопросу. Можно заменить или отдельно настроить его кадрирование." : "Коллаж считается одной страницей. Каждую фотографию можно заменить и кадрировать отдельно."}</p>
         <strong>Настройки страницы</strong>
         <fieldset className="book-photo-layout-settings"><legend>Макет коллажа</legend><div>{BOOK_PHOTO_LAYOUTS.map((option) => {
@@ -542,8 +617,21 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
           <div><span><strong>Убрать колонтитулы</strong><small>Скрыть подпись и номер на этой странице</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Убрать колонтитулы с фотографии" aria-checked={active.image.hideFooter} disabled={layoutPending} onClick={() => { const next = !active.image.hideFooter; if (!next) setApplyFooterRemovalToAll(false); void changePhotoFooterHidden(next); }}><span /></button></div>
           {active.image.hideFooter && <div className="book-photo-rounding-settings__apply-all"><span><strong>Применить ко всем фото</strong><small>Убрать колонтитулы со всех фотографий книги</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Убрать колонтитулы со всех фотографий книги" aria-checked={applyFooterRemovalToAll} disabled={layoutPending} onClick={() => void changeFooterApplyToAll(!applyFooterRemovalToAll)}><span /></button></div>}
         </section>
+      </div> : active.kind === "text" ? <div className="book-text-page-settings" aria-busy={layoutPending}>
+        <div className="book-page-settings-heading"><span className="book-inline-editor__chapter">{active.textPage.style === "quote" ? "Цитата" : "Текстовая страница"} · Страница {active.pageNumber}</span><div><button type="button" aria-label="Переместить страницу раньше" title="Переместить раньше" disabled={layoutPending || active.position <= 1} onClick={() => void movePage(-1)}><ChevronLeft size={18} /></button><button type="button" aria-label="Переместить страницу позже" title="Переместить позже" disabled={layoutPending || !pages.some(page => (page.kind === "photo" || page.kind === "blank" || page.kind === "text") && page.questionId === active.questionId && page.placement === active.placement && page.position > active.position)} onClick={() => void movePage(1)}><ChevronRight size={18} /></button><button className="book-page-settings-heading__delete" type="button" aria-label="Удалить страницу" title="Удалить страницу" disabled={layoutPending} onClick={() => void deleteTextPage()}><Trash2 size={17} /></button></div></div>
+        <fieldset className="book-text-page-settings__style"><legend>Оформление</legend><div className="book-text-page-settings__modes">
+          {(["quote", "text"] as const).map((style) => <button type="button" key={style} className={active.textPage.style === style ? "is-selected" : ""} aria-pressed={active.textPage.style === style} disabled={layoutPending} onMouseDown={(event) => event.preventDefault()} onClick={() => { const next = { ...active.textPage, style }; setTextPages((current) => ({ ...current, [active.questionId]: (current[active.questionId] ?? []).map((page) => page.id === next.id ? next : page) })); void persistTextPage(next); }}>{style === "quote" ? "Цитата" : "Обычный текст"}</button>)}
+        </div></fieldset>
+        <fieldset className="book-size-options"><legend>Размер текста</legend><div>
+          {BOOK_TEXT_PAGE_FONT_SIZES.map((fontSize) => <button type="button" key={fontSize} className={active.textPage.fontSize === fontSize ? "is-selected" : ""} aria-pressed={active.textPage.fontSize === fontSize} disabled={layoutPending} onClick={() => { const next = { ...active.textPage, fontSize }; setTextPages((current) => ({ ...current, [active.questionId]: (current[active.questionId] ?? []).map((page) => page.id === next.id ? next : page) })); void persistTextPage(next); }}>{fontSize}</button>)}
+        </div></fieldset>
+        <section className="book-photo-rounding-settings" aria-label="Колонтитулы текстовой страницы">
+          <div><span><strong>Убрать колонтитулы</strong><small>Скрыть подпись и номер на этой странице</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Убрать колонтитулы с текстовой страницы" aria-checked={active.textPage.hideFooter} disabled={layoutPending} onClick={() => { const next = { ...active.textPage, hideFooter: !active.textPage.hideFooter }; setTextPages((current) => ({ ...current, [active.questionId]: (current[active.questionId] ?? []).map((page) => page.id === next.id ? next : page) })); void persistTextPage(next); }}><span /></button></div>
+        </section>
+        <label><span>Текст</span><textarea value={active.textPage.content} maxLength={1200} placeholder={active.textPage.style === "quote" ? "Напишите цитату или важную мысль" : "Напишите текст страницы"} disabled={layoutPending} onChange={(event) => { const content = event.target.value; setTextPages((current) => ({ ...current, [active.questionId]: (current[active.questionId] ?? []).map((page) => page.id === active.textPage.id ? { ...page, content } : page) })); }} onBlur={() => void persistTextPage(active.textPage)} /><small>{active.textPage.content.length}/1200</small></label>
+        {active.textPage.style === "quote" && <label><span>Автор или источник <small>необязательно</small></span><input value={active.textPage.attribution} maxLength={160} placeholder="Например, имя автора" disabled={layoutPending} onChange={(event) => { const attribution = event.target.value; setTextPages((current) => ({ ...current, [active.questionId]: (current[active.questionId] ?? []).map((page) => page.id === active.textPage.id ? { ...page, attribution } : page) })); }} onBlur={() => void persistTextPage(active.textPage)} /></label>}
       </div> : active.kind === "blank" ? <div className="book-blank-page-settings" aria-busy={layoutPending}>
-        <div className="book-page-settings-heading"><span className="book-inline-editor__chapter">Пустая страница · Страница {active.pageNumber}</span><div><button type="button" aria-label="Переместить страницу раньше" title="Переместить раньше" disabled={layoutPending || active.position <= 1} onClick={() => void movePage(-1)}><ChevronLeft size={18} /></button><button type="button" aria-label="Переместить страницу позже" title="Переместить позже" disabled={layoutPending || !pages.some(page => (page.kind === "photo" || page.kind === "blank") && page.questionId === active.questionId && page.placement === active.placement && page.position > active.position)} onClick={() => void movePage(1)}><ChevronRight size={18} /></button><button className="book-page-settings-heading__delete" type="button" aria-label="Удалить страницу" title="Удалить страницу" disabled={layoutPending} onClick={() => void deleteBlankPage()}><Trash2 size={17} /></button></div></div>
+        <div className="book-page-settings-heading"><span className="book-inline-editor__chapter">Пустая страница · Страница {active.pageNumber}</span><div><button type="button" aria-label="Переместить страницу раньше" title="Переместить раньше" disabled={layoutPending || active.position <= 1} onClick={() => void movePage(-1)}><ChevronLeft size={18} /></button><button type="button" aria-label="Переместить страницу позже" title="Переместить позже" disabled={layoutPending || !pages.some(page => (page.kind === "photo" || page.kind === "blank" || page.kind === "text") && page.questionId === active.questionId && page.placement === active.placement && page.position > active.position)} onClick={() => void movePage(1)}><ChevronRight size={18} /></button><button className="book-page-settings-heading__delete" type="button" aria-label="Удалить страницу" title="Удалить страницу" disabled={layoutPending} onClick={() => void deleteBlankPage()}><Trash2 size={17} /></button></div></div>
         <p>Она останется пустой в готовой книге и сохранит своё место в последовательности этого вопроса.</p>
         <strong>Пустая страница</strong>
         <div className="book-blank-page-settings__preview preview-page-background--colored" style={{ background: getPageBackgroundColor(book.pageBackground) }}><FilePlus2 size={28} /><span>Без текста и фотографий</span></div>
@@ -560,7 +648,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
     <div className="book-spread-stage" ref={stageRef} aria-label={`Страница ${active.pageNumber} книги`}>
       <div className="book-spread-paper book-spread-paper--single" style={{ zoom: scale }}>
         <div key={active.key} className="book-spread-leaf is-selected">
-          <div data-no-translate className={`preview-page preview-page--font-${book.pageFont} preview-page--question-size-${book.questionTextSize} preview-page--answer-size-${book.answerTextSize}${active.kind === "photo" ? " preview-page--photo" : ""}${active.kind === "title" ? " preview-page--title" : ""}${active.kind === "chapter" ? " preview-page--chapter" : ""}`}>{renderPage(active)}{active.kind !== "opening-blank" && active.kind !== "title" && active.kind !== "preface" && active.kind !== "contents" && active.kind !== "chapter" && active.kind !== "blank" && !(active.kind === "photo" && active.image.hideFooter) && <footer className="preview-page__footer"><p className="preview-page__chapter">{getBookFooterLabel({ pageNumber: active.pageNumber, authorName: book.author_name, bookTitle: book.title, showAuthor: book.showFooterAuthor, showTitle: book.showFooterTitle })}</p><span className="preview-page__number">{active.pageNumber}</span></footer>}</div>
+          <div data-no-translate className={`preview-page preview-page--font-${book.pageFont} preview-page--question-size-${book.questionTextSize} preview-page--answer-size-${book.answerTextSize}${active.kind === "photo" ? " preview-page--photo" : ""}${active.kind === "text" ? " preview-page--text" : ""}${active.kind === "title" ? " preview-page--title" : ""}${active.kind === "chapter" ? " preview-page--chapter" : ""}`}>{renderPage(active)}{active.kind !== "opening-blank" && active.kind !== "title" && active.kind !== "preface" && active.kind !== "contents" && active.kind !== "chapter" && active.kind !== "blank" && !(active.kind === "photo" && active.image.hideFooter) && !(active.kind === "text" && active.textPage.hideFooter) && <footer className="preview-page__footer"><p className="preview-page__chapter">{getBookFooterLabel({ pageNumber: active.pageNumber, authorName: book.author_name, bookTitle: book.title, showAuthor: book.showFooterAuthor, showTitle: book.showFooterTitle })}</p><span className="preview-page__number">{active.pageNumber}</span></footer>}</div>
           <button className="book-spread-select" type="button" aria-label={`Страница ${active.pageNumber}${active.kind === "photo" ? ". Двойное нажатие открывает кадрирование первого фото" : ""}`} aria-pressed="true" onDoubleClick={() => { if (active.kind === "photo") { const slot = getBookPhotoSlots(active.image)[0]; setCropError(""); setCropEditor({ questionId: active.questionId, pageImageId: active.image.id, displayMode: active.image.displayMode, layout: active.image.collageLayout, image: slot, x: slot.cropX, y: slot.cropY, scale: slot.cropScale }); } }} />
         </div>
       </div>
@@ -574,10 +662,12 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
     <dialog ref={pageTypeDialogRef} className="book-page-type-dialog" aria-labelledby="book-page-type-title" onClick={(event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }}>
       <div className="book-page-type-dialog__panel">
         <header><div><p className="eyebrow">Для текущего вопроса</p><h2 id="book-page-type-title">Добавить страницу</h2></div><button type="button" aria-label="Закрыть" onClick={() => pageTypeDialogRef.current?.close()}><X size={19} /></button></header>
-        <p>Фотография или пустая страница появится сразу после выбранной.</p>
+        <p>Новая страница появится сразу после выбранной.</p>
         <div className="book-page-type-grid">
           <button type="button" onClick={addPhoto}><span><ImagePlus size={22} /></span><strong>Фотография</strong><small>Добавить одну или собрать цепочку из нескольких фото</small></button>
           <button type="button" disabled={layoutPending} onClick={() => void addBlankPage()}><span><FilePlus2 size={22} /></span><strong>Пустая страница</strong><small>Оставить страницу без текста и изображения</small></button>
+          <button type="button" disabled={layoutPending} onClick={() => void addTextPage("text")}><span><FileText size={22} /></span><strong>Текстовая страница</strong><small>Добавить отдельный текст, посвящение или небольшую историю</small></button>
+          <button type="button" disabled={layoutPending} onClick={() => void addTextPage("quote")}><span><Quote size={22} /></span><strong>Цитата</strong><small>Выделить важную мысль и при желании указать автора</small></button>
         </div>
       </div>
     </dialog>
@@ -625,12 +715,14 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
           return { ...current, [questionId]: [...shifted, image].sort((a, b) => a.position - b.position) };
         });
         setBlankPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === image.placement && page.position >= image.position ? { ...page, position: page.position + 1 } : page) }));
+        setTextPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === image.placement && page.position >= image.position ? { ...page, position: page.position + 1 } : page) }));
         setActivePageKey(`photo-${image.id}`);
       }}
       onImageDelete={(questionId, imageId) => {
         const deletedImage = (images[questionId] ?? []).find((image) => image.id === imageId);
         setImages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).filter((image) => image.id !== imageId).map((image) => deletedImage && image.placement === deletedImage.placement && image.position > deletedImage.position ? { ...image, position: image.position - 1 } : image) }));
         if (deletedImage) setBlankPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === deletedImage.placement && page.position > deletedImage.position ? { ...page, position: page.position - 1 } : page) }));
+        if (deletedImage) setTextPages((current) => ({ ...current, [questionId]: (current[questionId] ?? []).map((page) => page.placement === deletedImage.placement && page.position > deletedImage.position ? { ...page, position: page.position - 1 } : page) }));
         setActivePageKey(`question-${questionId}`);
       }}
     />

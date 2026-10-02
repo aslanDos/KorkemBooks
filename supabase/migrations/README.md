@@ -97,3 +97,5 @@ SQL-файлы лежат в одном уровне, потому что Supaba
 | v65 | 29.09 | [allow_owner_question_edits](202609290005_allow_owner_question_edits.sql) |
 | v66 | 29.09 | [fix_book_editing_transition](202609290006_fix_book_editing_transition.sql) |
 | v67 | 30.09 | [add_photo_collages](202609300001_add_photo_collages.sql) |
+| v68 | 02.10 | [add_text_question_pages](202610020001_add_text_question_pages.sql) |
+| v69 | 03.10 | [add_text_page_typography](202610030001_add_text_page_typography.sql) |
