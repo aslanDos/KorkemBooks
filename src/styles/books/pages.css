@@ -21,6 +21,7 @@
 .preview-page__chapter { min-width: 0; margin: 0; overflow: hidden; color: inherit; font: inherit; letter-spacing: inherit; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 .preview-page--text { padding:0; color:#fffaf3; }
 .preview-page--text .preview-page__footer { z-index:2; color:inherit; }
+.preview-page--text .preview-page__number { color:inherit; }
 .preview-text-page { position:absolute; inset:0; display:grid; padding:58px 48px 64px; place-items:center; color:#fffaf3; }
 .preview-text-page__content { display:grid; width:100%; min-width:0; align-content:center; }
 .preview-text-page p { margin:0; overflow-wrap:anywhere; white-space:pre-wrap; font-family:var(--font-literata), serif; font-weight:400; }
