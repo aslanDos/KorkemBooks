@@ -16,6 +16,7 @@ export function LandingEditorDemo() {
       <div className="landing-editor-demo__workspace">
         <div className="book-inline-editor landing-editor-demo__editor">
           <div className="landing-editor-demo__prompt">
+            <p className="landing-editor-demo__prompt-label">Вопрос</p>
             <h2>{question}</h2>
           </div>
 

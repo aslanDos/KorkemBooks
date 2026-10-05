@@ -244,7 +244,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
         content: data.text_content ?? "",
         attribution: data.text_attribution ?? "",
         style: textStyle,
-        fontSize: BOOK_TEXT_PAGE_FONT_SIZES.includes(textSize) ? textSize : textStyle === "text" ? 18 : 24,
+        fontSize: BOOK_TEXT_PAGE_FONT_SIZES.includes(textSize) ? textSize : textStyle === "text" ? 18 : 20,
         hideFooter: Boolean(data.hide_footer),
         pageBackground: normalizePageBackground(data.background_style),
         placement: data.placement === "before" ? "before" : "after",
@@ -565,7 +565,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
         <div><strong>Страницы вопроса</strong><span>{questionSequence.length}</span></div>
         <div>{questionSequence.map((page) => <button key={page.key} type="button" className={page.key === active.key ? "is-active" : ""} aria-current={page.key === active.key ? "page" : undefined} onClick={() => setActivePageKey(page.key)}>
           {page.kind === "question" ? <FileText size={15} /> : page.kind === "photo" ? <ImagePlus size={15} /> : page.kind === "text" ? <Quote size={15} /> : <FilePlus2 size={15} />}
-          {page.kind === "question" ? `Текст${page.answerPageIndex ? ` ${page.answerPageIndex + 1}` : ""}` : page.kind === "photo" ? page.image.collageLayout === "single" ? "Фото" : "Коллаж" : page.kind === "text" ? page.textPage.style === "quote" ? "Цитата" : "Текстовая" : "Пустая"}
+          {page.kind === "question" ? `Ответ${page.answerPageIndex ? ` ${page.answerPageIndex + 1}` : ""}` : page.kind === "photo" ? page.image.collageLayout === "single" ? "Фото" : "Коллаж" : page.kind === "text" ? page.textPage.style === "quote" ? "Цитата" : "Текстовая" : "Пустая"}
         </button>)}<button className="book-question-pages__add" type="button" aria-haspopup="dialog" onClick={() => pageTypeDialogRef.current?.showModal()}><Plus size={15} />Добавить</button></div>
       </nav>}
       {active.kind === "chapter" ? <div className="book-page-variant-picker"><span className="book-inline-editor__chapter">Оформление страницы главы</span><strong>Выберите вариант</strong><button className="is-selected" type="button" aria-pressed="true"><span><small>Глава {active.chapterIndex + 1}</small><b>{active.chapter.title}</b></span><em>Классический</em><Check size={15} /></button><p>Сейчас доступен один вариант. Новые оформления можно будет добавить сюда позже.</p></div> : active.kind === "photo" ? <div className="book-photo-page-settings" aria-busy={layoutPending}>
@@ -596,6 +596,9 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
           <button type="button" className={active.image.displayMode === "contain" ? "is-selected" : ""} aria-pressed={active.image.displayMode === "contain"} disabled={layoutPending} onClick={() => void changeDisplayMode("contain")}>С полями</button>
           <button type="button" className={active.image.displayMode === "full" ? "is-selected" : ""} aria-pressed={active.image.displayMode === "full"} disabled={layoutPending} onClick={() => void changeDisplayMode("full")}>На всю страницу</button>
         </div></fieldset>
+        <section className="book-photo-darkening-settings" aria-label="Затемнение фотографии">
+          <label className="book-photo-text-settings__range"><span><strong>Затемнение фотографии</strong><output>{active.image.photoText.darkening}%</output></span><input type="range" min="0" max="50" step="5" value={active.image.photoText.darkening} disabled={layoutPending} onChange={(event) => changePhotoTextDraft({ darkening: Number(event.target.value) })} /></label>
+        </section>
         <section className="book-photo-text-settings" aria-label="Текст на странице с фотографией">
           <div className="book-photo-text-settings__toggle"><span><strong>Текст на странице</strong><small>Добавить короткий текст к фотографии</small></span><button className="book-setting-toggle" type="button" role="switch" aria-label="Добавить текст на страницу с фотографией" aria-checked={active.image.photoText.enabled} disabled={layoutPending} onClick={() => void changePhotoTextSettings({ enabled: !active.image.photoText.enabled })}><span /></button></div>
           {active.image.photoText.enabled && <div className="book-photo-text-settings__body">
@@ -609,7 +612,6 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
             <fieldset className="book-photo-text-settings__sizes"><legend>Размер</legend><div>{PHOTO_TEXT_SIZES.map((size) => <button key={size} type="button" className={active.image.photoText.size === size ? "is-selected" : ""} aria-pressed={active.image.photoText.size === size} disabled={layoutPending} onClick={() => void changePhotoTextSettings({ size })}>{size}</button>)}</div></fieldset>
             <fieldset className="book-photo-text-settings__positions"><legend>Положение</legend><div>{PHOTO_TEXT_POSITIONS.map((option) => <button key={option.value} type="button" className={active.image.photoText.position === option.value ? "is-selected" : ""} aria-pressed={active.image.photoText.position === option.value} disabled={layoutPending} onClick={() => void changePhotoTextSettings({ position: option.value })}>{option.label}</button>)}</div></fieldset>
             <fieldset className="book-photo-text-settings__choices"><legend>Цвет текста</legend><div>{PHOTO_TEXT_TONES.map((option) => <button key={option.value} type="button" className={active.image.photoText.tone === option.value ? "is-selected" : ""} aria-pressed={active.image.photoText.tone === option.value} disabled={layoutPending} onClick={() => void changePhotoTextSettings({ tone: option.value })}>{option.label}</button>)}</div></fieldset>
-            <label className="book-photo-text-settings__range"><span><strong>Затемнение фотографии</strong><output>{active.image.photoText.darkening}%</output></span><input type="range" min="0" max="50" step="5" value={active.image.photoText.darkening} disabled={layoutPending} onChange={(event) => changePhotoTextDraft({ darkening: Number(event.target.value) })} /></label>
             <label className="book-photo-text-settings__range"><span><strong>Тень текста</strong><output>{active.image.photoText.textShadow}%</output></span><input type="range" min="0" max="100" step="5" value={active.image.photoText.textShadow} disabled={layoutPending} onChange={(event) => changePhotoTextDraft({ textShadow: Number(event.target.value) })} /></label>
           </div>}
         </section>

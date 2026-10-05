@@ -186,6 +186,7 @@ function serializeEditor(root: HTMLElement): { text: string; format: AnswerForma
     if ((tag === "DIV" || tag === "P") && startsAt !== text.length && !text.endsWith("\n") && node.nextSibling) append("\n", inherited);
   };
   root.childNodes.forEach((node) => walk(node, new Set()));
+  if (!text.trim()) return { text: "", format: EMPTY_ANSWER_FORMAT };
   return { text, format: { version: 1, marks: mergeMarks(marks).filter((mark) => mark.to > mark.from) } };
 }
 

@@ -4,7 +4,7 @@ import type { BookPageImage } from "@/lib/books/types";
 import { getBookPhotoSlots } from "@/lib/books/photo-collage";
 
 export function BookPagePhoto({ image, pageNumber }: { image: BookPageImage; pageNumber: number }) {
-  const darkening = image.photoText.enabled ? image.photoText.darkening : 0;
+  const darkening = image.photoText.darkening;
   const imageFilter = `brightness(${Math.max(.3, 1 - darkening / 100)})`;
   const slots = getBookPhotoSlots(image);
   const layout = image.collageLayout ?? "single";

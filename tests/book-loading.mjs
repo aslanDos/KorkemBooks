@@ -95,7 +95,7 @@ test('editor preserves answers and ordered images with duplicate storage paths',
   assert.equal(question.images[0].collageLayout, 'two_columns');
   assert.deepEqual(question.images[0].collageImages.map(image => [image.id, image.slot, image.signedUrl, image.cropX, image.cropY, image.cropScale]), [['collage2', 2, 'signed:collage-photo', 4, -2, 1.2]]);
   assert.deepEqual(question.blankPages, [{ id: 'blank1', pageBackground: 'olive', placement: 'after', position: 2 }]);
-  assert.deepEqual(question.textPages, [{ id: 'text1', content: 'A meaningful quote', attribution: 'Author', style: 'quote', fontSize: 28, hideFooter: true, pageBackground: 'navy', placement: 'after', position: 3 }]);
+  assert.deepEqual(question.textPages, [{ id: 'text1', content: 'A meaningful quote', attribution: 'Author', style: 'quote', fontSize: 20, hideFooter: true, pageBackground: 'navy', placement: 'after', position: 3 }]);
   assert.deepEqual(calls.filter(Array.isArray), [['photo', 'collage-photo']]);
 });
 
@@ -145,6 +145,14 @@ test('text page typography migration stores per-page size and footer visibility'
   assert.match(migration, /hide_footer boolean not null default false/);
   assert.match(migration, /text_size in \(14, 16, 18, 20, 22, 24, 28, 32\)/);
   assert.match(migration, /case when target_text_style = 'text' then 18 else 24 end/);
+});
+
+test('text page sizes are capped at 20', () => {
+  const migration = readFileSync(new URL('../supabase/migrations/202610030002_cap_text_page_size_at_20.sql', import.meta.url), 'utf8');
+  assert.match(migration, /alter column text_size set default 20/);
+  assert.match(migration, /set text_size = 20\s+where text_size > 20/);
+  assert.match(migration, /text_size in \(14, 16, 18, 20\)/);
+  assert.match(migration, /case when target_text_style = 'text' then 18 else 20 end/);
 });
 
 test('question editing migration replaces the suggestion queue with direct owner edits', () => {

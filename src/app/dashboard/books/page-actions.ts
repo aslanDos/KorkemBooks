@@ -62,7 +62,7 @@ export async function saveBookTextPageAction(input: { pageId: string; content: s
     content: z.string().max(1200),
     attribution: z.string().max(160),
     style: z.enum(["text", "quote"]),
-    fontSize: z.union([z.literal(14), z.literal(16), z.literal(18), z.literal(20), z.literal(22), z.literal(24), z.literal(28), z.literal(32)]),
+    fontSize: z.union([z.literal(14), z.literal(16), z.literal(18), z.literal(20)]),
     hideFooter: z.boolean(),
   }).safeParse(input);
   if (!parsed.success) return { error: "Текст страницы слишком длинный" };

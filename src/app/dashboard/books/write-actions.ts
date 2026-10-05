@@ -64,14 +64,17 @@ export async function saveAnswersAction(input: Array<{ questionId: string; answe
   if (!book) return { error: "Книга не найдена" };
   if (book.production_status !== "writing") return { error: "Книга уже отправлена на редактуру и доступна только для просмотра" };
 
-  const { error } = await supabase.from("answers").upsert(parsed.data.map((answer) => ({
-    question_id: answer.questionId,
-    book_id: bookId,
-    owner_id: user.id,
-    answer_text: answer.answerText,
-    answer_format: normalizeAnswerFormat(answer.answerFormat, answer.answerText.length),
-    answered_at: answer.answerText.trim() ? new Date().toISOString() : null,
-  })), { onConflict: "question_id" });
+  const { error } = await supabase.from("answers").upsert(parsed.data.map((answer) => {
+    const answerText = answer.answerText.trim() ? answer.answerText : "";
+    return {
+      question_id: answer.questionId,
+      book_id: bookId,
+      owner_id: user.id,
+      answer_text: answerText,
+      answer_format: normalizeAnswerFormat(answer.answerFormat, answerText.length),
+      answered_at: answerText ? new Date().toISOString() : null,
+    };
+  }), { onConflict: "question_id" });
   if (error) return { error: "Не удалось сохранить ответ" };
 
   const progress = await refreshBookPageProgress(supabase, bookId);

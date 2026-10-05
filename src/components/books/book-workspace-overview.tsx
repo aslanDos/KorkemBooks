@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { BookApprovalPanel } from "@/components/books/book-approval-panel";
 import { BookStructureStats } from "@/components/books/book-structure-stats";
-import { EditBookDialog } from "@/components/books/edit-book-dialog";
 import { SubmitBookButton } from "@/components/books/submit-book-button";
 import { getBookLanguageLabel } from "@/lib/books/language";
 import { getBookPageProgress } from "@/lib/books/progress";
@@ -30,7 +29,7 @@ export function BookWorkspaceOverview({ book }: { book: BookWithContent }) {
             {book.recipient_name && <div><dt>Получатель</dt><dd>{book.recipient_name}</dd></div>}
             <div><dt>Язык книги</dt><dd>{getBookLanguageLabel(book.language)}</dd></div>
           </dl>
-          {!readOnly && <EditBookDialog bookId={book.id} title={book.title} authorName={book.author_name} recipientName={book.recipient_name} />}
+          {!readOnly && <Link className="book-hero__edit" href={`/dashboard/books/${book.id}/edit`}><Pencil size={15} /><span>Изменить</span></Link>}
         </div>
       </div>
       <BookStructureStats key={`${book.chapters.length}:${questionCount}:${pageCount}`} chapterCount={book.chapters.length} questionCount={questionCount} pageCount={pageCount} progress={book.progress} showSubmissionHint={!readOnly} />

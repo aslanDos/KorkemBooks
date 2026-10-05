@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, ListChecks } from "lucide-react";
-import { getBookWithContent, getLastViewedQuestionId } from "@/lib/books/queries";
+import { getAnswerRevisions, getBookWithContent, getLastViewedQuestionId } from "@/lib/books/queries";
 import { ChapterList } from "@/components/books/chapter-list";
 import { BookViewTabs } from "@/components/books/book-view-tabs";
 import { BookWorkspaceOverview } from "@/components/books/book-workspace-overview";
+import { AnswerRevisionReview } from "@/components/books/answer-revision-review";
 
 export default async function BookPage({ params, searchParams }: { params: Promise<{ bookId: string }>; searchParams: Promise<{ answered?: string }> }) {
   const { bookId } = await params;
   const { answered } = await searchParams;
   const answeredOnly = answered === "1";
-  const [book, lastViewedQuestionId] = await Promise.all([getBookWithContent(bookId, "summary"), getLastViewedQuestionId(bookId)]);
+  const [book, lastViewedQuestionId, revisions] = await Promise.all([getBookWithContent(bookId, "summary"), getLastViewedQuestionId(bookId), getAnswerRevisions(bookId)]);
   if (!book) notFound();
 
   const hasLegacyQuestions = book.chapters.some(chapter => chapter.questions.some(question => question.catalogId === null));
@@ -26,6 +27,7 @@ export default async function BookPage({ params, searchParams }: { params: Promi
   return (
     <>
       <BookWorkspaceOverview book={book} />
+      <AnswerRevisionReview bookId={book.id} revisions={revisions} />
       <BookViewTabs bookId={book.id} active="questions" />
       {!readOnly && resumeQuestion && <Link className="book-resume-card" href={`/dashboard/books/${book.id}/write?question=${resumeQuestion.id}`}>
         <span className="book-resume-card__copy"><small>{lastViewedQuestionId ? "Продолжить заполнение" : "Начать заполнение"}</small><p>{resumeQuestion.prompt}</p>{resumeChapter && <em>{resumeChapter.title}</em>}</span>

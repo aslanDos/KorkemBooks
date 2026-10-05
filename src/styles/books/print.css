@@ -73,6 +73,7 @@
 .print-preview-page .preview-photo-text { inset:var(--page-safe-margin) var(--page-safe-margin) var(--page-body-bottom); }
 .print-preview-page .preview-photo-text__content { font-size:var(--photo-text-print-size, 12.6pt); }
 .print-preview-page.preview-page--photo .preview-page__footer { padding: 0; background: transparent; color: #252525; text-shadow: none; }
+.print-preview-page.preview-page--photo .preview-page__number { color: inherit; }
 .print-preview-page.preview-page--photo:has(.preview-photo-page--contain.preview-page-background--colored) .preview-page__footer { color: #fffaf3; }
 .print-preview-page.preview-page--photo:has(.preview-photo-page--full) .preview-page__footer { color: #fff; text-shadow: none; }
 @media print {

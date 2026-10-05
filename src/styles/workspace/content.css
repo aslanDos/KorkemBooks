@@ -28,6 +28,7 @@
 .dashboard-shell .book-form-card { width: 100%; max-width: none; }
 .dashboard-shell .book-form { width: 100%; max-width: none; gap: 26px; }
 .dashboard-shell .book-form .form-field__control > :is(input, select) { box-sizing: border-box; height: 50px; padding: 0 16px; border-radius: var(--workspace-small-radius); font-size: 15px; }
+.dashboard-shell .book-form .form-field__control > input[readonly] { color: var(--muted); background: var(--background); cursor: default; }
 .dashboard-shell .book-form .form-field__control > select { appearance: none; -webkit-appearance: none; padding-right: 44px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23716d64' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; }
 .dashboard-shell .form-field > span, .dashboard-shell .form-field label { font-size: 13px; font-weight: 600; }
 .dashboard-shell .form-field input { min-height: 50px; font-size: 15px; border-radius: var(--workspace-small-radius); background: var(--surface-raised); }
@@ -53,7 +54,7 @@
 .dashboard-shell .book-overview__progress-heading small { font-family: inherit; font-size: 16px; }
 .dashboard-shell .book-overview progress::-webkit-progress-value { background: var(--accent); }
 .dashboard-shell .book-overview progress::-moz-progress-bar { background: var(--accent); }
-.dashboard-shell .book-hero__edit { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--workspace-pill); font-size: 11px; font-weight: 600; }
+.dashboard-shell .book-hero__edit { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--workspace-pill); font-size: 11px; font-weight: 600; text-decoration: none; }
 .dashboard-shell .book-overview__counts { font-size: 12px; }
 .dashboard-shell .chapter-heading { margin-block: 34px 20px; flex-wrap: wrap; }
 .dashboard-shell .chapter-heading__actions { flex-wrap: wrap; }

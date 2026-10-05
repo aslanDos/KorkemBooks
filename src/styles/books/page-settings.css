@@ -36,6 +36,7 @@
 .book-photo-page-settings fieldset > div { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .book-photo-display-picker button { transition:color 160ms ease, background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 .book-photo-display-picker button.is-selected { color:var(--primary); background:var(--workspace-tint); border-color:var(--primary); box-shadow:0 0 0 2px var(--focus-ring); }
+.book-photo-darkening-settings { padding:13px 14px; border:1px solid var(--line); border-radius:14px; }
 .book-photo-text-settings { display:grid; overflow:hidden; border:1px solid var(--line); border-radius:14px; }
 .book-photo-text-settings__toggle { display:flex; min-width:0; padding:13px 14px; align-items:center; justify-content:space-between; gap:16px; }
 .book-photo-text-settings__toggle > span { display:grid; min-width:0; gap:2px; }

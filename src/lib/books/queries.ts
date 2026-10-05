@@ -8,6 +8,7 @@ import { normalizeAnswerFormat } from "./answer-format";
 import { isBookLanguage } from "./language";
 import { getBookPageProgress } from "./progress";
 import { getExpectedChapterCount, isRemovedBookTypeSlug } from "./catalog";
+import type { AnswerRevision } from "./answer-revisions";
 
 export type BookContentMode = "full" | "structure" | "cover" | "summary";
 type InternalBookContentMode = BookContentMode | "progress";
@@ -100,6 +101,28 @@ export async function getLastViewedQuestionId(bookId: string): Promise<string | 
     .eq("book_id", bookId)
     .maybeSingle();
   return data?.question_id ?? null;
+}
+
+export async function getAnswerRevisions(bookId: string): Promise<AnswerRevision[]> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
+  const { data: rows } = await supabase.from("answer_revisions")
+    .select("id, book_id, question_id, original_answer, edited_answer, status, created_at, reviewed_at")
+    .eq("book_id", bookId).order("created_at", { ascending: false });
+  if (!rows?.length) return [];
+  const { data: questions } = await supabase.from("questions").select("id, prompt").eq("book_id", bookId).in("id", [...new Set(rows.map((row) => row.question_id))]);
+  const prompts = new Map((questions ?? []).map((question) => [question.id, question.prompt]));
+  return rows.map((row) => ({
+    id: row.id,
+    bookId: row.book_id,
+    questionId: row.question_id,
+    question: prompts.get(row.question_id) ?? "Вопрос",
+    originalAnswer: row.original_answer,
+    editedAnswer: row.edited_answer,
+    status: row.status as AnswerRevision["status"],
+    createdAt: row.created_at,
+    reviewedAt: row.reviewed_at,
+  }));
 }
 
 export async function getAdminBookWithContent(bookId: string, content: BookContentMode = "full"): Promise<BookWithContent | null> {
@@ -311,7 +334,7 @@ function normalizePhotoLayout(value: unknown): BookPhotoLayout {
 
 function normalizeTextPageFontSize(value: unknown, style: unknown): BookTextPageFontSize {
   const size = Number(value) as BookTextPageFontSize;
-  return BOOK_TEXT_PAGE_FONT_SIZES.includes(size) ? size : style === "text" ? 18 : 24;
+  return BOOK_TEXT_PAGE_FONT_SIZES.includes(size) ? size : style === "text" ? 18 : 20;
 }
 
 function normalizeCollageImages(value: unknown): BookCollageImage[] {

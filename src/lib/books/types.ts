@@ -154,7 +154,7 @@ export type BookBlankPage = {
   position: number;
 };
 
-export const BOOK_TEXT_PAGE_FONT_SIZES = [14, 16, 18, 20, 22, 24, 28, 32] as const;
+export const BOOK_TEXT_PAGE_FONT_SIZES = [14, 16, 18, 20] as const;
 export type BookTextPageFontSize = (typeof BOOK_TEXT_PAGE_FONT_SIZES)[number];
 
 export type BookTextPage = {

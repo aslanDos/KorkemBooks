@@ -475,7 +475,11 @@ try {
           const contained=sheet.querySelector('.preview-photo-page--contain .preview-photo-page__frame');
           if(contained){const frame=contained.getBoundingClientRect();check(near(frame.left-trim.left,mm(18))&&near(frame.top-trim.top,mm(18)), 'contained photo margin is not 20 mm including bleed');}
           const footer=sheet.querySelector('.preview-page__footer');
-          if(footer){const rect=footer.getBoundingClientRect();check(near(rect.left-trim.left,mm(18))&&near(trim.bottom-rect.bottom,mm(18)), 'footer margin is not 20 mm including bleed');}
+          if(footer){
+            const rect=footer.getBoundingClientRect();
+            check(near(rect.left-trim.left,mm(18))&&near(trim.bottom-rect.bottom,mm(18)), 'footer margin is not 20 mm including bleed');
+            if(sheet.querySelector('.preview-photo-page'))check(getComputedStyle(footer.querySelector('.preview-page__number')).color===getComputedStyle(footer).color,'photo page number does not inherit footer color');
+          }
           const body=sheet.querySelector('.preview-page__content');
           if(body){const rect=body.getBoundingClientRect();check(near(rect.left-trim.left,mm(18))&&near(rect.top-trim.top,mm(18)), 'answer margin is not 20 mm including bleed');}
         }
