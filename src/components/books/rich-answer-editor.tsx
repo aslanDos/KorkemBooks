@@ -1,57 +1,91 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bold, Italic, Redo2, Underline, Undo2 } from "lucide-react";
 import type { AnswerFormat, AnswerMarkType } from "@/lib/books/types";
 
 export const EMPTY_ANSWER_FORMAT: AnswerFormat = { version: 1, marks: [] };
 
-type EditorSelection = {
-  anchorPath: number[];
-  anchorOffset: number;
-  focusPath: number[];
-  focusOffset: number;
-};
+type AnswerChange = { value: string; format: AnswerFormat };
+type StyleCommand = "bold" | "italic" | "underline";
 
-export function RichAnswerEditor({ value, format, readOnly = false, onChange }: { value: string; format: AnswerFormat; readOnly?: boolean; onChange: (value: string, format: AnswerFormat) => void }) {
+export function RichAnswerEditor({ value, format, readOnly = false, changeDelay = 0, onChange }: { value: string; format: AnswerFormat; readOnly?: boolean; changeDelay?: number; onChange: (value: string, format: AnswerFormat) => void }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialContentRef = useRef({ value, format });
-  const selectionRef = useRef<EditorSelection | null>(null);
   const composingRef = useRef(false);
+  const changeTimerRef = useRef<number | null>(null);
+  const pendingChangeRef = useRef<AnswerChange | null>(null);
+  const onChangeRef = useRef(onChange);
+  const [activeStyles, setActiveStyles] = useState<Record<StyleCommand, boolean>>({ bold: false, italic: false, underline: false });
+
+  const updateToolbarState = useCallback(() => {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+    const selectionInsideEditor = Boolean(editor && selection?.anchorNode && selection.focusNode && editor.contains(selection.anchorNode) && editor.contains(selection.focusNode));
+    const next = {
+      bold: selectionInsideEditor && document.queryCommandState("bold"),
+      italic: selectionInsideEditor && document.queryCommandState("italic"),
+      underline: selectionInsideEditor && document.queryCommandState("underline"),
+    };
+    setActiveStyles((current) => current.bold === next.bold && current.italic === next.italic && current.underline === next.underline ? current : next);
+  }, []);
+
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+
+  useEffect(() => {
+    document.addEventListener("selectionchange", updateToolbarState);
+    return () => document.removeEventListener("selectionchange", updateToolbarState);
+  }, [updateToolbarState]);
 
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
     editor.innerHTML = answerToHtml(initialContentRef.current.value, initialContentRef.current.format);
+    return () => {
+      if (changeTimerRef.current !== null) window.clearTimeout(changeTimerRef.current);
+    };
   }, []); // The editor is keyed by question, so initial content is applied once per answer.
 
-  useLayoutEffect(() => {
-    const editor = editorRef.current;
-    const saved = selectionRef.current;
-    if (!editor || !saved || document.activeElement !== editor) return;
-    restoreEditorSelection(editor, saved);
-  });
+  const publishChange = (next: AnswerChange, immediate: boolean) => {
+    pendingChangeRef.current = next;
+    if (changeTimerRef.current !== null) {
+      window.clearTimeout(changeTimerRef.current);
+      changeTimerRef.current = null;
+    }
+    if (immediate || changeDelay <= 0) {
+      pendingChangeRef.current = null;
+      onChangeRef.current(next.value, next.format);
+      return;
+    }
+    changeTimerRef.current = window.setTimeout(() => {
+      changeTimerRef.current = null;
+      const pending = pendingChangeRef.current;
+      pendingChangeRef.current = null;
+      if (pending) onChangeRef.current(pending.value, pending.format);
+    }, changeDelay);
+  };
 
-  const emitChange = () => {
+  const emitChange = (immediate = false) => {
     const editor = editorRef.current;
     if (!editor || composingRef.current) return;
-    selectionRef.current = captureEditorSelection(editor);
     const next = serializeEditor(editor);
-    onChange(next.text, next.format);
+    publishChange({ value: next.text, format: next.format }, immediate);
+    updateToolbarState();
   };
 
   const run = (command: "bold" | "italic" | "underline" | "undo" | "redo") => {
     if (readOnly) return;
     editorRef.current?.focus();
     document.execCommand(command);
-    emitChange();
+    emitChange(true);
+    updateToolbarState();
   };
 
   return <div className="rich-answer-editor">
     <div className="rich-answer-toolbar" role="toolbar" aria-label="Форматирование ответа">
-      <ToolbarButton label="Жирный" disabled={readOnly} onRun={() => run("bold")}><Bold size={16} /></ToolbarButton>
-      <ToolbarButton label="Курсив" disabled={readOnly} onRun={() => run("italic")}><Italic size={16} /></ToolbarButton>
-      <ToolbarButton label="Подчёркивание" disabled={readOnly} onRun={() => run("underline")}><Underline size={16} /></ToolbarButton>
+      <ToolbarButton label="Жирный" pressed={activeStyles.bold} disabled={readOnly} onRun={() => run("bold")}><Bold size={16} /></ToolbarButton>
+      <ToolbarButton label="Курсив" pressed={activeStyles.italic} disabled={readOnly} onRun={() => run("italic")}><Italic size={16} /></ToolbarButton>
+      <ToolbarButton label="Подчёркивание" pressed={activeStyles.underline} disabled={readOnly} onRun={() => run("underline")}><Underline size={16} /></ToolbarButton>
       <span className="rich-answer-toolbar__divider" aria-hidden="true" />
       <ToolbarButton label="Отменить" disabled={readOnly} onRun={() => run("undo")}><Undo2 size={16} /></ToolbarButton>
       <ToolbarButton label="Повторить" disabled={readOnly} onRun={() => run("redo")}><Redo2 size={16} /></ToolbarButton>
@@ -65,8 +99,11 @@ export function RichAnswerEditor({ value, format, readOnly = false, onChange }: 
       aria-label="Ответ"
       data-placeholder="Расскажите свою историю…"
       suppressContentEditableWarning
-      onInput={emitChange}
-      onBlur={emitChange}
+      onInput={() => emitChange()}
+      onBlur={() => emitChange(true)}
+      onFocus={updateToolbarState}
+      onKeyUp={updateToolbarState}
+      onMouseUp={updateToolbarState}
       onCompositionStart={() => { composingRef.current = true; }}
       onCompositionEnd={() => { composingRef.current = false; emitChange(); }}
       onPaste={(event) => {
@@ -78,57 +115,8 @@ export function RichAnswerEditor({ value, format, readOnly = false, onChange }: 
   </div>;
 }
 
-function captureEditorSelection(root: HTMLElement): EditorSelection | null {
-  const selection = window.getSelection();
-  if (!selection?.anchorNode || !selection.focusNode || !root.contains(selection.anchorNode) || !root.contains(selection.focusNode)) return null;
-  const anchorPath = getNodePath(root, selection.anchorNode);
-  const focusPath = getNodePath(root, selection.focusNode);
-  if (!anchorPath || !focusPath) return null;
-  return { anchorPath, anchorOffset: selection.anchorOffset, focusPath, focusOffset: selection.focusOffset };
-}
-
-function restoreEditorSelection(root: HTMLElement, saved: EditorSelection) {
-  const anchor = getNodeAtPath(root, saved.anchorPath);
-  const focus = getNodeAtPath(root, saved.focusPath);
-  if (!anchor || !focus) return;
-  const selection = window.getSelection();
-  if (!selection) return;
-  try {
-    selection.setBaseAndExtent(
-      anchor,
-      Math.min(saved.anchorOffset, getMaximumOffset(anchor)),
-      focus,
-      Math.min(saved.focusOffset, getMaximumOffset(focus)),
-    );
-  } catch {
-    // The browser may replace contentEditable nodes while normalizing pasted HTML.
-  }
-}
-
-function getNodePath(root: Node, node: Node) {
-  const path: number[] = [];
-  let current: Node | null = node;
-  while (current && current !== root) {
-    const parent: Node | null = current.parentNode;
-    if (!parent) return null;
-    path.unshift(Array.prototype.indexOf.call(parent.childNodes, current));
-    current = parent;
-  }
-  return current === root ? path : null;
-}
-
-function getNodeAtPath(root: Node, path: number[]) {
-  let current: Node | undefined = root;
-  for (const index of path) current = current?.childNodes[index];
-  return current;
-}
-
-function getMaximumOffset(node: Node) {
-  return node.nodeType === Node.TEXT_NODE ? (node.textContent?.length ?? 0) : node.childNodes.length;
-}
-
-function ToolbarButton({ label, disabled, onRun, children }: { label: string; disabled: boolean; onRun: () => void; children: React.ReactNode }) {
-  return <button type="button" aria-label={label} title={label} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onRun}>{children}</button>;
+function ToolbarButton({ label, pressed, disabled, onRun, children }: { label: string; pressed?: boolean; disabled: boolean; onRun: () => void; children: React.ReactNode }) {
+  return <button type="button" className={pressed ? "is-active" : undefined} aria-label={label} aria-pressed={pressed} title={label} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onRun}>{children}</button>;
 }
 
 export function RichAnswerText({ text, format }: { text: string; format: AnswerFormat }) {

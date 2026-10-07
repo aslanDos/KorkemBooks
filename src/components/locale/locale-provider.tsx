@@ -261,6 +261,14 @@ const kk: Record<string, string> = {
   "Для:": "Кімге:",
   "Настройки текста": "Мәтін баптаулары",
   "Следующий вопрос": "Келесі сұрақ",
+  "Предыдущий вопрос": "Алдыңғы сұрақ",
+  "Страницы вопроса": "Сұрақ беттері",
+  "Страницы текущего вопроса": "Ағымдағы сұрақтың беттері",
+  "Ответ": "Жауап",
+  "Изменить настройки страницы": "Бет баптауларын өзгерту",
+  "Цитата": "Дәйексөз",
+  "Текстовая": "Мәтін",
+  "Пустая": "Бос",
   "Расскажите всё, что приходит в голову. Текст можно будет отредактировать позже…": "Ойыңызға келгеннің бәрін жазыңыз. Мәтінді кейін өңдеуге болады…",
   "Сохранено": "Сақталды",
   "Сохраняем…": "Сақталуда…",
@@ -490,6 +498,22 @@ const kk: Record<string, string> = {
   "Некорректный шаблон обложки": "Мұқаба үлгісі қате",
   "Новый пароль должен отличаться от старого": "Жаңа құпиясөз ескісінен өзгеше болуы керек",
   "Ответ слишком длинный": "Жауап тым ұзын",
+  "Помощь с текстом": "Мәтінмен жұмыс істеуге көмек",
+  "ИИ": "ЖИ",
+  "Ваш смысл и факты останутся без изменений.": "Сіздің ойыңыз бен деректеріңіз өзгеріссіз қалады.",
+  "Исправить ошибки": "Қателерді түзету",
+  "Орфография и пунктуация": "Емле және тыныс белгілері",
+  "Сделать текст лучше": "Мәтінді жақсарту",
+  "Ясность и связность": "Түсініктілік және бірізділік",
+  "Сначала напишите ответ своими словами.": "Алдымен жауабыңызды өз сөзіңізбен жазыңыз.",
+  "Исправим орфографию и пунктуацию, не меняя ваши слова и интонацию.": "Сөздеріңіз бен мәнеріңізді өзгертпей, емле және тыныс белгілерін түзетеміз.",
+  "Уберём повторы и сделаем рассказ более связным, не добавляя новых фактов.": "Жаңа деректер қоспай, қайталауларды алып тастап, әңгімені бірізді етеміз.",
+  "Демонстрационный вариант — ИИ пока не подключён": "Демонстрациялық нұсқа — ЖИ әзірге қосылмаған",
+  "Ваш текст": "Сіздің мәтініңіз",
+  "Предложенная версия": "Ұсынылған нұсқа",
+  "Можно поправить текст перед применением.": "Қолданар алдында мәтінді түзетуге болады.",
+  "Оставить оригинал": "Бастапқы нұсқаны қалдыру",
+  "Принять изменения": "Өзгерістерді қабылдау",
   "Отвечайте на простые вопросы, а korkembooks поможет собрать ответы в связную историю.": "Қарапайым сұрақтарға жауап беріңіз, ал korkembooks жауаптарды біртұтас хикаяға жинауға көмектеседі.",
   "Переместить вопрос вверх": "Сұрақты жоғары жылжыту",
   "Переместить вопрос вниз": "Сұрақты төмен жылжыту",
@@ -540,7 +564,7 @@ function translateTree(root: ParentNode, locale: Locale) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let node = walker.nextNode();
   while (node) {
-    if (node.parentElement && !node.parentElement.closest("script, style, [data-no-translate]")) node.nodeValue = translateValue(node.nodeValue ?? "", locale);
+    if (node instanceof Text) translateTextNode(node, locale);
     node = walker.nextNode();
   }
   if (root instanceof Element) translateElement(root, locale);
@@ -548,11 +572,18 @@ function translateTree(root: ParentNode, locale: Locale) {
 }
 
 function translateElement(element: Element, locale: Locale) {
-  if (element.closest("[data-no-translate]")) return;
+  if (element.closest("[data-no-translate], [contenteditable]")) return;
   for (const attribute of ["placeholder", "title", "aria-label"]) {
     const value = element.getAttribute(attribute);
     if (value) element.setAttribute(attribute, translateValue(value, locale));
   }
+}
+
+function translateTextNode(node: Text, locale: Locale) {
+  if (!node.parentElement || node.parentElement.closest("script, style, [data-no-translate], [contenteditable]")) return;
+  const current = node.nodeValue ?? "";
+  const translated = translateValue(current, locale);
+  if (translated !== current) node.nodeValue = translated;
 }
 
 export function LocaleProvider({ initialLocale, children }: { initialLocale: Locale; children: ReactNode }) {
@@ -572,7 +603,7 @@ export function LocaleProvider({ initialLocale, children }: { initialLocale: Loc
       animationFrame = 0;
       for (const node of pendingNodes) {
         if (!node.isConnected) continue;
-        if (node instanceof Text) node.nodeValue = translateValue(node.nodeValue ?? "", locale);
+        if (node instanceof Text) translateTextNode(node, locale);
         else if (node instanceof Element) translateTree(node, locale);
       }
       pendingNodes.clear();

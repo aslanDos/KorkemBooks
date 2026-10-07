@@ -7,6 +7,18 @@ export const BOOK_PHOTO_LAYOUTS: Array<{ value: BookPhotoLayout; label: string; 
   { value: "four_grid", label: "2 × 2", description: "Четыре фотографии", slots: 4 },
 ];
 
+const BOOK_PHOTO_LAYOUT_COPY: Record<BookPhotoLayout, { kk: { label: string; description: string } }> = {
+  single: { kk: { label: "1 фотосурет", description: "Беттегі бір фотосурет" } },
+  two_columns: { kk: { label: "2 қатар", description: "Екі тік аймақ" } },
+  two_rows: { kk: { label: "2 бірінің астында", description: "Екі көлденең аймақ" } },
+  four_grid: { kk: { label: "2 × 2", description: "Төрт фотосурет" } },
+};
+
+export function getPhotoLayoutCopy(layout: BookPhotoLayout, locale: "ru" | "kk") {
+  const fallback = BOOK_PHOTO_LAYOUTS.find((option) => option.value === layout) ?? BOOK_PHOTO_LAYOUTS[0];
+  return locale === "kk" ? BOOK_PHOTO_LAYOUT_COPY[layout].kk : { label: fallback.label, description: fallback.description };
+}
+
 export type BookPhotoSlot = {
   id: string;
   slot: number;

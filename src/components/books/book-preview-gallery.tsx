@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, Columns2, Crop, FilePlus2, FileText, Grid2X2, GripVertical, ImagePlus, List, Move, Plus, Quote, RotateCcw, Rows2, Settings2, Trash2, X } from "lucide-react";
@@ -22,6 +22,8 @@ import { getBookFooterLabel } from "@/lib/books/page-footer";
 import { getBookContent } from "@/lib/books/language";
 import { QuestionPromptEditor } from "@/components/books/question-prompt-editor";
 import { BOOK_PHOTO_LAYOUTS, getBookPhotoSlots, type BookPhotoSlot } from "@/lib/books/photo-collage";
+import { AnswerWritingAssistant } from "@/components/books/answer-writing-assistant";
+import { useLocale } from "@/components/locale/locale-provider";
 
 const BookPhotoDialog = dynamic(() => import("@/components/books/book-photo-dialog").then((module) => module.BookPhotoDialog), { ssr: false });
 
@@ -39,6 +41,7 @@ const PHOTO_TEXT_TONES: Array<{ value: BookPhotoTextSettings["tone"]; label: str
 const PHOTO_LAYOUT_ICONS = { single: ImagePlus, two_columns: Columns2, two_rows: Rows2, four_grid: Grid2X2 } as const;
 
 export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWithContent; initialQuestionId?: string }) {
+  const { locale } = useLocale();
   const router = useRouter();
   const bookContent = getBookContent(book.language);
   const [images, setImages] = useState<Record<string, BookPageImage[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.images]))));
@@ -46,8 +49,11 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
   const [textPages, setTextPages] = useState<Record<string, BookTextPageData[]>>(() => Object.fromEntries(book.chapters.flatMap((chapter) => chapter.questions.map((question) => [question.id, question.textPages]))));
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [formats, setFormats] = useState<Record<string, AnswerFormat>>({});
+  const deferredAnswers = useDeferredValue(answers);
+  const deferredFormats = useDeferredValue(formats);
   const [savedAnswers, setSavedAnswers] = useState<Record<string, string>>(() => Object.fromEntries(book.chapters.flatMap(chapter => chapter.questions.map(question => [question.id, question.answer]))));
   const [savedFormats, setSavedFormats] = useState<Record<string, AnswerFormat>>(() => Object.fromEntries(book.chapters.flatMap(chapter => chapter.questions.map(question => [question.id, question.answerFormat]))));
+  const [answerEditorVersions, setAnswerEditorVersions] = useState<Record<string, number>>({});
   const dirtyIds = Object.keys(answers).filter(id => answers[id] !== savedAnswers[id] || JSON.stringify(formats[id]) !== JSON.stringify(savedFormats[id]));
   const dirty = dirtyIds.length > 0;
   const [saving, setSaving] = useState(false);
@@ -66,8 +72,8 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
     const storyPages = book.chapters.flatMap((chapter, chapterIndex) => [
       { chapter, chapterIndex, kind: "chapter" as const, key: `chapter-${chapter.id}` },
       ...chapter.questions.flatMap((question) => {
-        const answer = answers[question.id] ?? question.answer;
-        const answerFormat = formats[question.id] ?? question.answerFormat;
+        const answer = deferredAnswers[question.id] ?? question.answer;
+        const answerFormat = deferredFormats[question.id] ?? question.answerFormat;
         let answerOffset = 0;
         const questionPages = paginateBookAnswer(question.prompt, answer, { question: book.questionTextSize, answer: book.answerTextSize }).map((answerPart, answerPageIndex) => {
           const pageFormat = sliceAnswerFormat(answerFormat, answerOffset, answerOffset + answerPart.length);
@@ -96,7 +102,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
       { kind: "contents" as const, key: "contents", pageNumber: 4, contents },
       ...storyPages,
     ];
-  }, [book.chapters, book.questionTextSize, book.answerTextSize, images, blankPages, textPages, answers, formats]);
+  }, [book.chapters, book.questionTextSize, book.answerTextSize, images, blankPages, textPages, deferredAnswers, deferredFormats]);
   const [activePageKey, setActivePageKey] = useState<string | undefined>(() => { const questions = book.chapters.flatMap(chapter => chapter.questions); const question = questions.find(q => q.id === initialQuestionId) ?? questions.find(q => !q.answer.trim()) ?? questions[0]; return question ? `question-${question.id}` : "preface"; });
   const [photoDialogTarget, setPhotoDialogTarget] = useState<{ questionId: string; imageId: string | null; placement: BookPageImage["placement"]; insertPosition?: number; targetSlot?: number; requestedLayout?: BookPhotoLayout } | null>(null);
   const [layoutError, setLayoutError] = useState("");
@@ -548,7 +554,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
     <div className="book-editor-controls">
     <div className="book-editor-savebar"><span role="status">{saveError ? "Не удалось сохранить" : saving || dirty ? "Сохраняется…" : "Сохранено"}</span>{saveError && <button type="button" disabled={saving} onClick={() => void saveText()}>Повторить сохранение</button>}</div>
     <div className="book-spread-toolbar">
-      <button className="book-spread-toolbar__settings" type="button" disabled={saving || layoutPending} onClick={() => void openPageSettings()}><Settings2 size={17} />Изменить настройки страницы</button>
+      <button className="book-spread-toolbar__settings" type="button" disabled={saving || layoutPending} onClick={() => void openPageSettings()}><Settings2 size={17} />{locale === "kk" ? "Бет баптауларын өзгерту" : "Изменить настройки страницы"}</button>
       <button type="button" aria-haspopup="dialog" onClick={() => {
         setExpandedChapterId(editable?.kind === "question" ? editable.chapter.id : null);
         drawerRef.current?.showModal();
@@ -565,7 +571,7 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
         <div><strong>Страницы вопроса</strong><span>{questionSequence.length}</span></div>
         <div>{questionSequence.map((page) => <button key={page.key} type="button" className={page.key === active.key ? "is-active" : ""} aria-current={page.key === active.key ? "page" : undefined} onClick={() => setActivePageKey(page.key)}>
           {page.kind === "question" ? <FileText size={15} /> : page.kind === "photo" ? <ImagePlus size={15} /> : page.kind === "text" ? <Quote size={15} /> : <FilePlus2 size={15} />}
-          {page.kind === "question" ? `Ответ${page.answerPageIndex ? ` ${page.answerPageIndex + 1}` : ""}` : page.kind === "photo" ? page.image.collageLayout === "single" ? "Фото" : "Коллаж" : page.kind === "text" ? page.textPage.style === "quote" ? "Цитата" : "Текстовая" : "Пустая"}
+          {page.kind === "question" ? `${locale === "kk" ? "Жауап" : "Ответ"}${page.answerPageIndex ? ` ${page.answerPageIndex + 1}` : ""}` : page.kind === "photo" ? page.image.collageLayout === "single" ? "Фото" : "Коллаж" : page.kind === "text" ? page.textPage.style === "quote" ? locale === "kk" ? "Дәйексөз" : "Цитата" : locale === "kk" ? "Мәтін" : "Текстовая" : locale === "kk" ? "Бос" : "Пустая"}
         </button>)}<button className="book-question-pages__add" type="button" aria-haspopup="dialog" onClick={() => pageTypeDialogRef.current?.showModal()}><Plus size={15} />Добавить</button></div>
       </nav>}
       {active.kind === "chapter" ? <div className="book-page-variant-picker"><span className="book-inline-editor__chapter">Оформление страницы главы</span><strong>Выберите вариант</strong><button className="is-selected" type="button" aria-pressed="true"><span><small>Глава {active.chapterIndex + 1}</small><b>{active.chapter.title}</b></span><em>Классический</em><Check size={15} /></button><p>Сейчас доступен один вариант. Новые оформления можно будет добавить сюда позже.</p></div> : active.kind === "photo" ? <div className="book-photo-page-settings" aria-busy={layoutPending}>
@@ -641,8 +647,14 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
         <span className="book-inline-editor__chapter">{editable.chapter.title} · {questionIndex + 1} из {questions.length}</span>
         <label>{editable.prompt}</label>
         <QuestionPromptEditor key={`prompt-editor-${editable.questionId}-${editable.prompt}`} bookId={book.id} questionId={editable.questionId} prompt={editable.prompt} />
-        <RichAnswerEditor key={`answer-${editable.questionId}`} value={editable.answer} format={editable.answerFormat} onChange={(answer, answerFormat) => { setAnswers(current => ({ ...current, [editable.questionId]: answer })); setFormats(current => ({ ...current, [editable.questionId]: answerFormat })); setSaveError(""); }} />
+        <RichAnswerEditor key={`answer-${editable.questionId}-${answerEditorVersions[editable.questionId] ?? 0}`} value={editable.answer} format={editable.answerFormat} changeDelay={500} onChange={(answer, answerFormat) => { setAnswers(current => ({ ...current, [editable.questionId]: answer })); setFormats(current => ({ ...current, [editable.questionId]: answerFormat })); setSaveError(""); }} />
         <small>{editable.answer.length} символов</small>
+        <AnswerWritingAssistant value={editable.answer} onApply={(answer) => {
+          setAnswers(current => ({ ...current, [editable.questionId]: answer }));
+          setFormats(current => ({ ...current, [editable.questionId]: { version: 1, marks: [] } }));
+          setAnswerEditorVersions(current => ({ ...current, [editable.questionId]: (current[editable.questionId] ?? 0) + 1 }));
+          setSaveError("");
+        }} />
         <div className="book-inline-editor__navigation"><button type="button" disabled={questionIndex <= 0} onClick={() => setActivePageKey(questions[questionIndex - 1].key)}>Предыдущий вопрос</button><button type="button" disabled={questionIndex >= questions.length - 1} onClick={() => setActivePageKey(questions[questionIndex + 1].key)}>Следующий вопрос</button></div>
       </> : <p>Выберите вопрос или страницу с историей, чтобы начать писать. Начальные страницы, предисловие и содержание формируются автоматически.</p>}
     </aside>
@@ -663,13 +675,13 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
     </div></div>
     <dialog ref={pageTypeDialogRef} className="book-page-type-dialog" aria-labelledby="book-page-type-title" onClick={(event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }}>
       <div className="book-page-type-dialog__panel">
-        <header><div><p className="eyebrow">Для текущего вопроса</p><h2 id="book-page-type-title">Добавить страницу</h2></div><button type="button" aria-label="Закрыть" onClick={() => pageTypeDialogRef.current?.close()}><X size={19} /></button></header>
-        <p>Новая страница появится сразу после выбранной.</p>
+        <header><div><p className="eyebrow">{locale === "kk" ? "Ағымдағы сұрақ үшін" : "Для текущего вопроса"}</p><h2 id="book-page-type-title">{locale === "kk" ? "Бет қосу" : "Добавить страницу"}</h2></div><button type="button" aria-label={locale === "kk" ? "Жабу" : "Закрыть"} onClick={() => pageTypeDialogRef.current?.close()}><X size={19} /></button></header>
+        <p>{locale === "kk" ? "Жаңа бет таңдалған беттен кейін бірден пайда болады." : "Новая страница появится сразу после выбранной."}</p>
         <div className="book-page-type-grid">
-          <button type="button" onClick={addPhoto}><span><ImagePlus size={22} /></span><strong>Фотография</strong><small>Добавить одну или собрать цепочку из нескольких фото</small></button>
-          <button type="button" disabled={layoutPending} onClick={() => void addBlankPage()}><span><FilePlus2 size={22} /></span><strong>Пустая страница</strong><small>Оставить страницу без текста и изображения</small></button>
-          <button type="button" disabled={layoutPending} onClick={() => void addTextPage("text")}><span><FileText size={22} /></span><strong>Текстовая страница</strong><small>Добавить отдельный текст, посвящение или небольшую историю</small></button>
-          <button type="button" disabled={layoutPending} onClick={() => void addTextPage("quote")}><span><Quote size={22} /></span><strong>Цитата</strong><small>Выделить важную мысль и при желании указать автора</small></button>
+          <button type="button" onClick={addPhoto}><span><ImagePlus size={22} /></span><strong>{locale === "kk" ? "Фотосурет" : "Фотография"}</strong><small>{locale === "kk" ? "Бір фотосурет қосу немесе бірнеше фотосуреттен топтама жасау" : "Добавить одну или собрать цепочку из нескольких фото"}</small></button>
+          <button type="button" disabled={layoutPending} onClick={() => void addBlankPage()}><span><FilePlus2 size={22} /></span><strong>{locale === "kk" ? "Бос бет" : "Пустая страница"}</strong><small>{locale === "kk" ? "Бетті мәтінсіз және кескінсіз қалдыру" : "Оставить страницу без текста и изображения"}</small></button>
+          <button type="button" disabled={layoutPending} onClick={() => void addTextPage("text")}><span><FileText size={22} /></span><strong>{locale === "kk" ? "Мәтіндік бет" : "Текстовая страница"}</strong><small>{locale === "kk" ? "Жеке мәтін, арнау немесе шағын хикая қосу" : "Добавить отдельный текст, посвящение или небольшую историю"}</small></button>
+          <button type="button" disabled={layoutPending} onClick={() => void addTextPage("quote")}><span><Quote size={22} /></span><strong>{locale === "kk" ? "Дәйексөз" : "Цитата"}</strong><small>{locale === "kk" ? "Маңызды ойды бөліп көрсету және қажет болса авторын жазу" : "Выделить важную мысль и при желании указать автора"}</small></button>
         </div>
       </div>
     </dialog>

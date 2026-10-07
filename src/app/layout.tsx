@@ -9,7 +9,7 @@ const manrope = Manrope({ variable: "--font-manrope", subsets: ["cyrillic", "lat
 const forum = Forum({ preload: false, variable: "--font-forum", subsets: ["cyrillic", "latin"], weight: "400" });
 const playfair = Playfair_Display({ preload: false, variable: "--font-playfair", subsets: ["cyrillic", "latin"], weight: ["400", "500"] });
 const cormorant = Cormorant_Garamond({ preload: false, variable: "--font-cormorant", subsets: ["cyrillic", "latin"], weight: ["400", "500", "600"] });
-const literata = Literata({ preload: false, variable: "--font-literata", subsets: ["cyrillic", "latin"] });
+const literata = Literata({ preload: false, variable: "--font-literata", subsets: ["cyrillic", "latin"], style: ["normal", "italic"] });
 
 export const metadata: Metadata = {
   title: "korkembooks — Ваша история достойна книги",

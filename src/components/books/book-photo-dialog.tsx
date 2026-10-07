@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { Columns2, Grid2X2, ImagePlus, LoaderCircle, Rows2, Trash2, Upload, X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DEFAULT_BOOK_PHOTO_TEXT, type BookCollageImage, type BookPageImage, type BookPhotoLayout } from "@/lib/books/types";
-import { BOOK_PHOTO_LAYOUTS, getBookPhotoSlots, getPhotoLayoutSlotCount } from "@/lib/books/photo-collage";
+import { BOOK_PHOTO_LAYOUTS, getBookPhotoSlots, getPhotoLayoutCopy, getPhotoLayoutSlotCount } from "@/lib/books/photo-collage";
 import { prepareImageUpload, SUPPORTED_IMAGE_INPUT, SUPPORTED_IMAGE_TYPES } from "@/lib/books/image-upload";
 import { deleteBookPageImageAction, refreshBookProgressAction } from "@/app/dashboard/books/page-actions";
+import { useLocale } from "@/components/locale/locale-provider";
 
 const MAX_FILE_SIZE = 6 * 1024 * 1024;
 
@@ -35,6 +36,7 @@ export function BookPhotoDialog({ bookId, defaultRoundedCorners, defaultHideFoot
   onImageSave: (questionId: string, image: BookPageImage) => void;
   onImageDelete: (questionId: string, imageId: string) => void;
 }) {
+  const { locale } = useLocale();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [layout, setLayout] = useState<BookPhotoLayout>("single");
   const [drafts, setDrafts] = useState<Record<number, SlotDraft>>({});
@@ -218,21 +220,22 @@ export function BookPhotoDialog({ bookId, defaultRoundedCorners, defaultHideFoot
 
   return <dialog ref={dialogRef} className="book-photo-dialog" onCancel={(event) => { event.preventDefault(); resetAndClose(); }}>
     <div className="book-photo-dialog__panel">
-      <header><div><p className="eyebrow">Страница {page?.pageNumber}</p><h2>{isLayoutChange ? "Изменить макет коллажа?" : page?.image ? `Изменить фото ${page.targetSlot ?? 1}` : "Добавить фотостраницу"}</h2></div><button type="button" disabled={pending} onClick={resetAndClose} aria-label="Закрыть"><X size={19} /></button></header>
+      <header><div><p className="eyebrow">{locale === "kk" ? "Бет" : "Страница"} {page?.pageNumber}</p><h2>{isLayoutChange ? locale === "kk" ? "Коллаж макетін өзгерту керек пе?" : "Изменить макет коллажа?" : page?.image ? locale === "kk" ? `Фотосуретті өзгерту ${page.targetSlot ?? 1}` : `Изменить фото ${page.targetSlot ?? 1}` : locale === "kk" ? "Фотосурет бетін қосу" : "Добавить фотостраницу"}</h2></div><button type="button" disabled={pending} onClick={resetAndClose} aria-label={locale === "kk" ? "Жабу" : "Закрыть"}><X size={19} /></button></header>
       <p className="book-photo-dialog__question">{page?.prompt}</p>
-      {!page?.image && <fieldset className="book-photo-layout-picker"><legend>Выберите макет</legend><div>{BOOK_PHOTO_LAYOUTS.map((option) => {
+      {!page?.image && <fieldset className="book-photo-layout-picker"><legend>{locale === "kk" ? "Макетті таңдаңыз" : "Выберите макет"}</legend><div>{BOOK_PHOTO_LAYOUTS.map((option) => {
         const Icon = layoutIcons[option.value];
-        return <button type="button" className={layout === option.value ? "is-selected" : ""} aria-pressed={layout === option.value} onClick={() => chooseLayout(option.value)} key={option.value}><Icon size={23} /><strong>{option.label}</strong><small>{option.description}</small></button>;
+        const copy = getPhotoLayoutCopy(option.value, locale);
+        return <button type="button" className={layout === option.value ? "is-selected" : ""} aria-pressed={layout === option.value} onClick={() => chooseLayout(option.value)} key={option.value}><Icon size={23} /><strong>{copy.label}</strong><small>{copy.description}</small></button>;
       })}</div></fieldset>}
-      {isLayoutChange && <div className={`book-photo-layout-change-note${removesPhotos ? " is-warning" : ""}`}><strong>{BOOK_PHOTO_LAYOUTS.find((option) => option.value === page?.requestedLayout)?.label}</strong><p>{removesPhotos ? "Лишние фотографии будут удалены из этой страницы после подтверждения." : visibleSlots.length ? `Добавьте ещё ${visibleSlots.length} ${visibleSlots.length === 1 ? "фотографию" : "фотографии"} для нового макета.` : "Фотографии сохранятся, изменится только их расположение."}</p></div>}
+      {isLayoutChange && page?.requestedLayout && <div className={`book-photo-layout-change-note${removesPhotos ? " is-warning" : ""}`}><strong>{getPhotoLayoutCopy(page.requestedLayout, locale).label}</strong><p>{locale === "kk" ? removesPhotos ? "Растағаннан кейін артық фотосуреттер осы беттен жойылады." : visibleSlots.length ? `Жаңа макет үшін тағы ${visibleSlots.length} фотосурет қосыңыз.` : "Фотосуреттер сақталады, тек орналасуы өзгереді." : removesPhotos ? "Лишние фотографии будут удалены из этой страницы после подтверждения." : visibleSlots.length ? `Добавьте ещё ${visibleSlots.length} ${visibleSlots.length === 1 ? "фотографию" : "фотографии"} для нового макета.` : "Фотографии сохранятся, изменится только их расположение."}</p></div>}
       <div className={`book-photo-upload-grid book-photo-upload-grid--${page?.image && !page.requestedLayout ? "single" : layout}`}>
         {visibleSlots.map((slot) => {
           const current = existingSlots.find((item) => item.slot === slot);
           const shownUrl = drafts[slot]?.previewUrl || current?.signedUrl || "";
           return <label className={`book-photo-dropzone${shownUrl ? " book-photo-dropzone--filled" : ""}`} key={slot} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void acceptFile(slot, event.dataTransfer.files[0]); }} style={shownUrl ? { backgroundImage: `url("${shownUrl}")` } : undefined}>
             <input className="book-photo-file-input" type="file" accept={SUPPORTED_IMAGE_INPUT} disabled={pending || convertingSlots.has(slot)} onChange={(event) => { void acceptFile(slot, event.target.files?.[0]); event.target.value = ""; }} />
-            {!shownUrl && <><span>{convertingSlots.has(slot) ? <LoaderCircle className="spin" size={22} /> : <ImagePlus size={22} />}</span><strong>{convertingSlots.has(slot) ? "Обрабатываем HEIC…" : `Фото ${slot}`}</strong><small>HEIC, JPEG, PNG или WebP · до 6 МБ</small></>}
-            {shownUrl && <span className="book-photo-dropzone__replace"><Upload size={15} />{drafts[slot] ? "Выбрать другое" : "Заменить фото"}</span>}
+            {!shownUrl && <><span>{convertingSlots.has(slot) ? <LoaderCircle className="spin" size={22} /> : <ImagePlus size={22} />}</span><strong>{convertingSlots.has(slot) ? locale === "kk" ? "HEIC өңделуде…" : "Обрабатываем HEIC…" : `${locale === "kk" ? "Фотосурет" : "Фото"} ${slot}`}</strong><small>HEIC, JPEG, PNG немесе WebP · 6 МБ дейін</small></>}
+            {shownUrl && <span className="book-photo-dropzone__replace"><Upload size={15} />{drafts[slot] ? locale === "kk" ? "Басқасын таңдау" : "Выбрать другое" : locale === "kk" ? "Фотосуретті ауыстыру" : "Заменить фото"}</span>}
           </label>;
         })}
       </div>
