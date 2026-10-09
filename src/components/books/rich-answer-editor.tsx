@@ -9,7 +9,7 @@ export const EMPTY_ANSWER_FORMAT: AnswerFormat = { version: 1, marks: [] };
 type AnswerChange = { value: string; format: AnswerFormat };
 type StyleCommand = "bold" | "italic" | "underline";
 
-export function RichAnswerEditor({ value, format, readOnly = false, changeDelay = 0, onChange }: { value: string; format: AnswerFormat; readOnly?: boolean; changeDelay?: number; onChange: (value: string, format: AnswerFormat) => void }) {
+export function RichAnswerEditor({ value, format, readOnly = false, changeDelay = 0, toolbarActions, onChange }: { value: string; format: AnswerFormat; readOnly?: boolean; changeDelay?: number; toolbarActions?: React.ReactNode; onChange: (value: string, format: AnswerFormat) => void }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const initialContentRef = useRef({ value, format });
   const composingRef = useRef(false);
@@ -89,6 +89,7 @@ export function RichAnswerEditor({ value, format, readOnly = false, changeDelay 
       <span className="rich-answer-toolbar__divider" aria-hidden="true" />
       <ToolbarButton label="Отменить" disabled={readOnly} onRun={() => run("undo")}><Undo2 size={16} /></ToolbarButton>
       <ToolbarButton label="Повторить" disabled={readOnly} onRun={() => run("redo")}><Redo2 size={16} /></ToolbarButton>
+      {toolbarActions && <div className="rich-answer-toolbar__actions">{toolbarActions}</div>}
     </div>
     <div
       ref={editorRef}

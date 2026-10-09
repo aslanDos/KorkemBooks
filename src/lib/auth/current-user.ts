@@ -24,19 +24,23 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) return null;
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const claims = claimsData?.claims;
+  if (!claims) return null;
+  const userId = claims?.sub;
+  const email = claims?.email;
+  if (typeof userId !== "string" || typeof email !== "string") return null;
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("role, phone_e164")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle();
 
   return {
-    id: user.id,
-    email: user.email,
-    phone: profile?.phone_e164 ?? user.phone,
+    id: userId,
+    email,
+    phone: profile?.phone_e164 ?? (typeof claims.phone === "string" ? claims.phone : undefined),
     role: isAppRole(profile?.role) ? profile.role : "user",
     isDevelopmentUser: false,
   };

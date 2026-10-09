@@ -1,7 +1,7 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import type { BookFinance, FinanceEntry, FinanceKind, FinancePeriod } from "./finance-types";
-export type { BookFinance, FinanceEntry, FinanceKind, FinancePeriod } from "./finance-types";
+import type { BookFinance, FinanceBucket, FinanceEntry, FinanceKind, FinancePeriod } from "./finance-types";
+export type { BookFinance, FinanceBucket, FinanceEntry, FinanceKind, FinancePeriod } from "./finance-types";
 
 export function financeTotals(price: number | null, entries: FinanceEntry[]): BookFinance {
   const active = entries.filter((entry) => !entry.voidedAt);
@@ -52,7 +52,6 @@ function monthKey(key: string): string { return `${key.slice(0, 7)}-01`; }
 function shiftMonths(key: string, months: number): string { const date = dateFromKey(monthKey(key)); date.setUTCMonth(date.getUTCMonth() + months); return keyFromDate(date); }
 function bucketKey(key: string, period: FinancePeriod): string { return period === "day" ? key : period === "week" ? weekKey(key) : monthKey(key); }
 
-export type FinanceBucket = { key: string; label: string; received: number; refunds: number; costs: number };
 function bucketLabel(key: string, period: FinancePeriod): string {
   if (period === "day") return new Intl.DateTimeFormat("ru-KZ", { day: "numeric", month: "short", timeZone: "UTC" }).format(dateFromKey(key));
   if (period === "week") return `с ${new Intl.DateTimeFormat("ru-KZ", { day: "numeric", month: "short", timeZone: "UTC" }).format(dateFromKey(key))}`;
@@ -82,10 +81,10 @@ export function buildFinanceBuckets(entries: FinanceEntry[], period: FinancePeri
 export async function getFinanceAnalytics(period: FinancePeriod) {
   const admin = createSupabaseAdminClient();
   if (!admin) return { error: "Сервис временно недоступен" } as const;
-  const bookRows: Array<{ id: string; title: string; production_status: string }> = [];
+  const bookRows: Array<{ id: string; title: string; production_status: string; profiles: { phone_e164: string | null } | Array<{ phone_e164: string | null }> | null }> = [];
   const prices: Array<{ book_id: string; agreed_price_kzt: number | string }> = [];
   for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await admin.from("books").select("id, title, production_status").is("deleted_at", null).order("created_at", { ascending: false }).order("id").range(offset, offset + 999);
+    const { data, error } = await admin.from("books").select("id, title, production_status, profiles!books_owner_id_fkey(phone_e164)").is("deleted_at", null).order("created_at", { ascending: false }).order("id").range(offset, offset + 999);
     if (error) return { error: "Не удалось загрузить книги." } as const;
     bookRows.push(...(data ?? []));
     if (!data || data.length < 1000) break;
@@ -112,10 +111,14 @@ export async function getFinanceAnalytics(period: FinancePeriod) {
   const activeEntries = entries.filter((entry) => activeBookIds.has(entry.bookId));
   const byBook = new Map<string, FinanceEntry[]>();
   for (const entry of activeEntries) byBook.set(entry.bookId, [...(byBook.get(entry.bookId) ?? []), entry]);
-  const books = bookRows.map((row) => ({
-    id: row.id, title: row.title, status: row.production_status,
-    finance: financeTotals(priceByBook.get(row.id) ?? null, byBook.get(row.id) ?? []),
-  }));
+  const books = bookRows.map((row) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      id: row.id, title: row.title, status: row.production_status,
+      ownerPhone: profile?.phone_e164 ?? null,
+      finance: financeTotals(priceByBook.get(row.id) ?? null, byBook.get(row.id) ?? []),
+    };
+  });
   const buckets = buildFinanceBuckets(activeEntries, period);
   const periodRefunds = buckets.reduce((sum, bucket) => sum + bucket.refunds, 0);
   const periodReceived = buckets.reduce((sum, bucket) => sum + bucket.received, 0) - periodRefunds;

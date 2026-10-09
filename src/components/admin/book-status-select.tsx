@@ -8,7 +8,7 @@ import type { BookProductionStatus } from "@/lib/admin/types";
 import { BOOK_PRODUCTION_LABELS } from "@/lib/books/production-status";
 
 const nextStatuses: Record<BookProductionStatus, BookProductionStatus[]> = {
-  writing: ["editing"], editing: ["writing"], approval: [], printing: ["ready", "editing"],
+  writing: ["editing"], editing: ["writing", "approval"], approval: ["printing"], printing: ["ready", "editing"],
   ready: ["delivery", "editing"], delivery: ["received", "editing"], received: ["editing"],
 };
 

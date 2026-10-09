@@ -20,10 +20,10 @@ export default async function DashboardPage() {
         </article>
         {books.length > 1 && <article className="overview-stat"><span><BookOpenText size={21} /></span><div><strong>{books.length}</strong><p>Книг в библиотеке</p></div></article>}
       </section>
-      <section className="dashboard-section">
+      {books.length > 0 && <section className="dashboard-section">
         <div className="section-heading"><div><h2>Недавние книги</h2><p>Здесь появятся книги, над которыми вы работаете.</p></div><Link href="/dashboard/books">Все книги</Link></div>
-        {books.length === 0 ? <div className="empty-books"><BookOpenText size={28} /><h3>Пока нет ни одной книги</h3><p>Создайте первую книгу — мы проведём вас по каждому шагу.</p></div> : <div className="book-grid book-grid--recent">{books.slice(0, 3).map((book) => <BookCard book={book} key={book.id} />)}</div>}
-      </section>
+        <div className="book-grid book-grid--recent">{books.slice(0, 3).map((book) => <BookCard book={book} key={book.id} />)}</div>
+      </section>}
     </>
   );
 }

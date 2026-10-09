@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { CatalogQuestionList } from "@/components/admin/catalog-question-list";
+import { CatalogChapterList } from "@/components/admin/catalog-chapter-list";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { BOOK_LANGUAGES, isAvailableBookLanguage } from "@/lib/books/language";
 import { isRemovedBookTypeSlug } from "@/lib/books/catalog";
@@ -17,11 +18,12 @@ export default async function AdminQuestionsPage({ searchParams }: { searchParam
   const availableTypes = types?.filter((type) => !isRemovedBookTypeSlug(type.slug));
   const selectedType = availableTypes?.find((type) => type.slug === params.type) ?? availableTypes?.[0];
   const language = isAvailableBookLanguage(params.language) ? params.language : "ru";
-  const { data: questions, error: questionsError } = selectedType
-    ? await admin.from("question_catalog")
+  const [{ data: questions, error: questionsError }, { data: chapters, error: chaptersError }] = selectedType
+    ? await Promise.all([admin.from("question_catalog")
       .select("id, number, prompt, question_catalog_translations(language, prompt)")
-      .eq("book_type_id", selectedType.id).order("number")
-    : { data: [], error: null };
+      .eq("book_type_id", selectedType.id).order("number"), admin.from("chapter_catalog")
+      .select("id, position, title").eq("book_type_id", selectedType.id).eq("language", language).order("position")])
+    : [{ data: [], error: null }, { data: [], error: null }];
   const rows = (questions ?? []).map((question) => {
     const translation = question.question_catalog_translations.find((item) => item.language === language);
     return { id: question.id, number: question.number, prompt: language === "ru" ? question.prompt : translation?.prompt ?? question.prompt, missingTranslation: language !== "ru" && !translation };
@@ -31,14 +33,14 @@ export default async function AdminQuestionsPage({ searchParams }: { searchParam
     <DashboardHeader title="Каталог вопросов" description="Общие формулировки для всех типов книг" />
     <section className="admin-card catalog-editor">
       <p className="catalog-editor__notice">Изменения применяются к новым книгам и к книгам на этапах написания и редактуры. Ответы и индивидуальные исправления сохраняются; книги на согласовании и в производстве не меняются.</p>
-      {typesError || questionsError ? <p role="alert" className="admin-form-error">Не удалось загрузить каталог вопросов.</p> : <>
+      {typesError || questionsError || chaptersError ? <p role="alert" className="admin-form-error">Не удалось загрузить каталог. Проверьте, что применены последние миграции базы данных.</p> : <>
         <nav className="catalog-editor__types" aria-label="Тип получателя">
           {availableTypes?.map((type) => <Link key={type.id} className={type.id === selectedType?.id ? "is-active" : ""} href={`/admin/questions?type=${encodeURIComponent(type.slug)}&language=${language}`}>{type.name}</Link>)}
         </nav>
         <nav className="catalog-editor__languages" aria-label="Язык вопросов">
           {BOOK_LANGUAGES.map((item) => <Link key={item.value} className={item.value === language ? "is-active" : ""} href={`/admin/questions?type=${encodeURIComponent(selectedType?.slug ?? "")}&language=${item.value}`}>{item.label}</Link>)}
         </nav>
-        {selectedType && <CatalogQuestionList key={`${selectedType.id}:${language}`} questions={rows} language={language} />}
+        {selectedType && <><CatalogChapterList key={`chapters:${selectedType.id}:${language}`} chapters={chapters ?? []} language={language} /><CatalogQuestionList key={`${selectedType.id}:${language}`} questions={rows} language={language} /></>}
       </>}
     </section>
   </>;

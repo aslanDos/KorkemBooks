@@ -4,19 +4,15 @@ import { useRef, useState } from "react";
 import { Check, PenLine, Sparkles, SpellCheck2 } from "lucide-react";
 import { useLocale } from "@/components/locale/locale-provider";
 import { Dialog } from "@/components/ui/dialog";
+import { BOOK_WRITING_STYLE_COPY, type BookWritingStyle } from "@/lib/books/writing-style";
 
 type EditingMode = "proofread" | "improve";
 
 const COPY = {
   ru: {
     assistant: "Помощь с текстом",
-    ai: "ИИ",
-    promise: "Ваш смысл и факты останутся без изменений.",
     proofread: "Исправить ошибки",
-    proofreadShort: "Орфография и пунктуация",
     proofreadDescription: "Исправим орфографию и пунктуацию, не меняя ваши слова и интонацию.",
-    improve: "Сделать текст лучше",
-    improveShort: "Ясность и связность",
     improveDescription: "Уберём повторы и сделаем рассказ более связным, не добавляя новых фактов.",
     empty: "Сначала напишите ответ своими словами.",
     prototype: "Демонстрационный вариант — ИИ пока не подключён",
@@ -28,13 +24,8 @@ const COPY = {
   },
   kk: {
     assistant: "Мәтінмен жұмыс істеуге көмек",
-    ai: "ЖИ",
-    promise: "Сіздің ойыңыз бен деректеріңіз өзгеріссіз қалады.",
     proofread: "Қателерді түзету",
-    proofreadShort: "Емле және тыныс белгілері",
     proofreadDescription: "Сөздеріңіз бен мәнеріңізді өзгертпей, емле және тыныс белгілерін түзетеміз.",
-    improve: "Мәтінді жақсарту",
-    improveShort: "Түсініктілік және бірізділік",
     improveDescription: "Жаңа деректер қоспай, қайталауларды алып тастап, әңгімені бірізді етеміз.",
     empty: "Алдымен жауабыңызды өз сөзіңізбен жазыңыз.",
     prototype: "Демонстрациялық нұсқа — ЖИ әзірге қосылмаған",
@@ -46,9 +37,10 @@ const COPY = {
   },
 };
 
-export function AnswerWritingAssistant({ value, disabled = false, onApply }: { value: string; disabled?: boolean; onApply: (value: string) => void }) {
+export function AnswerWritingAssistant({ value, writingStyle, disabled = false, onApply }: { value: string; writingStyle: BookWritingStyle; disabled?: boolean; onApply: (value: string) => void }) {
   const { locale } = useLocale();
   const copy = COPY[locale];
+  const styleCopy = BOOK_WRITING_STYLE_COPY[locale][writingStyle];
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<EditingMode>("proofread");
   const [original, setOriginal] = useState("");
@@ -69,33 +61,23 @@ export function AnswerWritingAssistant({ value, disabled = false, onApply }: { v
   }
 
   return <>
-    <section className="answer-writing-assistant" aria-label={copy.assistant}>
-      <div className="answer-writing-assistant__heading">
-        <span className="answer-writing-assistant__icon" aria-hidden="true"><Sparkles size={16} /></span>
-        <div>
-          <div><strong>{copy.assistant}</strong><span>{copy.ai}</span></div>
-          <p>{copy.promise}</p>
-        </div>
-      </div>
-      <div className="answer-writing-assistant__actions">
-        <button type="button" disabled={disabled || !value.trim()} onClick={() => open("proofread")}>
-          <SpellCheck2 size={17} aria-hidden="true" />
-          <span><strong>{copy.proofread}</strong><small>{copy.proofreadShort}</small></span>
-        </button>
-        <button type="button" disabled={disabled || !value.trim()} onClick={() => open("improve")}>
-          <PenLine size={17} aria-hidden="true" />
-          <span><strong>{copy.improve}</strong><small>{copy.improveShort}</small></span>
-        </button>
-      </div>
-      {!value.trim() && <small className="answer-writing-assistant__empty">{copy.empty}</small>}
-    </section>
+    <div className="answer-writing-assistant" aria-label={copy.assistant}>
+      <button className="answer-writing-assistant__action" type="button" title={value.trim() ? copy.proofreadDescription : copy.empty} disabled={disabled || !value.trim()} onClick={() => open("proofread")}>
+        <SpellCheck2 size={16} aria-hidden="true" />
+        <span>{copy.proofread}</span>
+      </button>
+      <button className="answer-writing-assistant__action" type="button" title={value.trim() ? styleCopy.assistant : copy.empty} disabled={disabled || !value.trim()} onClick={() => open("improve")}>
+        <PenLine size={16} aria-hidden="true" />
+        <span>{styleCopy.label}</span>
+      </button>
+    </div>
 
     <Dialog
       ref={dialogRef}
       className="answer-assistant-dialog"
       panelClassName="answer-assistant-dialog__panel"
       eyebrow={copy.assistant}
-      title={mode === "proofread" ? copy.proofread : copy.improve}
+      title={mode === "proofread" ? copy.proofread : styleCopy.label}
     >
       <p className="answer-assistant-dialog__description">{mode === "proofread" ? copy.proofreadDescription : copy.improveDescription}</p>
       <p className="answer-assistant-dialog__prototype"><Sparkles size={14} aria-hidden="true" />{copy.prototype}</p>

@@ -24,9 +24,19 @@ export function ScrollTimeline({ children }: { children: ReactNode }) {
       if (!frame) frame = window.requestAnimationFrame(update);
     };
     const measure = () => {
-      const track = window.getComputedStyle(list, "::before");
-      trackTop = parseFloat(track.top) || 0;
-      trackHeight = Math.max(0, list.clientHeight - trackTop - (parseFloat(track.bottom) || 0));
+      const markers = list.querySelectorAll<HTMLElement>(".landing-step-number");
+      const firstMarker = markers[0];
+      const lastMarker = markers[markers.length - 1];
+      if (!firstMarker || !lastMarker) return;
+
+      const listBounds = list.getBoundingClientRect();
+      const firstBounds = firstMarker.getBoundingClientRect();
+      const lastBounds = lastMarker.getBoundingClientRect();
+      trackTop = firstBounds.top + firstBounds.height / 2 - listBounds.top;
+      const trackBottom = listBounds.bottom - lastBounds.top - lastBounds.height / 2;
+      trackHeight = Math.max(0, list.clientHeight - trackTop - trackBottom);
+      list.style.setProperty("--timeline-track-top", `${trackTop}px`);
+      list.style.setProperty("--timeline-track-bottom", `${trackBottom}px`);
       scheduleUpdate();
     };
 

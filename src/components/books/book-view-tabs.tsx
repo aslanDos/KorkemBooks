@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, ListChecks } from "lucide-react";
 
-export function BookViewTabs({ bookId, active }: { bookId: string; active: "questions" | "preview" }) {
+export function BookViewTabs({ bookId }: { bookId: string }) {
   const router = useRouter();
+  const pathname = usePathname();
   const questionsHref = `/dashboard/books/${bookId}`;
   const previewHref = `/dashboard/books/${bookId}/preview`;
+  const active = pathname.startsWith(previewHref) ? "preview" : "questions";
 
   useEffect(() => {
     if (active !== "questions") return;

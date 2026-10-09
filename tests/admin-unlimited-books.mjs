@@ -50,8 +50,9 @@ function bookActionFixture(role, existingBook = false) {
       isBookLanguage: value => ['ru', 'kk', 'en'].includes(value),
     },
     '@/lib/books/catalog': { isRemovedBookTypeSlug: value => value === 'son' || value === 'daughter' },
+    '@/lib/books/progress': { BOOK_MINIMUM_SUBMISSION_PAGE_COUNT: 60, BOOK_TARGET_PAGE_COUNT: 100 },
     '@/lib/books/validation': {
-      createBookSchema: { safeParse: input => ({ success: true, data: { title: input.title, authorName: input.authorName, recipientName: input.recipientName } }) },
+      createBookSchema: { safeParse: input => ({ success: true, data: { title: input.title, authorName: input.authorName, recipientName: input.recipientName, authorGender: input.authorGender ?? 'neutral', recipientGender: input.recipientGender ?? 'neutral', backCoverText: input.backCoverText ?? '', writingStyle: input.writingStyle ?? 'warm_story' } }) },
     },
   };
   new Function('require', 'module', 'exports', source)(name => mocks[name] ?? require(name), loaded, loaded.exports);
@@ -60,7 +61,7 @@ function bookActionFixture(role, existingBook = false) {
 
 function createForm(selectedType = typeId) {
   const form = new FormData();
-  for (const [key, value] of Object.entries({ title: 'Новая книга', authorName: 'Автор', recipientName: '', language: 'ru', typeId: selectedType })) form.set(key, value);
+  for (const [key, value] of Object.entries({ title: 'Новая книга', authorName: 'Автор', recipientName: '', authorGender: 'female', recipientGender: 'male', backCoverText: 'С любовью', language: 'ru', typeId: selectedType, writingStyle: 'literary_story' })) form.set(key, value);
   return form;
 }
 
@@ -68,6 +69,10 @@ test('admin book creation ignores the one-book guard and selects a type per book
   const admin = bookActionFixture('admin', true);
   await assert.rejects(admin.action({}, createForm()), /redirect:\/dashboard\/books\//);
   assert.equal(admin.getInserted().type_id, typeId);
+  assert.equal(admin.getInserted().writing_style, 'literary_story');
+  assert.equal(admin.getInserted().author_gender, 'female');
+  assert.equal(admin.getInserted().recipient_gender, 'male');
+  assert.equal(admin.getInserted().back_cover_text, 'С любовью');
   assert.equal((await admin.action({}, createForm('invalid'))).error, 'Выберите тип получателя');
 
   const user = bookActionFixture('user', true);

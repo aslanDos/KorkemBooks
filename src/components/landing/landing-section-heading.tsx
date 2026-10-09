@@ -9,7 +9,7 @@ type LandingSectionHeadingProps = {
 
 export function LandingSectionHeading({ id, eyebrow, title, children }: LandingSectionHeadingProps) {
   return (
-    <div className="landing-section-heading">
+    <div className="landing-section-heading" data-landing-reveal="heading">
       <p className="landing-eyebrow">{eyebrow}</p>
       <h2 id={id}>{title}</h2>
       <p>{children}</p>

@@ -7,14 +7,14 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { FormField } from "@/components/ui/form-field";
 import { BOOK_LANGUAGES } from "@/lib/books/language";
 import type { BookType } from "@/lib/books/types";
+import { BookWritingStylePicker } from "@/components/books/book-writing-style-picker";
+import { BookPersonalizationFields } from "@/components/books/book-personalization-fields";
 
 type CreateBookFormProps = {
   adminBookTypes?: Pick<BookType, "id" | "name">[];
-  assignedBookType?: string;
-  assignedBookLanguage?: string;
 };
 
-export function CreateBookForm({ adminBookTypes, assignedBookType, assignedBookLanguage }: CreateBookFormProps) {
+export function CreateBookForm({ adminBookTypes }: CreateBookFormProps) {
   const [state, formAction] = useActionState(createBookAction, {});
 
   return (
@@ -30,10 +30,8 @@ export function CreateBookForm({ adminBookTypes, assignedBookType, assignedBookL
         <div className="form-field__header"><label htmlFor="language">Язык книги <span aria-hidden="true">*</span></label></div>
         <div className="form-field__control"><select id="language" name="language" defaultValue="ru" required>{BOOK_LANGUAGES.map((language) => <option key={language.value} value={language.value}>{language.label}</option>)}</select></div>
       </div>}
-      {!adminBookTypes && <>
-        <FormField id="assignedBookType" label="Тип получателя" value={assignedBookType ?? "Не назначен"} readOnly aria-readonly="true" />
-        <FormField id="assignedBookLanguage" label="Язык книги" value={assignedBookLanguage ?? "Не назначен"} readOnly aria-readonly="true" />
-      </>}
+      <BookPersonalizationFields />
+      <BookWritingStylePicker />
       <FormFeedback error={state.error} />
       <SubmitButton>Создать книгу</SubmitButton>
     </form>

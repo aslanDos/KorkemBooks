@@ -12,7 +12,7 @@ export function LandingEditorDemo() {
   const [format, setFormat] = useState<AnswerFormat>(EMPTY_ANSWER_FORMAT);
 
   return (
-    <section className="landing-editor-demo" aria-label="Пример редактора книги">
+    <section className="landing-editor-demo" aria-label="Пример редактора книги" data-landing-reveal="book" data-motion-depth="18">
       <div className="landing-editor-demo__workspace">
         <div className="book-inline-editor landing-editor-demo__editor">
           <div className="landing-editor-demo__prompt">

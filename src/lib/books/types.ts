@@ -1,4 +1,6 @@
 import type { BookProductionStatus } from "./production-status";
+import type { BookWritingStyle } from "./writing-style";
+import type { BookGender } from "./personalization";
 
 export type BookType = {
   id: string;
@@ -177,6 +179,7 @@ export type BookChapter = {
 };
 
 export type BookWithContent = Omit<BookSummary, "book_types"> & {
+  typeId: string;
   typeName: string;
   productionStatus: BookProductionStatus;
   pageFont: BookPageFont;
@@ -190,6 +193,10 @@ export type BookWithContent = Omit<BookSummary, "book_types"> & {
   roundPhotos: boolean;
   hidePhotoFooters: boolean;
   pageBackground: BookPageBackground;
+  writingStyle: BookWritingStyle;
+  authorGender: BookGender | null;
+  recipientGender: BookGender | null;
+  backCoverText: string;
   chapters: BookChapter[];
   cover: BookCover | null;
 };

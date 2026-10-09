@@ -34,6 +34,10 @@ export default async function EditBookPage({ params }: { params: Promise<{ bookI
           recipientName={book.recipient_name}
           bookType={book.typeName}
           bookLanguage={getBookLanguageLabel(book.language)}
+          writingStyle={book.writingStyle}
+          authorGender={book.authorGender}
+          recipientGender={book.recipientGender}
+          backCoverText={book.backCoverText}
         />
       </section>
     </>

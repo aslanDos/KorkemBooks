@@ -1,10 +1,12 @@
 import type { AppRole } from "@/lib/auth/current-user";
 import type { BookProductionStatus } from "@/lib/books/production-status";
+import type { FinanceBucket } from "./finance-types";
 
 export type AdminUser = {
   id: string;
   phone: string | null;
   hasBookType: boolean;
+  activated: boolean;
   role: AppRole;
   createdAt: string;
 };
@@ -45,6 +47,6 @@ export type AdminOverview = {
   adminCount: number;
   activeBooks: number;
   salesTotal: number | null;
-  sales: SalesPoint[];
+  financeBuckets: FinanceBucket[];
   recentBooks: AdminBook[];
 };

@@ -9,11 +9,11 @@ export function LandingFaq({ items }: { items: readonly FaqItem[] }) {
   const middle = Math.ceil(items.length / 2);
 
   return (
-    <div className="landing-faq-columns">
+    <div className="landing-faq-columns" data-landing-reveal="up">
       {[items.slice(0, middle), items.slice(middle)].map((column, index) => (
         <div className="landing-faq-column" key={index}>
           {column.map(({ question, answer }) => (
-            <details key={question}>
+            <details key={question} name="landing-faq">
               <summary>{question}<ChevronDown size={20} aria-hidden="true" /></summary>
               <p>{answer}</p>
             </details>

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export type PasswordSetupPurpose = "invite" | "reset";
@@ -28,7 +28,79 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+function createInvitationToken(userId: string, tokenId: string) {
+  const secret = process.env.PASSWORD_SETUP_TOKEN_SECRET?.trim()
+    || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!secret) throw new Error("Password setup token secret is not configured");
+
+  return createHmac("sha256", secret)
+    .update(`korkem-books:invite:${userId}:${tokenId}`)
+    .digest("base64url");
+}
+
+async function issueInvitationToken(userId: string) {
+  const admin = createSupabaseAdminClient();
+  if (!admin) throw new Error("Supabase admin client is not configured");
+
+  const issuedAt = new Date();
+  const expiresAt = new Date(issuedAt.getTime() + TOKEN_LIFETIME_MS.invite);
+  const { data: existing, error: existingError } = await admin
+    .from("password_setup_tokens")
+    .select("id, token_hash, purpose, expires_at")
+    .eq("user_id", userId)
+    .is("used_at", null)
+    .maybeSingle();
+  if (existingError) throw existingError;
+
+  if (existing) {
+    const existingToken = createInvitationToken(userId, existing.id);
+    const isReusable = existing.purpose === "invite"
+      && existing.token_hash === hashToken(existingToken)
+      && new Date(existing.expires_at).getTime() > issuedAt.getTime();
+    if (isReusable) {
+      return { token: existingToken, expiresAt: existing.expires_at };
+    }
+
+    // Legacy random invitations cannot be reconstructed from their hash. They
+    // are replaced once; invitations created by this version are reusable.
+    const { error: revokeError } = await admin
+      .from("password_setup_tokens")
+      .update({ used_at: issuedAt.toISOString() })
+      .eq("id", existing.id)
+      .is("used_at", null);
+    if (revokeError) throw revokeError;
+  }
+
+  const tokenId = randomUUID();
+  const token = createInvitationToken(userId, tokenId);
+  const { error: insertError } = await admin.from("password_setup_tokens").insert({
+    id: tokenId,
+    user_id: userId,
+    token_hash: hashToken(token),
+    purpose: "invite",
+    expires_at: expiresAt.toISOString(),
+  });
+  if (!insertError) return { token, expiresAt: expiresAt.toISOString() };
+
+  // Concurrent requests can race on the first insert. In that case both callers
+  // still receive the same URL rather than creating two invitations.
+  const { data: concurrent, error: concurrentError } = await admin
+    .from("password_setup_tokens")
+    .select("id, token_hash, purpose, expires_at")
+    .eq("user_id", userId)
+    .is("used_at", null)
+    .maybeSingle();
+  if (concurrentError || !concurrent || concurrent.purpose !== "invite" || new Date(concurrent.expires_at).getTime() <= issuedAt.getTime()) {
+    throw insertError;
+  }
+  const concurrentToken = createInvitationToken(userId, concurrent.id);
+  if (concurrent.token_hash !== hashToken(concurrentToken)) throw insertError;
+  return { token: concurrentToken, expiresAt: concurrent.expires_at };
+}
+
 export async function issuePasswordSetupToken(userId: string, purpose: PasswordSetupPurpose) {
+  if (purpose === "invite") return issueInvitationToken(userId);
+
   const admin = createSupabaseAdminClient();
   if (!admin) throw new Error("Supabase admin client is not configured");
 
@@ -36,7 +108,7 @@ export async function issuePasswordSetupToken(userId: string, purpose: PasswordS
   const issuedAt = new Date();
   const expiresAt = new Date(issuedAt.getTime() + TOKEN_LIFETIME_MS[purpose]);
 
-  // A newly generated link replaces every previous unused link for this user.
+  // A newly generated reset link replaces every previous unused link for this user.
   const { error: revokeError } = await admin
     .from("password_setup_tokens")
     .update({ used_at: issuedAt.toISOString() })
@@ -114,7 +186,7 @@ export async function consumePasswordSetupToken(
   token: string,
   purpose: PasswordSetupPurpose,
   password: string,
-): Promise<{ success: true; email: string } | { success: false; error: string }> {
+): Promise<{ success: true; email: string; userId: string } | { success: false; error: string }> {
   const passwordToken = await getValidPasswordSetupToken(token, purpose);
   if (!passwordToken) return { success: false, error: "Ссылка истекла, уже использована или недействительна" };
 
@@ -142,5 +214,5 @@ export async function consumePasswordSetupToken(
     return { success: false, error: "Не удалось сохранить пароль. Попробуйте ещё раз" };
   }
 
-  return { success: true, email: updatedUser.user.email };
+  return { success: true, email: updatedUser.user.email, userId: passwordToken.userId };
 }

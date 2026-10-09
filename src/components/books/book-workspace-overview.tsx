@@ -16,7 +16,7 @@ export function BookWorkspaceOverview({ book }: { book: BookWithContent }) {
   return <>
     <section className="book-workspace-header">
       <Link href="/dashboard/books"><ArrowLeft size={17} />К библиотеке</Link>
-      {readOnly ? <span className="book-readonly-badge">{BOOK_PRODUCTION_LABELS[book.productionStatus]} · только просмотр</span> : <SubmitBookButton bookId={book.id} progress={book.progress} />}
+      {readOnly ? <span className="book-readonly-badge">{BOOK_PRODUCTION_LABELS[book.productionStatus]} · только просмотр</span> : <SubmitBookButton bookId={book.id} pageCount={pageCount} />}
     </section>
     {readOnly && <section className="dashboard-section book-production-panel" aria-label="Этап книги"><span>Этап книги</span><strong>{BOOK_PRODUCTION_LABELS[book.productionStatus]}</strong><p>{BOOK_PRODUCTION_DESCRIPTIONS[book.productionStatus]}</p></section>}
     {book.productionStatus === "approval" && <BookApprovalPanel bookId={book.id} />}

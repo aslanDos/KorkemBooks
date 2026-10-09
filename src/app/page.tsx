@@ -5,6 +5,7 @@ import { ScrollTimeline } from "@/components/landing/scroll-timeline";
 import { LandingSectionHeading } from "@/components/landing/landing-section-heading";
 import { LandingFaq, type FaqItem } from "@/components/landing/landing-faq";
 import { LandingEditorDemo } from "@/components/landing/landing-editor-demo";
+import { LandingMotion } from "@/components/landing/landing-motion";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import "./landing.css";
 
@@ -30,14 +31,17 @@ export default async function LandingPage() {
   const isSignedIn = Boolean(await getCurrentUser());
   return (
     <div className="landing" lang="ru">
+      <LandingMotion />
       <a className="landing-skip" href="#main">Перейти к содержимому</a>
       <LandingHeader isSignedIn={isSignedIn} />
       <main id="main" tabIndex={-1}>
         <section className="landing-hero" aria-labelledby="hero-title">
-          <h1 id="hero-title">Соберите истории своей жизни в&nbsp;книгу</h1>
-          <p className="landing-description">Отвечайте на простые вопросы, добавляйте фотографии и сохраняйте то, чем хочется поделиться с близкими.</p>
-          <a href={whatsappUrl} className="landing-button">Начать свою книгу <ArrowRight size={19} aria-hidden="true" /></a>
-          <p className="landing-hero-note">В своём темпе. Своими словами.</p>
+          <h1 id="hero-title" className="landing-hero-title">
+            <span className="landing-hero-title-line"><span>Ваша история, которую</span></span>
+            <span className="landing-hero-title-line"><span>можно держать в руках</span></span>
+          </h1>
+          <p className="landing-description landing-hero-copy">Ответьте на вопросы, добавьте любимые фотографии — а мы превратим ваши воспоминания в настоящую книгу.</p>
+          <a href={whatsappUrl} className="landing-button landing-hero-action">Начать свою книгу <ArrowRight size={19} aria-hidden="true" /></a>
           <LandingEditorDemo />
         </section>
 
@@ -46,9 +50,9 @@ export default async function LandingPage() {
             Семейные привычки, первые встречи, слова родителей. KorkemBooks помогает сохранить эти воспоминания — постепенно, через вопросы о вашей жизни.
           </LandingSectionHeading>
           <div className="landing-features">
-            <div><span>01 / Вопросы</span><h3>Есть с чего начать</h3><p>Темы и вопросы помогают вспомнить то, что трудно рассказать с чистого листа.</p></div>
-            <div><span>02 / Истории</span><h3>Остаётся ваш голос</h3><p>Вы сами выбираете слова, добавляете детали и рассказываете так, как чувствуете.</p></div>
-            <div><span>03 / Книга</span><h3>Всё в одном месте</h3><p>Ответы и фотографии собираются в личную книгу, а наша команда готовит её к печати.</p></div>
+            <div data-landing-reveal="left"><span>01 / Вопросы</span><h3>Есть с чего начать</h3><p>Темы и вопросы помогают вспомнить то, что трудно рассказать с чистого листа.</p></div>
+            <div data-landing-reveal="up"><span>02 / Истории</span><h3>Остаётся ваш голос</h3><p>Вы сами выбираете слова, добавляете детали и рассказываете так, как чувствуете.</p></div>
+            <div data-landing-reveal="right"><span>03 / Книга</span><h3>Всё в одном месте</h3><p>Ответы и фотографии собираются в личную книгу, а наша команда готовит её к печати.</p></div>
           </div>
         </section>
 
@@ -58,7 +62,7 @@ export default async function LandingPage() {
           </LandingSectionHeading>
           <ScrollTimeline>
             {steps.map((step, index) => (
-              <li key={step.title}>
+              <li key={step.title} data-landing-reveal={index % 2 === 0 ? "left" : "right"}>
                 <span className="landing-step-number" aria-hidden="true">0{index + 1}</span>
                 <div className="landing-step-card"><h3>{step.title}</h3><p>{step.text}</p></div>
               </li>
@@ -67,11 +71,11 @@ export default async function LandingPage() {
         </section>
 
         <section className="landing-timing landing-section" id="timing" aria-labelledby="timing-title">
-          <div className="landing-timing-intro">
+          <div className="landing-timing-intro" data-landing-reveal="left" data-motion-depth="-14">
             <p className="landing-eyebrow">Сколько времени нужно</p>
             <h2 id="timing-title">Когда будет готова ваша книга?</h2>
           </div>
-          <div className="landing-timing-details">
+          <div className="landing-timing-details" data-landing-reveal="right" data-motion-depth="10">
             <ol className="landing-timing-list">
               <li className="landing-timing-step">
                 <span className="landing-timing-number" aria-hidden="true">01</span>
@@ -97,7 +101,7 @@ export default async function LandingPage() {
             Всё, что хочется узнать, прежде чем начать свою книгу.
           </LandingSectionHeading>
           <LandingFaq items={questions} />
-          <div className="landing-faq-contact">
+          <div className="landing-faq-contact" data-landing-reveal="scale">
             <div className="landing-faq-contact-copy">
               <p className="landing-eyebrow">Остались вопросы?</p>
               <h3>Напишите нам — поможем разобраться<br className="landing-desktop-break" /> и начать свою книгу.</h3>

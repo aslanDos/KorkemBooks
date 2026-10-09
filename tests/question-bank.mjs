@@ -195,6 +195,16 @@ for (const sourceType of updatedSource.types) {
   assert.deepEqual((await db.query('select title from chapters where book_id=$1 order by position',[localizedBook])).rows.map(row=>row.title),sourceType.locales.kk.chapters.map(chapter=>chapter.title));
   assert.equal((await db.query('select prompt from questions where book_id=$1 and catalog_id=(select id from question_catalog where book_type_id=$2 and number=150)',[localizedBook,type.id])).rows[0].prompt,sourceType.locales.kk.questions[149]);
 }
+await db.exec('reset role;'+await readFile(root+'/supabase/migrations/202610090004_add_chapter_catalog.sql','utf8'));
+assert.equal((await db.query('select count(*)::int count from chapter_catalog')).rows[0].count,128);
+const wifeChapterCatalog=(await db.query("select catalog.id,catalog.title from chapter_catalog catalog join book_types types on types.id=catalog.book_type_id where types.slug='wife' and catalog.language='ru' and catalog.position=1")).rows[0];
+await db.exec('set role service_role;');
+assert.equal((await db.query("select admin_edit_chapter_catalog($1,'ru',$2,'Новое начало') ok",[wifeChapterCatalog.id,wifeChapterCatalog.title])).rows[0].ok,true);
+await db.exec('reset role;');
+assert.equal((await db.query('select title from chapters where book_id=$1 and position=1',[books[2]])).rows[0].title,'Новое начало');
+await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);
+const catalogBook=(await db.query("insert into books(owner_id,type_id,title,author_name,recipient_name,language) values($1,(select id from book_types where slug='wife'),'Catalog book','Author','Recipient','ru') returning id",[owner])).rows[0].id;
+assert.equal((await db.query('select title from chapters where book_id=$1 and position=1',[catalogBook])).rows[0].title,'Новое начало');
 await db.exec('reset role;'+await readFile(root+'/supabase/migrations/202609290005_allow_owner_question_edits.sql','utf8'));
 const ownerEditedQuestion=(await db.query('select id from questions where book_id=$1 order by position limit 1',[boyfriendBook])).rows[0].id;
 await db.exec(`set role authenticated; set request.jwt.claim.sub='${owner}';`);

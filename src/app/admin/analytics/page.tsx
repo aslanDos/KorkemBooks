@@ -3,6 +3,7 @@ import { Banknote, CircleDollarSign, ReceiptText, TrendingUp } from "lucide-reac
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { FinanceBarChart } from "@/components/admin/finance-bar-chart";
 import { getFinanceAnalytics, type FinancePeriod } from "@/lib/admin/finance";
+import { formatPhone } from "@/lib/auth/phone";
 
 const money = new Intl.NumberFormat("ru-KZ");
 const formatMoney = (value: number) => `${money.format(value)} ₸`;
@@ -32,7 +33,7 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
       </section>
       <section className="admin-card finance-lifetime"><h2>За всё время</h2><div><p><span>Согласованная стоимость книг</span><strong>{formatMoney(data.agreedTotal)}</strong></p><p><span>Получено от клиентов</span><strong>{formatMoney(data.allReceived)}</strong></p><p><span>Расходы</span><strong>{formatMoney(data.allCosts)}</strong></p><p><span>Денежный результат</span><strong>{formatMoney(data.allReceived - data.allCosts)}</strong></p><p><span>Стоимость завершённых книг</span><strong>{formatMoney(data.completedValue)}</strong></p></div><small>Стоимость завершённых книг — отдельный операционный показатель, не бухгалтерское признание выручки.</small></section>
       <section className="admin-card finance-books"><header><div><h2>По книгам</h2><p>Откройте книгу, чтобы указать цену и добавить платежи или расходы.</p></div></header>
-        <div className="admin-table-wrap" tabIndex={0} role="region" aria-label="Финансы по книгам"><table className="admin-table"><thead><tr><th>Книга</th><th>Цена</th><th>Получено</th><th>Остаток</th><th>Расходы</th><th>Денежный результат</th></tr></thead><tbody>{data.books.map((book) => <tr key={book.id}><td><Link href={`/admin/books/${book.id}`}>{book.title}</Link></td><td>{book.finance.price === null ? "Не указана" : formatMoney(book.finance.price)}</td><td>{formatMoney(book.finance.received)}</td><td>{book.finance.outstanding === null ? "—" : formatMoney(book.finance.outstanding)}</td><td>{formatMoney(book.finance.costs)}</td><td>{formatMoney(book.finance.cashResult)}</td></tr>)}{data.books.length === 0 && <tr><td colSpan={6}>Книг пока нет.</td></tr>}</tbody></table></div>
+        <div className="admin-table-wrap" tabIndex={0} role="region" aria-label="Финансы по книгам"><table className="admin-table"><thead><tr><th>Книга</th><th>Пользователь</th><th>Цена</th><th>Получено</th><th>Остаток</th><th>Расходы</th><th>Денежный результат</th></tr></thead><tbody>{data.books.map((book) => <tr key={book.id}><td><Link href={`/admin/books/${book.id}`}>{book.title}</Link></td><td>{book.ownerPhone ? formatPhone(book.ownerPhone) : "Телефон не указан"}</td><td>{book.finance.price === null ? "Не указана" : formatMoney(book.finance.price)}</td><td>{formatMoney(book.finance.received)}</td><td>{book.finance.outstanding === null ? "—" : formatMoney(book.finance.outstanding)}</td><td>{formatMoney(book.finance.costs)}</td><td>{formatMoney(book.finance.cashResult)}</td></tr>)}{data.books.length === 0 && <tr><td colSpan={7}>Книг пока нет.</td></tr>}</tbody></table></div>
       </section>
     </>}
   </>;

@@ -28,6 +28,7 @@ type PasswordLink = { url: string; expiresAt: string };
 
 export type CreateUserState = { error?: string; invitation?: PasswordLink & { login: string } };
 export type ResetPasswordState = { error?: string; resetLink?: PasswordLink };
+export type InvitationLinkState = { error?: string; invitationLink?: PasswordLink };
 export type AssignBookTypeState = { error?: string; success?: string };
 
 async function getPublicUrl(path: string) {
@@ -120,6 +121,31 @@ export async function resetUserPasswordAction(_state: ResetPasswordState, formDa
     return { resetLink };
   } catch {
     return { error: "Не удалось создать ссылку для сброса. Проверьте миграции базы данных." };
+  }
+}
+
+export async function createInvitationLinkAction(_state: InvitationLinkState, formData: FormData): Promise<InvitationLinkState> {
+  const currentUser = await getCurrentUser();
+  if (currentUser?.role !== "admin") return { error: "Недостаточно прав" };
+
+  const parsed = z.object({ userId: z.uuid() }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Некорректные данные пользователя" };
+
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { error: "Добавьте SUPABASE_SERVICE_ROLE_KEY для создания приглашения" };
+
+  const [{ data: authData, error: authError }, { data: profile }] = await Promise.all([
+    admin.auth.admin.getUserById(parsed.data.userId),
+    admin.from("profiles").select("phone_e164").eq("id", parsed.data.userId).maybeSingle(),
+  ]);
+  if (authError || !authData.user || !profile) return { error: "Пользователь не найден" };
+  if (authData.user.last_sign_in_at) return { error: "Аккаунт уже активирован" };
+  if (!profile.phone_e164) return { error: "У пользователя не указан номер телефона" };
+
+  try {
+    return { invitationLink: await createPasswordLink(parsed.data.userId, "invite") };
+  } catch {
+    return { error: "Не удалось создать приглашение. Проверьте миграции базы данных." };
   }
 }
 

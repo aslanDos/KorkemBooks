@@ -23,7 +23,7 @@ function loadTS(filename) {
     if (name === '@/lib/books/queries') return { getAdminBookWithContent: async id => id === 'admin-fixture' ? adminFixtureBook : printFixtureBook };
     if (name === '@/app/admin/books/actions') return { updateBookProductionStatus: async () => {} };
     if (name === '@/app/admin/books/[bookId]/actions') return { saveAdminAnswerAction: async () => ({ success: true }), saveBookDeliveryAction: async () => ({ success: true }) };
-    if (name === '@/lib/admin/book-delivery') return { getAdminBookDelivery: async () => ({ delivery: { pickup: false, city: 'Алматы', address: 'Улица Абая, дом 10, квартира 5' } }) };
+    if (name === '@/lib/admin/book-delivery') return { getAdminBookDelivery: async () => ({ delivery: { city: 'Алматы', address: 'Улица Абая, дом 10, квартира 5' } }) };
     if (name === 'next/navigation') return {
       notFound: () => { throw new Error('Print fixture missing'); },
       useRouter: () => ({ refresh: () => {}, push: () => {}, replace: () => {} }),

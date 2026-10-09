@@ -72,7 +72,6 @@ export function WorkspaceSidebar({ admin = false, role = "user", canCreateBook =
         <button className="sidebar-collapse" type="button" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Развернуть боковое меню" : "Свернуть боковое меню"} aria-expanded={!collapsed}>{collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}</button>
         <button ref={closeButton} className="sidebar-close" type="button" onClick={close} aria-label="Закрыть меню"><X size={21} /></button>
       </div>
-      <p className="workspace-sidebar-label">{admin ? "Управление" : "Личный кабинет"}</p>
       {canCreateBook && !admin && <Link className="sidebar-create" href="/dashboard/books/new" onClick={() => setOpen(false)} aria-label="Создать книгу" title="Создать книгу"><Plus size={18} /><span>Создать книгу</span></Link>}
       <nav className="sidebar-nav" aria-label={admin ? "Разделы админ-панели" : "Разделы личного кабинета"}>
         {links.map(({ href, label, icon: Icon, exact }) => {

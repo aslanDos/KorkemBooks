@@ -22,7 +22,8 @@
   .dashboard-shell .mobile-menu-button { display: grid; place-items: center; position: fixed; cursor: pointer; color: var(--ink); top: 20px; left: 22px; width: 40px; height: 40px; z-index: 21; background: transparent; border: 0; box-shadow: none; border-radius: 50%; }
   .dashboard-shell .dashboard-sidebar, .dashboard-shell .dashboard-sidebar--collapsed { z-index: 40; inset: 12px auto 12px 12px; width: min(300px, calc(100vw - 40px)); padding: 24px 18px; transform: translateX(calc(-100% - 24px)); box-shadow: none; }
   .dashboard-shell .dashboard-sidebar--open { transform: translateX(0); }
-  .dashboard-shell .dashboard-sidebar .brand-mark, .dashboard-shell .dashboard-sidebar--collapsed .brand-mark { width: 166px; height: 38px; }
+  .dashboard-shell .dashboard-sidebar__top { justify-content: space-between; }
+  .dashboard-shell .dashboard-sidebar .brand-mark, .dashboard-shell .dashboard-sidebar--collapsed .brand-mark { width: 118px; height: 60px; }
   .dashboard-shell .dashboard-sidebar--collapsed .workspace-sidebar-label { height: auto; margin-inline: 14px; visibility: visible; }
   .dashboard-shell .dashboard-sidebar--collapsed .sidebar-create { width: auto; margin-inline: 0; }
   .dashboard-shell .dashboard-sidebar--collapsed .sidebar-nav__item, .dashboard-shell .dashboard-sidebar--collapsed .sidebar-signout button { width: 100%; }
@@ -36,6 +37,7 @@
   .dashboard-shell .dashboard-header { margin-bottom: 26px; }
   .dashboard-shell .dashboard-header h1 { font-size: 30px; }
   .dashboard-shell .dashboard-header p { font-size: 13px; }
+  .dashboard-shell .dashboard-header__action { padding-top: 0; }
   .dashboard-shell .overview-hero { padding: 26px; min-height: 280px; }
   .dashboard-shell .overview-hero h2 { font-size: 27px; }
   .dashboard-shell .overview-stat { padding: 22px; }
@@ -44,8 +46,10 @@
   .dashboard-shell .admin-list-card > header { padding: 18px; }
   .dashboard-shell .admin-card > header { flex-wrap: wrap; }
   .dashboard-shell .admin-tabs { max-width: 100%; }
-  .dashboard-shell .admin-search { width: calc(100% - 36px); margin: 18px; }
-  .dashboard-shell .admin-list-card .admin-table-wrap { padding-inline: 4px; }
+  .dashboard-shell .admin-user-toolbar { padding: 18px; align-items: stretch; flex-direction: column; }
+  .dashboard-shell .admin-user-toolbar .admin-search { width: 100%; margin: 0; }
+  .dashboard-shell .admin-status-filters { width: 100%; }
+  .dashboard-shell .admin-list-card .admin-table-wrap { padding-inline: 0; }
   .dashboard-shell .admin-stats article { padding: 20px; min-height: 150px; }
   .dashboard-shell .admin-stats strong { font-size: 28px; }
   .dashboard-shell .book-overview { grid-template-columns: minmax(0, 1fr); }
@@ -79,6 +83,9 @@
   .dashboard-shell .form-field input, .dashboard-shell .cover-data-fields input, .dashboard-shell .admin-create-form .form-field input { font-size: 16px; }
 }
 @media (max-width: 480px) {
+  .dashboard-shell .dashboard-header { align-items: stretch; flex-direction: column; gap: 18px; }
+  .dashboard-shell .dashboard-header__action .content-primary-button { width: 100%; justify-content: center; }
+  .dashboard-shell .admin-pagination { align-items: flex-start; flex-direction: column; }
   .dashboard-shell .admin-stats { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .dashboard-shell .admin-stats article { min-height: 138px; }
   .dashboard-shell .admin-stats strong { font-size: 34px; }
@@ -102,5 +109,7 @@
 :root[data-theme="dark"] .dashboard-shell :is(.order-status--editing, .role-pill--manager) { color: #e2c68d; }
 :root[data-theme="dark"] .dashboard-shell :is(.order-status--printing, .role-pill--admin) { color: #cbb3e3; }
 :root[data-theme="dark"] .dashboard-shell :is(.order-status--ready, .order-status--received, .admin-stats .positive) { color: #9ac8a5; }
+:root[data-theme="dark"] .dashboard-shell .account-status--active { color: #9ac8a5; }
+:root[data-theme="dark"] .dashboard-shell .account-status--inactive { color: #e2c68d; }
 :root[data-theme="dark"] .dashboard-shell :is(.order-status--shipped, .order-status--delivery) { color: #9ed0d8; }
 :root[data-theme="dark"] .dashboard-shell .order-status--cancelled { color: #e5aaaa; }

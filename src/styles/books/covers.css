@@ -94,6 +94,7 @@
 .colored-cover-side--front h2 { position: absolute; top: 50%; left: 9%; width: 82%; margin: 0; color: #fffaf3; font: inherit; font-size: var(--cover-title-size, 2.735cqw); font-weight: 400; line-height: 1.12; text-align: center; overflow-wrap: anywhere; transform: translateY(-50%); }
 .colored-cover-side--front h2.is-long { font-size: 2.15cqw; }
 .colored-cover-author, .colored-cover-brand { position: absolute; bottom: 7.5%; left: 9%; right: 9%; color: #fffaf3; font-size: 1.313cqw; line-height: 1.1; letter-spacing: .02em; text-align: center; text-transform: uppercase; }
+.colored-cover-back-copy { position: absolute; z-index: 1; top: 50%; left: 13%; width: 74%; max-height: 62%; margin: 0; overflow: hidden; color: #fffaf3; font-size: 1.35cqw; line-height: 1.65; text-align: center; white-space: pre-wrap; overflow-wrap: anywhere; transform: translateY(-50%); }
 .colored-cover-author { font-size: var(--cover-author-size, 1.313cqw); overflow-wrap: anywhere; }
 .colored-cover-spine { position: relative; overflow: hidden; color: #fffaf3; background: var(--cover-bg); border-inline: 1px solid rgb(255 255 255 / 6%); }
 .colored-cover-spine__author-slot, .colored-cover-spine__title-slot { position: absolute; left: 8%; right: 8%; display: flex; justify-content: center; overflow: hidden; }
@@ -111,8 +112,8 @@
 .colored-cover-spread--template .colored-cover-spine { background: var(--cover-bg); }
 .colored-cover-spread--template.colored-cover-spread--colored-back .colored-cover-side--back { background: var(--cover-bg); }
 .colored-cover-spread--colored-back .colored-cover-side--back .colored-cover-background { display: none; }
-.colored-cover-spread--back-text-dark .colored-cover-brand { color: #29251f; text-shadow: 0 1px 2px rgb(255 255 255 / 70%); }
-.colored-cover-spread--back-text-light .colored-cover-brand { color: #fffaf3; text-shadow: 0 1px 3px rgb(0 0 0 / 65%); }
+.colored-cover-spread--back-text-dark :is(.colored-cover-brand, .colored-cover-back-copy) { color: #29251f; text-shadow: 0 1px 2px rgb(255 255 255 / 70%); }
+.colored-cover-spread--back-text-light :is(.colored-cover-brand, .colored-cover-back-copy) { color: #fffaf3; text-shadow: 0 1px 3px rgb(0 0 0 / 65%); }
 .colored-cover-spread--template .colored-cover-title-panel { position: absolute; top: 50%; left: 50%; display: flex; flex-direction: column; justify-content: space-between; gap: 4cqw; width: 52%; min-height: 30cqw; padding: 6cqw 2.5cqw 4.5cqw; color: #29251f; background: #faf8f2; border: 1px solid rgb(62 52 39 / 12%); transform: translate(-50%, -50%); }
 .colored-cover-spread--template .colored-cover-title-panel:not(:has(.colored-cover-author)) { justify-content: center; padding-block: 4.5cqw; }
 .colored-cover-spread--template .colored-cover-side--front h2 { position: static; flex-shrink: 0; width: 100%; color: inherit; font-size: calc(var(--cover-title-size, 2.735cqw) * .75 * var(--cover-panel-text-scale, 1)); line-height: 1.2; transform: none; }

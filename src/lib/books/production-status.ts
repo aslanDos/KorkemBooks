@@ -7,7 +7,7 @@ export const BOOK_PRODUCTION_LABELS: Record<BookProductionStatus, string> = {
   printing: "Печать",
   ready: "Готово",
   delivery: "Доставка",
-  received: "Получена",
+  received: "Завершен",
 };
 
 export const BOOK_PRODUCTION_DESCRIPTIONS: Record<BookProductionStatus, string> = {
@@ -17,5 +17,5 @@ export const BOOK_PRODUCTION_DESCRIPTIONS: Record<BookProductionStatus, string> 
   printing: "Макет подтверждён и передан в печать.",
   ready: "Книга напечатана и готова к передаче.",
   delivery: "Книга передаётся вам выбранным способом.",
-  received: "Книга у вас. Спасибо, что сохранили свою историю с нами.",
+  received: "Работа над книгой завершена. Спасибо, что сохранили свою историю с нами.",
 };

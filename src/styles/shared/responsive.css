@@ -26,7 +26,7 @@
   .dashboard-sidebar, .dashboard-sidebar--collapsed { width: min(300px, 86vw); padding: 30px 22px 22px; transform: translateX(-102%); box-shadow: 18px 0 45px rgb(0 0 0 / 18%); }
   .dashboard-sidebar--open { transform: translateX(0); }
   .dashboard-sidebar--collapsed .dashboard-sidebar__top { justify-content: space-between; padding: 0 8px; }
-  .dashboard-sidebar--collapsed .brand-mark { width: 190px; height: 42px; padding: 0; color: var(--accent); background: transparent; border: 0; border-radius: 0; }
+  .dashboard-sidebar--collapsed .brand-mark { width: 118px; height: 60px; padding: 0; color: var(--accent); background: transparent; border: 0; border-radius: 0; }
   .dashboard-sidebar--collapsed .brand-mark__logo { mask-image: url("/brand/logo.svg"); -webkit-mask-image: url("/brand/logo.svg"); }
   .dashboard-sidebar--collapsed .sidebar-create span, .dashboard-sidebar--collapsed .sidebar-nav__item span, .dashboard-sidebar--collapsed .sidebar-signout span { display: initial; }
   .dashboard-sidebar--collapsed .sidebar-create { width: auto; margin-inline: 0; }

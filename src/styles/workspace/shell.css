@@ -1,29 +1,29 @@
 /* Shared workspace design. Book artwork and page typography keep their own styles. */
 .dashboard-shell {
-  --background: #f6f0e7;
-  --surface: #fdf9f4;
-  --surface-raised: #fffdf9;
+  --background: #ffffff;
+  --surface: #f7f7f6;
+  --surface-raised: #ffffff;
   --ink: #2d2222;
   --muted: #6f6260;
   --primary: #652f35;
   --primary-hover: #51242a;
   --primary-ink: #fff8f1;
-  --line: #e1d5cc;
+  --line: #e5e3e1;
   --focus-ring: rgb(101 47 53 / 22%);
   --accent: #b78a61;
   --shadow: rgb(71 27 33 / 7%);
-  --workspace-tint: #f0e2d8;
+  --workspace-tint: #f1eded;
   --workspace-radius: 20px;
   --workspace-small-radius: 12px;
   --workspace-pill: 999px;
-  --hero-start: #f0dfd5;
-  --hero-end: #e8cfc0;
+  --hero-start: #f2eeee;
+  --hero-end: #eae5e5;
   --hero-text: #2d2222;
   --hero-muted: #6f5657;
   --hero-subtle: #816b68;
   --sage-300: #dec9b5;
   --sage-500: #652f35;
-  background: linear-gradient(150deg, #f5eae1 0, var(--background) 620px, #f0e3da 100%);
+  background: #fff;
   font-size: 14px;
   line-height: 1.5;
 }
@@ -56,11 +56,11 @@
 .dashboard-shell:has(.dashboard-sidebar--collapsed) .dashboard-main { margin-left: 110px; }
 .dashboard-shell .workspace-content { max-width: 1320px; margin-inline: auto; }
 .dashboard-shell .dashboard-sidebar { inset: 16px auto 16px 16px; width: 238px; padding: 26px 16px 18px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); box-shadow: 0 8px 32px var(--shadow); }
-.dashboard-shell .dashboard-sidebar__top { padding: 0 8px; min-height: 42px; }
-.dashboard-shell .dashboard-sidebar .brand-mark { width: 166px; height: 37px; }
-.dashboard-shell .dashboard-sidebar .brand-mark:not(.brand-mark--collapsed) { color: var(--primary); }
+.dashboard-shell .dashboard-sidebar__top { padding: 0 8px; min-height: 60px; justify-content: center; }
+.dashboard-shell .dashboard-sidebar .brand-mark { width: 118px; height: 60px; color: var(--primary); }
 .dashboard-shell .sidebar-collapse { right: -31px; width: 30px; height: 30px; box-shadow: none; }
 .dashboard-shell .workspace-sidebar-label { margin: 36px 14px 18px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.dashboard-shell .dashboard-sidebar__top + :is(.sidebar-create, .sidebar-nav) { margin-top: 36px; }
 .dashboard-shell .sidebar-create { min-height: 46px; height: auto; margin: 0 0 20px; border-radius: var(--workspace-small-radius); box-shadow: none; font-weight: 600; }
 .dashboard-shell .sidebar-nav { gap: 7px; }
 .dashboard-shell .sidebar-nav__item { height: 46px; border-radius: var(--workspace-small-radius); font-size: 13px; font-weight: 550; gap: 12px; }
@@ -71,7 +71,7 @@
 .dashboard-shell .sidebar-signout { margin-top: 0; padding-top: 12px; }
 .dashboard-shell .sidebar-signout button { font-weight: 550; border-radius: var(--workspace-small-radius); }
 .dashboard-shell .dashboard-sidebar--collapsed { width: 78px; padding-inline: 10px; }
-.dashboard-shell .dashboard-sidebar--collapsed .brand-mark { width: 38px; height: 38px; }
+.dashboard-shell .dashboard-sidebar--collapsed .brand-mark { width: 48px; height: 24px; }
 .dashboard-shell .dashboard-sidebar--collapsed .workspace-sidebar-label { height: 15px; margin-inline: 0; visibility: hidden; }
 .dashboard-shell .dashboard-sidebar--collapsed .sidebar-collapse { right: -27px; }
 .dashboard-shell .dashboard-sidebar--collapsed .sidebar-create { width: 46px; margin-inline: auto; }
@@ -101,6 +101,7 @@
 .dashboard-shell .dashboard-header { margin-bottom: 30px; }
 .dashboard-shell .dashboard-header h1 { font-family: var(--font-manrope), sans-serif; font-size: clamp(28px, 3vw, 40px); font-weight: 700; letter-spacing: -.045em; line-height: 1.2; }
 .dashboard-shell .dashboard-header p { max-width: 670px; margin-top: 12px; font-size: 14px; line-height: 1.75; }
+.dashboard-shell .dashboard-header__action { flex: 0 0 auto; padding-top: 2px; }
 .dashboard-shell .eyebrow { font-size: 10px; font-weight: 650; letter-spacing: .12em; }
 .dashboard-shell :is(.section-heading h2, .overview-hero h2, .profile-card h2, .settings-list h2, .coming-soon h2, .book-form-card__heading h2, .admin-card h2, .writer-drawer__header h2, .question-dialog__panel h2, .edit-book-dialog__panel h2, .book-photo-dialog__panel h2, .cover-template-panel h1, .book-preview-browser h1) { font-family: var(--font-manrope), sans-serif; font-size: 22px; font-weight: 650; line-height: 1.35; letter-spacing: -.035em; }
 .dashboard-shell :is(.content-primary-button, .secondary-content-button, .cover-save-button, .primary-button) { min-height: 46px; height: auto; padding: 12px 20px; border-radius: var(--workspace-pill); box-shadow: none; font-size: 13px; font-weight: 650; line-height: 1.5; transition: background 160ms ease; }

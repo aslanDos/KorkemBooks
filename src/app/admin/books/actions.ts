@@ -5,13 +5,14 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { BookProductionStatus } from "@/lib/books/production-status";
+import { attributeLatestBookStatusChange } from "@/lib/admin/book-status-history";
 
-const schema = z.object({ bookId: z.uuid(), status: z.enum(["writing", "editing", "ready", "delivery", "received"]) });
+const schema = z.object({ bookId: z.uuid(), status: z.enum(["writing", "editing", "approval", "printing", "ready", "delivery", "received"]) });
 
 const ADMIN_STATUS_TRANSITIONS: Record<BookProductionStatus, BookProductionStatus[]> = {
   writing: ["editing"],
-  editing: ["writing"],
-  approval: [],
+  editing: ["writing", "approval"],
+  approval: ["printing"],
   printing: ["ready", "editing"],
   ready: ["delivery", "editing"],
   delivery: ["received", "editing"],
@@ -25,11 +26,26 @@ export async function updateBookProductionStatus(formData: FormData): Promise<{ 
   if (!parsed.success) return { error: "Некорректный этап книги" };
   const admin = createSupabaseAdminClient();
   if (!admin) return { error: "Сервис временно недоступен" };
-  const { data: book } = await admin.from("books").select("production_status").eq("id", parsed.data.bookId).is("deleted_at", null).maybeSingle();
+  const { data: book } = await admin.from("books").select("production_status, owner_id").eq("id", parsed.data.bookId).is("deleted_at", null).maybeSingle();
   const currentStatus = book?.production_status as BookProductionStatus | undefined;
   if (!currentStatus || !ADMIN_STATUS_TRANSITIONS[currentStatus].includes(parsed.data.status)) return { error: "Этот переход между этапами недоступен" };
-  const { data: updated, error } = await admin.from("books").update({ production_status: parsed.data.status }).eq("id", parsed.data.bookId).eq("production_status", currentStatus).select("id").maybeSingle();
-  if (error || !updated) return { error: "Не удалось сменить этап. Обновите страницу" };
+  if (currentStatus === "approval" && parsed.data.status === "printing") {
+    if (!book?.owner_id) return { error: "Не удалось определить владельца книги" };
+    const { data, error } = await admin.rpc("decide_book_approval", {
+      target_book_id: parsed.data.bookId,
+      target_owner_id: book.owner_id,
+      decision: "approved",
+      decision_feedback: null,
+    });
+    if (error || data !== true) return { error: "Не удалось завершить согласование. Обновите страницу" };
+  } else if (parsed.data.status === "approval") {
+    const { data, error } = await admin.rpc("request_book_approval", { target_book_id: parsed.data.bookId });
+    if (error || data !== true) return { error: "Не удалось отправить книгу на согласование. Обновите страницу" };
+  } else {
+    const { data: updated, error } = await admin.from("books").update({ production_status: parsed.data.status }).eq("id", parsed.data.bookId).eq("production_status", currentStatus).select("id").maybeSingle();
+    if (error || !updated) return { error: "Не удалось сменить этап. Обновите страницу" };
+  }
+  await attributeLatestBookStatusChange(admin, parsed.data.bookId, user.id);
   revalidatePath("/admin");
   revalidatePath("/admin/books");
   revalidatePath(`/admin/books/${parsed.data.bookId}`);

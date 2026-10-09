@@ -5,10 +5,10 @@ import { getFinanceAnalytics } from "./finance";
 import type { AdminBook, AdminOrder, AdminOverview, AdminUser, BookProductionStatus, OrderStatus } from "./types";
 
 const demoUsers: AdminUser[] = [
-  { id: "1", phone: "+77011234567", hasBookType: true, role: "user", createdAt: "2026-08-31T10:20:00Z" },
-  { id: "2", phone: "+77022345678", hasBookType: false, role: "manager", createdAt: "2026-08-26T08:00:00Z" },
-  { id: "3", phone: "+77033456789", hasBookType: false, role: "admin", createdAt: "2026-08-20T08:00:00Z" },
-  { id: "4", phone: "+77044567890", hasBookType: true, role: "user", createdAt: "2026-08-18T08:00:00Z" },
+  { id: "1", phone: "+77011234567", hasBookType: true, activated: true, role: "user", createdAt: "2026-08-31T10:20:00Z" },
+  { id: "2", phone: "+77022345678", hasBookType: false, activated: true, role: "manager", createdAt: "2026-08-26T08:00:00Z" },
+  { id: "3", phone: "+77033456789", hasBookType: false, activated: true, role: "admin", createdAt: "2026-08-20T08:00:00Z" },
+  { id: "4", phone: "+77044567890", hasBookType: true, activated: true, role: "user", createdAt: "2026-08-18T08:00:00Z" },
 ];
 
 const demoOrders: AdminOrder[] = [
@@ -27,9 +27,59 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   const admin = createSupabaseAdminClient();
   if (!admin) return demoUsers;
 
-  const { data: profiles } = await admin.from("profiles").select("id, role, phone_e164, book_type_id, created_at").order("created_at", { ascending: false });
+  const { data: profiles } = await admin.from("profiles").select("id, role, phone_e164, book_type_id, activated_at, created_at").order("created_at", { ascending: false });
   if (!profiles) return [];
-  return profiles.map((profile) => ({ id: profile.id, phone: profile.phone_e164, hasBookType: Boolean(profile.book_type_id), role: profile.role, createdAt: profile.created_at }));
+  return profiles.map((profile) => ({ id: profile.id, phone: profile.phone_e164, hasBookType: Boolean(profile.book_type_id), activated: Boolean(profile.activated_at), role: profile.role, createdAt: profile.created_at }));
+}
+
+export type AdminUsersPageQuery = {
+  role: "all" | "user" | "manager" | "admin";
+  status: "all" | "active" | "inactive";
+  q: string;
+  sort: "phone" | "role" | "created" | "status";
+  direction: "asc" | "desc";
+  page: number;
+  pageSize: number;
+};
+
+export async function getAdminUsersPage(input: AdminUsersPageQuery): Promise<{ users: AdminUser[]; total: number }> {
+  const admin = createSupabaseAdminClient();
+  const offset = (input.page - 1) * input.pageSize;
+  if (!admin) {
+    const roleNames = { admin: "Администратор", manager: "Менеджер", user: "Пользователь" };
+    const digits = input.q.replace(/\D/g, "");
+    const filtered = demoUsers
+      .filter((user) => input.role === "all" || user.role === input.role)
+      .filter((user) => input.status === "all" || user.activated === (input.status === "active"))
+      .filter((user) => !input.q || (user.phone ?? "").includes(input.q) || Boolean(digits && (user.phone ?? "").replace(/\D/g, "").includes(digits)))
+      .sort((left, right) => {
+        const comparison = input.sort === "phone" ? (left.phone ?? "").localeCompare(right.phone ?? "", "ru")
+          : input.sort === "role" ? roleNames[left.role].localeCompare(roleNames[right.role], "ru")
+            : input.sort === "status" ? Number(left.activated) - Number(right.activated)
+              : new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+        return input.direction === "asc" ? comparison : -comparison;
+      });
+    return { users: filtered.slice(offset, offset + input.pageSize), total: filtered.length };
+  }
+
+  let query = admin.from("profiles").select("id, role, phone_e164, book_type_id, activated_at, created_at", { count: "exact" });
+  if (input.role !== "all") query = query.eq("role", input.role);
+  if (input.status === "active") query = query.not("activated_at", "is", null);
+  if (input.status === "inactive") query = query.is("activated_at", null);
+  const digits = input.q.replace(/\D/g, "");
+  if (input.q && !digits) return { users: [], total: 0 };
+  if (digits) query = query.ilike("phone_e164", `%${digits}%`);
+
+  const orderColumn = input.sort === "phone" ? "phone_e164" : input.sort === "created" ? "created_at" : input.sort === "status" ? "activated_at" : "role";
+  const { data, count, error } = await query
+    .order(orderColumn, { ascending: input.direction === "asc", nullsFirst: input.direction === "asc" })
+    .order("id", { ascending: true })
+    .range(offset, offset + input.pageSize - 1);
+  if (error) return { users: [], total: 0 };
+  return {
+    total: count ?? 0,
+    users: (data ?? []).map((profile) => ({ id: profile.id, phone: profile.phone_e164, hasBookType: Boolean(profile.book_type_id), activated: Boolean(profile.activated_at), role: profile.role, createdAt: profile.created_at })),
+  };
 }
 
 export async function getAdminOrders(): Promise<AdminOrder[]> {
@@ -71,17 +121,76 @@ export async function getAdminBooks(): Promise<AdminBook[]> {
   return books;
 }
 
+export type AdminBooksPageQuery = {
+  status: "all" | BookProductionStatus;
+  q: string;
+  sort: "title" | "progress" | "created" | "status";
+  direction: "asc" | "desc";
+  page: number;
+  pageSize: number;
+};
+
+export async function getAdminBooksPage(input: AdminBooksPageQuery): Promise<{ books: AdminBook[]; total: number }> {
+  const admin = createSupabaseAdminClient();
+  const offset = (input.page - 1) * input.pageSize;
+  if (!admin) {
+    const needle = input.q.toLowerCase();
+    const filtered = demoBooks
+      .filter((book) => input.status === "all" || book.status === input.status)
+      .filter((book) => !needle || `${book.title} ${book.authorName} ${book.recipientName} ${book.ownerPhone} ${book.typeName}`.toLowerCase().includes(needle))
+      .sort((left, right) => {
+        const comparison = input.sort === "title" ? left.title.localeCompare(right.title, "ru")
+          : input.sort === "progress" ? left.progress - right.progress
+            : input.sort === "status" ? left.status.localeCompare(right.status)
+              : new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+        return input.direction === "asc" ? comparison : -comparison;
+      });
+    return { books: filtered.slice(offset, offset + input.pageSize), total: filtered.length };
+  }
+
+  let query = admin.from("books")
+    .select("id, owner_id, title, author_name, recipient_name, progress, production_status, created_at, updated_at, profiles!books_owner_id_fkey(phone_e164), book_types(name)", { count: "exact" })
+    .is("deleted_at", null);
+  if (input.status !== "all") query = query.eq("production_status", input.status);
+
+  const search = input.q.replace(/[,%()]/g, " ").trim();
+  if (input.q && !search) return { books: [], total: 0 };
+  if (search) {
+    const digits = search.replace(/\D/g, "");
+    const [{ data: owners }, { data: types }] = await Promise.all([
+      digits ? admin.from("profiles").select("id").ilike("phone_e164", `%${digits}%`) : Promise.resolve({ data: [] as Array<{ id: string }> }),
+      admin.from("book_types").select("id").ilike("name", `%${search}%`),
+    ]);
+    const filters = [`title.ilike.%${search}%`, `author_name.ilike.%${search}%`, `recipient_name.ilike.%${search}%`];
+    if (owners?.length) filters.push(`owner_id.in.(${owners.map((owner) => owner.id).join(",")})`);
+    if (types?.length) filters.push(`type_id.in.(${types.map((type) => type.id).join(",")})`);
+    query = query.or(filters.join(","));
+  }
+
+  const orderColumn = input.sort === "title" ? "title" : input.sort === "progress" ? "progress" : input.sort === "status" ? "production_status" : "created_at";
+  const { data, count, error } = await query.order(orderColumn, { ascending: input.direction === "asc" }).order("id", { ascending: true }).range(offset, offset + input.pageSize - 1);
+  if (error) return { books: [], total: 0 };
+  return {
+    total: count ?? 0,
+    books: (data ?? []).map((book) => {
+      const profile = Array.isArray(book.profiles) ? book.profiles[0] : book.profiles;
+      const bookType = Array.isArray(book.book_types) ? book.book_types[0] : book.book_types;
+      return { id: book.id, title: book.title, typeName: bookType?.name ?? "Не указан", authorName: book.author_name, recipientName: book.recipient_name, ownerPhone: profile?.phone_e164 ? formatPhone(profile.phone_e164) : "Телефон не указан", progress: book.progress, status: (book.production_status ?? "writing") as BookProductionStatus, createdAt: book.created_at, updatedAt: book.updated_at };
+    }),
+  };
+}
+
 export async function getAdminOverview(): Promise<AdminOverview> {
   const [users, books, finances] = await Promise.all([getAdminUsers(), getAdminBooks(), getFinanceAnalytics("month")]);
   const salesTotal = "error" in finances ? null : finances.allReceived;
-  const sales = "error" in finances ? [] : finances.buckets.slice(-7).map((bucket) => ({ label: bucket.label, value: bucket.received }));
+  const financeBuckets = "error" in finances ? [] : finances.buckets.slice(-7);
   return {
     userCount: users.filter((user) => user.role === "user").length,
     managerCount: users.filter((user) => user.role === "manager").length,
     adminCount: users.filter((user) => user.role === "admin").length,
     activeBooks: books.filter((book) => book.status !== "received").length,
     salesTotal,
-    sales,
+    financeBuckets,
     recentBooks: books.slice(0, 5),
   };
 }

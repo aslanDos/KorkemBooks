@@ -1,5 +1,6 @@
 export type FinanceKind = "deposit" | "payment" | "refund" | "printing" | "delivery" | "other_cost";
 export type FinancePeriod = "day" | "week" | "month";
+export type FinanceBucket = { key: string; label: string; received: number; refunds: number; costs: number };
 export type FinanceEntry = {
   id: string;
   bookId: string;

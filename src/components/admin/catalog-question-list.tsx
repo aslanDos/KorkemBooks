@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Search } from "lucide-react";
 import { editCatalogQuestionAction } from "@/app/admin/questions/actions";
 import type { AvailableBookLanguage } from "@/lib/books/language";
 
@@ -37,7 +38,7 @@ export function CatalogQuestionList({ questions, language }: { questions: Questi
   }
 
   return <div className="catalog-editor__list">
-    <label className="catalog-editor__search">Поиск по вопросам <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Номер или текст вопроса" /></label>
+    <label className="admin-search catalog-editor__search"><Search size={17} aria-hidden="true" /><input aria-label="Поиск по вопросам" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по номеру или тексту вопроса" /></label>
     <p className="catalog-editor__count">Показано {filtered.length} из {questions.length}</p>
     {error && <p role="alert" className="admin-form-error">{error}</p>}
     {success && <p role="status" className="catalog-editor__success">{success}</p>}

@@ -102,3 +102,11 @@ SQL-файлы лежат в одном уровне, потому что Supaba
 | v70 | 03.10 | [cap_text_page_size_at_20](202610030002_cap_text_page_size_at_20.sql) |
 | v71 | 03.10 | [answer_revision_workflow](202610030003_answer_revision_workflow.sql) |
 | v72 | 03.10 | [ignore_blank_answer_originals](202610030004_ignore_blank_answer_originals.sql) |
+| v73 | 08.10 | [remove_answer_revision_workflow](202610080001_remove_answer_revision_workflow.sql) |
+| v74 | 08.10 | [add_book_writing_style](202610080002_add_book_writing_style.sql) |
+| v75 | 09.10 | [add_profile_activation](202610090001_add_profile_activation.sql) |
+| v76 | 09.10 | [add_book_status_history](202610090002_add_book_status_history.sql) |
+| v77 | 09.10 | [remove_delivery_pickup](202610090003_remove_delivery_pickup.sql) |
+| v78 | 09.10 | [add_chapter_catalog](202610090004_add_chapter_catalog.sql) |
+| v79 | 09.10 | [change_book_recipient_type](202610090005_change_book_recipient_type.sql) |
+| v80 | 10.10 | [add_book_personalization](202610100001_add_book_personalization.sql) |

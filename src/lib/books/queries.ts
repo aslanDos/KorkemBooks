@@ -8,9 +8,10 @@ import { normalizeAnswerFormat } from "./answer-format";
 import { isBookLanguage } from "./language";
 import { getBookPageProgress } from "./progress";
 import { getExpectedChapterCount, isRemovedBookTypeSlug } from "./catalog";
-import type { AnswerRevision } from "./answer-revisions";
+import { normalizeBookWritingStyle } from "./writing-style";
+import { normalizeBookGender } from "./personalization";
 
-export type BookContentMode = "full" | "structure" | "cover" | "summary";
+export type BookContentMode = "full" | "structure" | "cover" | "summary" | "metadata";
 type InternalBookContentMode = BookContentMode | "progress";
 
 export async function getCoverTemplates(): Promise<CoverTemplate[]> {
@@ -86,11 +87,11 @@ export const getFirstBookId = cache(async (): Promise<string | null> => {
   return data?.id ?? null;
 });
 
-export async function getBookWithContent(bookId: string, content: BookContentMode = "full"): Promise<BookWithContent | null> {
+export const getBookWithContent = cache(async function getBookWithContent(bookId: string, content: BookContentMode = "full"): Promise<BookWithContent | null> {
   const supabase = await createSupabaseServerClient();
   if (!supabase) return null;
   return loadBookWithContent(supabase, bookId, content);
-}
+});
 
 export async function getLastViewedQuestionId(bookId: string): Promise<string | null> {
   const supabase = await createSupabaseServerClient();
@@ -101,28 +102,6 @@ export async function getLastViewedQuestionId(bookId: string): Promise<string | 
     .eq("book_id", bookId)
     .maybeSingle();
   return data?.question_id ?? null;
-}
-
-export async function getAnswerRevisions(bookId: string): Promise<AnswerRevision[]> {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) return [];
-  const { data: rows } = await supabase.from("answer_revisions")
-    .select("id, book_id, question_id, original_answer, edited_answer, status, created_at, reviewed_at")
-    .eq("book_id", bookId).order("created_at", { ascending: false });
-  if (!rows?.length) return [];
-  const { data: questions } = await supabase.from("questions").select("id, prompt").eq("book_id", bookId).in("id", [...new Set(rows.map((row) => row.question_id))]);
-  const prompts = new Map((questions ?? []).map((question) => [question.id, question.prompt]));
-  return rows.map((row) => ({
-    id: row.id,
-    bookId: row.book_id,
-    questionId: row.question_id,
-    question: prompts.get(row.question_id) ?? "Вопрос",
-    originalAnswer: row.original_answer,
-    editedAnswer: row.edited_answer,
-    status: row.status as AnswerRevision["status"],
-    createdAt: row.created_at,
-    reviewedAt: row.reviewed_at,
-  }));
 }
 
 export async function getAdminBookWithContent(bookId: string, content: BookContentMode = "full"): Promise<BookWithContent | null> {
@@ -139,12 +118,12 @@ export async function refreshBookPageProgress(supabase: SupabaseClient, bookId: 
 }
 
 async function loadBookWithContent(supabase: SupabaseClient, bookId: string, content: InternalBookContentMode = "full"): Promise<BookWithContent | null> {
-  const includeChapters = content !== "cover";
+  const includeChapters = content !== "cover" && content !== "metadata";
   const includeAttachments = content === "full" || content === "summary" || content === "progress";
-  const includeCover = content !== "progress";
+  const includeCover = content !== "progress" && content !== "metadata" && content !== "structure";
   const { data: book } = await supabase
     .from("books")
-    .select("id, title, author_name, recipient_name, language, status, progress, updated_at, page_font, production_status, title_page_title_size, chapter_page_style, chapter_title_size, question_text_size, answer_text_size, show_footer_author, show_footer_title, round_photos, hide_photo_footers, page_background_style, book_types(name)")
+    .select("id, type_id, title, author_name, recipient_name, author_gender, recipient_gender, back_cover_text, language, status, progress, updated_at, page_font, production_status, title_page_title_size, chapter_page_style, chapter_title_size, question_text_size, answer_text_size, show_footer_author, show_footer_title, round_photos, hide_photo_footers, page_background_style, writing_style, book_types(name)")
     .eq("id", bookId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -304,6 +283,7 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     status: book.status,
     progress: book.progress,
     updated_at: book.updated_at,
+    typeId: book.type_id,
     typeName: typeRelation?.name ?? "Книга",
     productionStatus: book.production_status ?? "writing",
     pageFont: "literata",
@@ -317,6 +297,10 @@ async function loadBookWithContent(supabase: SupabaseClient, bookId: string, con
     roundPhotos: Boolean(book.round_photos),
     hidePhotoFooters: Boolean(book.hide_photo_footers),
     pageBackground: normalizePageBackground(book.page_background_style),
+    writingStyle: normalizeBookWritingStyle(book.writing_style),
+    authorGender: normalizeBookGender(book.author_gender),
+    recipientGender: normalizeBookGender(book.recipient_gender),
+    backCoverText: book.back_cover_text ?? "",
     cover,
     chapters: chapters.map((chapter) => ({
       ...chapter,

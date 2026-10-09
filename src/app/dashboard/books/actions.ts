@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { refreshBookPageProgress } from "@/lib/books/queries";
 import { isAvailableBookLanguage, isBookLanguage } from "@/lib/books/language";
 import { isRemovedBookTypeSlug } from "@/lib/books/catalog";
+import { BOOK_MINIMUM_SUBMISSION_PAGE_COUNT, BOOK_TARGET_PAGE_COUNT } from "@/lib/books/progress";
 
 export type SubmitBookForEditingState = { error?: string; success?: boolean };
 
@@ -20,7 +21,8 @@ export async function submitBookForEditingAction(_: SubmitBookForEditingState, f
 
   const progress = await refreshBookPageProgress(supabase, bookId.data);
   if (progress === null) return { error: "Не удалось проверить готовность книги" };
-  if (progress < 50) return { error: "В книге должно быть минимум 50 страниц" };
+  const minimumProgress = Math.floor((BOOK_MINIMUM_SUBMISSION_PAGE_COUNT / BOOK_TARGET_PAGE_COUNT) * 100);
+  if (progress < minimumProgress) return { error: `В книге должно быть минимум ${BOOK_MINIMUM_SUBMISSION_PAGE_COUNT} страниц` };
 
   const { data: updated, error } = await supabase.from("books")
     .update({ production_status: "editing" })
@@ -95,7 +97,11 @@ export async function createBookAction(_: CreateBookState, formData: FormData): 
     title: parsed.data.title,
     author_name: parsed.data.authorName,
     recipient_name: parsed.data.recipientName,
+    author_gender: parsed.data.authorGender === "neutral" ? null : parsed.data.authorGender,
+    recipient_gender: parsed.data.recipientGender === "neutral" ? null : parsed.data.recipientGender,
+    back_cover_text: parsed.data.backCoverText,
     language: selectedLanguage,
+    writing_style: parsed.data.writingStyle,
   }).select("id").single();
 
   if (error || !book) return { error: !isAdmin && error?.code === "23505" ? "Сейчас один пользователь может создать только одну книгу" : "Не удалось создать книгу. Попробуйте ещё раз" };
@@ -111,9 +117,18 @@ export async function updateBookAction(_: UpdateBookState, formData: FormData): 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Сессия истекла. Войдите снова" };
 
+  const updates = {
+    title: parsed.data.title,
+    author_name: parsed.data.authorName,
+    recipient_name: parsed.data.recipientName,
+    author_gender: parsed.data.authorGender === "neutral" ? null : parsed.data.authorGender,
+    recipient_gender: parsed.data.recipientGender === "neutral" ? null : parsed.data.recipientGender,
+    back_cover_text: parsed.data.backCoverText,
+    ...(parsed.data.writingStyle ? { writing_style: parsed.data.writingStyle } : {}),
+  };
   const { data: updated, error } = await supabase
     .from("books")
-    .update({ title: parsed.data.title, author_name: parsed.data.authorName, recipient_name: parsed.data.recipientName })
+    .update(updates)
     .eq("id", parsed.data.bookId)
     .eq("owner_id", user.id)
     .eq("production_status", "writing")

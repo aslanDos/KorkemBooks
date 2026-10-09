@@ -2,7 +2,7 @@ import { getBookPrintLayout } from "./print-layout";
 import type { BookWithContent } from "./types";
 
 export const BOOK_TARGET_PAGE_COUNT = 100;
-export const BOOK_MINIMUM_SUBMISSION_PAGE_COUNT = 50;
+export const BOOK_MINIMUM_SUBMISSION_PAGE_COUNT = 60;
 
 export function getBookPageProgress(book: Pick<BookWithContent, "chapters" | "questionTextSize" | "answerTextSize">) {
   const totalPages = getBookPrintLayout(book).totalPages;

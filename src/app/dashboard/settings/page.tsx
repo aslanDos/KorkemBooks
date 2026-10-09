@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   const user = await getCurrentUser();
 
   return (
-    <>
+    <div className="settings-page">
       <DashboardHeader title="Настройки" description="Данные аккаунта и безопасность" />
       <section className="dashboard-section settings-list">
         <div className="settings-list__account">
@@ -31,6 +31,6 @@ export default async function SettingsPage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

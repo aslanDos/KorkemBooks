@@ -30,11 +30,55 @@
 .dashboard-shell .book-form .form-field__control > :is(input, select) { box-sizing: border-box; height: 50px; padding: 0 16px; border-radius: var(--workspace-small-radius); font-size: 15px; }
 .dashboard-shell .book-form .form-field__control > input[readonly] { color: var(--muted); background: var(--background); cursor: default; }
 .dashboard-shell .book-form .form-field__control > select { appearance: none; -webkit-appearance: none; padding-right: 44px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23716d64' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; }
+.dashboard-shell .book-personalization-fields { display: grid; padding: 28px 0; gap: 22px; border-block: 1px solid var(--line); }
+.dashboard-shell .book-form-section-heading { display: grid; gap: 7px; }
+.dashboard-shell .book-form-section-heading h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
+.dashboard-shell .book-form-section-heading p { max-width: 760px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.dashboard-shell .book-gender-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.dashboard-shell .book-gender-field { min-width: 0; margin: 0; padding: 0; border: 0; }
+.dashboard-shell .book-gender-field legend { margin-bottom: 10px; font-size: 13px; font-weight: 650; }
+.dashboard-shell .book-gender-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dashboard-shell .book-gender-options button { display: flex; min-width: 0; min-height: 44px; padding: 8px 10px; align-items: center; justify-content: center; color: var(--muted); text-align: center; background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--workspace-pill); cursor: pointer; font: inherit; font-size: 12px; line-height: 1.3; transition: border-color 150ms ease, background 150ms ease, color 150ms ease; }
+.dashboard-shell .book-gender-options button:hover { color: var(--ink); border-color: var(--accent); }
+.dashboard-shell .book-gender-options button.is-selected { color: var(--primary); background: var(--workspace-tint); border-color: var(--accent); font-weight: 650; }
+.dashboard-shell .book-gender-options button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.dashboard-shell .book-back-cover-field { display: grid; gap: 7px; }
+.dashboard-shell .book-back-cover-field > span { font-size: 13px; font-weight: 650; }
+.dashboard-shell .book-back-cover-field small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.dashboard-shell .book-back-cover-field textarea { box-sizing: border-box; width: 100%; min-height: 132px; padding: 14px 16px; resize: vertical; color: var(--ink); background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--workspace-small-radius); outline: 0; font: inherit; font-size: 14px; line-height: 1.65; }
+.dashboard-shell .book-back-cover-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+@media (max-width: 900px) {
+  .dashboard-shell .book-gender-fields { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .dashboard-shell .book-personalization-fields { padding-block: 22px; }
+  .dashboard-shell .book-gender-options { grid-template-columns: 1fr; }
+}
+.dashboard-shell .book-writing-style-picker { min-width: 0; margin: 4px 0 0; padding: 0; border: 0; }
+.dashboard-shell .book-writing-style-picker > legend { padding: 0; color: var(--ink); font-size: 18px; font-weight: 650; letter-spacing: -.025em; }
+.dashboard-shell .book-writing-style-picker > p { margin: 7px 0 16px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.dashboard-shell .book-writing-style-picker > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.dashboard-shell .book-writing-style-picker label { position: relative; min-width: 0; cursor: pointer; }
+.dashboard-shell .book-writing-style-picker input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.dashboard-shell .book-writing-style-picker label > span { position: relative; display: grid; min-height: 104px; padding: 18px; align-content: start; gap: 12px; color: var(--ink); background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--workspace-small-radius); transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
+.dashboard-shell .book-writing-style-picker label:hover > span { border-color: var(--accent); }
+.dashboard-shell .book-writing-style-picker label > span > span { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.dashboard-shell .book-writing-style-picker strong { font-size: 14px; line-height: 1.4; }
+.dashboard-shell .book-writing-style-picker small { flex: 0 0 auto; padding: 4px 7px; color: var(--primary); background: var(--workspace-tint); border-radius: var(--workspace-pill); font-size: 8px; font-weight: 700; }
+.dashboard-shell .book-writing-style-picker em { color: var(--muted); font-size: 11px; font-style: normal; line-height: 1.55; }
+.dashboard-shell .book-writing-style-picker__description { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 12px; }
+.dashboard-shell .book-writing-style-picker__description em { min-width: 0; }
+.dashboard-shell .book-writing-style-picker__description svg { flex: 0 0 auto; color: var(--primary); opacity: 0; transform: scale(.8); transition: opacity 160ms ease, transform 160ms ease; }
+.dashboard-shell .book-writing-style-picker input:checked + span { background: var(--workspace-tint); border-color: var(--primary); box-shadow: 0 0 0 2px var(--focus-ring); }
+.dashboard-shell .book-writing-style-picker input:checked + span .book-writing-style-picker__description svg { opacity: 1; transform: scale(1); }
+.dashboard-shell .book-writing-style-picker input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 3px; }
 .dashboard-shell .form-field > span, .dashboard-shell .form-field label { font-size: 13px; font-weight: 600; }
 .dashboard-shell .form-field input { min-height: 50px; font-size: 15px; border-radius: var(--workspace-small-radius); background: var(--surface-raised); }
 .dashboard-shell .book-type-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1100px) {
   .dashboard-shell .book-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-shell .book-writing-style-picker > div { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-shell .book-writing-style-picker label > span { min-height: 96px; }
 }
 @media (max-width: 600px) {
   .dashboard-shell .book-type-grid { grid-template-columns: minmax(0, 1fr); }
@@ -109,19 +153,25 @@
 .dashboard-shell .cover-segmented-control button { min-height: 38px; font-size: 11px; border-radius: 8px; }
 .dashboard-shell .cover-author-toggle { font-size: 12px; }
 .dashboard-shell .cover-author-toggle input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 4px; }
-.dashboard-shell .settings-list { width: 100%; max-width: none; padding: 0; }
-.dashboard-shell .settings-list > div { padding: clamp(26px, 3vw, 42px); }
-.dashboard-shell .settings-list p { max-width: 600px; line-height: 1.65; font-size: 14px; }
-.dashboard-shell .settings-list__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.dashboard-shell .settings-page { width: 100%; }
+.dashboard-shell .settings-page .dashboard-header { margin-bottom: 20px; }
+.dashboard-shell .settings-page .dashboard-header h1 { font-size: clamp(27px, 2.5vw, 34px); }
+.dashboard-shell .settings-page .dashboard-header p { margin-top: 6px; font-size: 12px; line-height: 1.5; }
+.dashboard-shell .settings-list { width: 100%; max-width: none; padding: 0; border-radius: 16px; }
+.dashboard-shell .settings-list > div { padding: 22px 24px; }
+.dashboard-shell .settings-list h2 { font-size: 16px; letter-spacing: -.025em; }
+.dashboard-shell .settings-list p { max-width: 520px; line-height: 1.5; font-size: 12px; }
+.dashboard-shell .settings-list__heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .dashboard-shell .settings-list__heading > div:first-child { min-width: 0; }
 .dashboard-shell .settings-list__heading .status-pill { position: static; flex: 0 0 auto; margin: 0; }
-.dashboard-shell .settings-list__phone { display: block; width: fit-content; margin-top: 30px; color: var(--ink); font-size: clamp(22px, 2vw, 30px); font-weight: 650; letter-spacing: -.035em; }
-.dashboard-shell .settings-list__phone + p { margin-top: 10px; }
-.dashboard-shell .settings-password-control { display: grid; width: min(100%, 480px); justify-items: end; gap: 20px; }
-.dashboard-shell .settings-password-toggle { display: inline-flex; min-height: 46px; padding: 10px 18px; align-items: center; justify-content: center; gap: 9px; color: var(--primary); background: var(--surface); border: 1px solid var(--line); border-radius: var(--workspace-pill); cursor: pointer; font: inherit; font-size: 13px; font-weight: 650; white-space: nowrap; }
+.dashboard-shell .settings-list__phone { display: block; width: fit-content; margin-top: 18px; color: var(--ink); font-size: 20px; font-weight: 650; letter-spacing: -.03em; }
+.dashboard-shell .settings-list__phone + p { margin-top: 6px; }
+.dashboard-shell .settings-password-control { display: grid; width: min(100%, 380px); justify-items: end; gap: 16px; }
+.dashboard-shell .settings-password-toggle { display: inline-flex; min-height: 38px; padding: 8px 14px; align-items: center; justify-content: center; gap: 7px; color: var(--primary); background: var(--surface); border: 1px solid var(--line); border-radius: var(--workspace-pill); cursor: pointer; font: inherit; font-size: 12px; font-weight: 650; white-space: nowrap; }
+.dashboard-shell .settings-password-toggle svg { width: 15px; height: 15px; }
 .dashboard-shell .settings-password-toggle:hover { border-color: var(--accent); background: var(--workspace-tint); }
 .dashboard-shell .settings-password-toggle:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
-.dashboard-shell .settings-password-form { width: 100%; max-width: 480px; margin: 0; gap: 18px; justify-self: stretch; }
+.dashboard-shell .settings-password-form { width: 100%; max-width: 380px; margin: 0; gap: 15px; justify-self: stretch; }
 .dashboard-shell .settings-password-form > p:first-child { margin: 0; }
 @media (max-width: 760px) {
   .dashboard-shell .settings-list__heading { flex-direction: column; align-items: stretch; gap: 20px; }

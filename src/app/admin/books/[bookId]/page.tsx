@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpen, ChevronDown, LayoutDashboard, Palette, Truck, WalletCards } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronDown, History, LayoutDashboard, Palette, Truck, WalletCards } from "lucide-react";
 import { BookStatusSelect } from "@/components/admin/book-status-select";
 import { BookStructureStats } from "@/components/books/book-structure-stats";
 import { getBookPageProgress } from "@/lib/books/progress";
@@ -17,32 +17,36 @@ import { BookFinancePanel } from "@/components/admin/book-finance-panel";
 import { getBookFinance, todayInAlmaty } from "@/lib/admin/finance";
 import { DeleteBookButton } from "@/components/admin/delete-book-button";
 import { PrintFormatButton } from "@/components/admin/print-format-button";
-import { AnswerRevisionImport } from "@/components/admin/answer-revision-import";
+import { BookStatusHistory } from "@/components/admin/book-status-history";
+import { getAdminBookStatusHistory } from "@/lib/admin/book-status-history";
+import { getBookGenderLabel } from "@/lib/books/personalization";
 
-type AdminBookTab = "overview" | "finance" | "delivery" | "content";
+type AdminBookTab = "overview" | "finance" | "delivery" | "history" | "content";
 
 export default async function AdminBookPage({ params, searchParams }: { params: Promise<{ bookId: string }>; searchParams?: Promise<{ tab?: string }> }) {
   const { bookId } = await params;
   const requestedTab = (await searchParams)?.tab;
-  const activeTab: AdminBookTab = requestedTab === "finance" || requestedTab === "delivery" || requestedTab === "content" ? requestedTab : "overview";
-  const book = await getAdminBookWithContent(bookId);
+  const activeTab: AdminBookTab = requestedTab === "finance" || requestedTab === "delivery" || requestedTab === "history" || requestedTab === "content" ? requestedTab : "overview";
+  const contentMode = activeTab === "overview" ? "summary" : activeTab === "content" ? "structure" : "metadata";
+  const book = await getAdminBookWithContent(bookId, contentMode);
   if (!book) notFound();
-  const [delivery, financial] = await Promise.all([
+  const [delivery, financial, statusHistory] = await Promise.all([
     activeTab === "delivery" ? getAdminBookDelivery(bookId) : Promise.resolve(null),
     activeTab === "finance" ? getBookFinance(bookId) : Promise.resolve(null),
+    activeTab === "history" ? getAdminBookStatusHistory(bookId) : Promise.resolve(null),
   ]);
   const admin = activeTab === "overview" ? createSupabaseAdminClient() : null;
   const { data: latestApproval } = admin
     ? await admin.from("book_approval_requests").select("status, feedback, requested_at, decided_at").eq("book_id", bookId).order("requested_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
-  const questions = book.chapters.flatMap(chapter => chapter.questions);
+  const questions = activeTab === "overview" || activeTab === "content" ? book.chapters.flatMap(chapter => chapter.questions) : [];
   const answered = questions.filter(question => question.answer.trim()).length;
-  const pageCount = getBookPageProgress(book).totalPages;
-  const answeredChapters = book.chapters.map((chapter, index) => ({
+  const pageCount = activeTab === "overview" ? getBookPageProgress(book).totalPages : 0;
+  const answeredChapters = activeTab === "content" ? book.chapters.map((chapter, index) => ({
     chapter,
     number: index + 1,
     questions: chapter.questions.filter((question) => question.answer.trim()),
-  })).filter(({ questions: answeredQuestions }) => answeredQuestions.length > 0);
+  })).filter(({ questions: answeredQuestions }) => answeredQuestions.length > 0) : [];
   const printLayout = activeTab === "overview" ? getBookPrintLayout(book) : null;
   const bookHref = `/admin/books/${book.id}`;
 
@@ -55,6 +59,7 @@ export default async function AdminBookPage({ params, searchParams }: { params: 
       <Link href={bookHref} className={activeTab === "overview" ? "is-active" : ""} aria-current={activeTab === "overview" ? "page" : undefined}><LayoutDashboard size={16} />Обзор</Link>
       <Link href={`${bookHref}?tab=finance`} className={activeTab === "finance" ? "is-active" : ""} aria-current={activeTab === "finance" ? "page" : undefined}><WalletCards size={16} />Финансы</Link>
       <Link href={`${bookHref}?tab=delivery`} className={activeTab === "delivery" ? "is-active" : ""} aria-current={activeTab === "delivery" ? "page" : undefined}><Truck size={16} />Доставка</Link>
+      <Link href={`${bookHref}?tab=history`} className={activeTab === "history" ? "is-active" : ""} aria-current={activeTab === "history" ? "page" : undefined}><History size={16} />История статусов</Link>
       <Link href={`${bookHref}?tab=content`} className={activeTab === "content" ? "is-active" : ""} aria-current={activeTab === "content" ? "page" : undefined}><BookOpen size={16} />Главы и ответы</Link>
     </nav>
     {activeTab === "overview" && <>
@@ -69,7 +74,10 @@ export default async function AdminBookPage({ params, searchParams }: { params: 
             {book.recipient_name && <div><dt>Получатель</dt><dd>{book.recipient_name}</dd></div>}
             <div><dt>Тип получателя</dt><dd>{book.typeName}</dd></div>
             <div><dt>Язык</dt><dd>{getBookLanguageLabel(book.language)}</dd></div>
+            <div><dt>Обращение к автору</dt><dd>{getBookGenderLabel(book.authorGender)}</dd></div>
+            <div><dt>Обращение к получателю</dt><dd>{getBookGenderLabel(book.recipientGender)}</dd></div>
           </dl>
+          <div className="admin-book-back-cover-text"><strong>Послание на задней стороне</strong><p>{book.backCoverText || "Не добавлено"}</p></div>
           <div className="admin-book-metadata"><span>Ответы: <b>{answered} из {questions.length}</b></span><span>Обновлена: <time dateTime={book.updated_at}>{new Date(book.updated_at).toLocaleDateString("ru-KZ")}</time></span></div>
         </div>
       </div>
@@ -78,16 +86,11 @@ export default async function AdminBookPage({ params, searchParams }: { params: 
     {printLayout && <BookPrintStats layout={printLayout} />}
     </>}
     {activeTab === "finance" && financial && <BookFinancePanel key={`${book.id}:${financial.finance?.price ?? "unset"}:${financial.finance?.entries.map((entry) => `${entry.id}:${entry.voidedAt}`).join(",")}`} bookId={book.id} finance={financial.finance} today={todayInAlmaty()} loadError={financial.error} />}
-    {activeTab === "delivery" && delivery && <>
-    <div className="chapter-heading" id="book-delivery-heading">
-      <div><Truck size={20} aria-hidden="true" /><span><h2>Доставка</h2><small>Укажите, как передать готовую книгу.</small></span></div>
-    </div>
-    <BookDeliveryForm key={JSON.stringify(delivery)} bookId={book.id} delivery={delivery.delivery} loadError={delivery.error} />
-    </>}
+    {activeTab === "delivery" && delivery && <BookDeliveryForm key={JSON.stringify(delivery)} bookId={book.id} delivery={delivery.delivery} loadError={delivery.error} />}
+    {activeTab === "history" && statusHistory && <BookStatusHistory entries={statusHistory.entries} loadError={statusHistory.error} />}
     {activeTab === "content" && <>
-    <AnswerRevisionImport bookId={book.id} disabled={book.productionStatus !== "editing"} />
     <div className="chapter-heading">
-      <div><BookOpen size={20} aria-hidden="true" /><span><h2>Главы и ответы</h2><small>Оригиналы пользователя доступны только для просмотра. Исправления загружаются отдельными версиями.</small></span></div>
+      <div><BookOpen size={20} aria-hidden="true" /><span><h2>Главы и ответы</h2><small>Ответы пользователя доступны только для просмотра.</small></span></div>
       <nav className="chapter-heading__actions" aria-label="Действия с книгой">
         <Link className="secondary-content-button" href={`/admin/books/${book.id}/cover`}><Palette size={16} />Обложка</Link>
       </nav>

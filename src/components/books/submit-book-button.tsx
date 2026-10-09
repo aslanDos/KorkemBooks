@@ -8,9 +8,10 @@ import { useLocale } from "@/components/locale/locale-provider";
 import { Dialog } from "@/components/ui/dialog";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { FormFeedback } from "@/components/ui/form-feedback";
+import { BOOK_MINIMUM_SUBMISSION_PAGE_COUNT } from "@/lib/books/progress";
 
-export function SubmitBookButton({ bookId, progress }: { bookId: string; progress: number }) {
-  const canSubmit = progress >= 50;
+export function SubmitBookButton({ bookId, pageCount }: { bookId: string; pageCount: number }) {
+  const canSubmit = pageCount >= BOOK_MINIMUM_SUBMISSION_PAGE_COUNT;
   const { locale } = useLocale();
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -29,7 +30,7 @@ export function SubmitBookButton({ bookId, progress }: { bookId: string; progres
         className="secondary-content-button"
         type="button"
         disabled={!canSubmit}
-        title={canSubmit ? undefined : locale === "kk" ? "Кітапта кемінде 50 бет болуы керек" : "В книге должно быть минимум 50 страниц"}
+        title={canSubmit ? undefined : locale === "kk" ? `Кітапта кемінде ${BOOK_MINIMUM_SUBMISSION_PAGE_COUNT} бет болуы керек` : `В книге должно быть минимум ${BOOK_MINIMUM_SUBMISSION_PAGE_COUNT} страниц`}
         onClick={() => dialogRef.current?.showModal()}
       >
         <Send size={15} />

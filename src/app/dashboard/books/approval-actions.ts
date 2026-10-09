@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { attributeLatestBookStatusChange } from "@/lib/admin/book-status-history";
 
 export type BookApprovalState = { error?: string; success?: string };
 
@@ -28,6 +29,7 @@ export async function requestBookApprovalAction(_: BookApprovalState, formData: 
   const { data, error } = await admin.rpc("request_book_approval", { target_book_id: bookId.data });
   if (error) return { error: "Не удалось отправить книгу на согласование. Проверьте миграции базы данных" };
   if (data !== true) return { error: "Книга уже перешла на другой этап. Обновите страницу" };
+  await attributeLatestBookStatusChange(admin, bookId.data, user.id);
 
   refreshBook(bookId.data);
   return { success: "Книга отправлена пользователю на согласование" };
@@ -66,6 +68,7 @@ export async function decideBookApprovalAction(_: BookApprovalState, formData: F
   });
   if (error) return { error: "Не удалось сохранить решение. Попробуйте ещё раз" };
   if (data !== true) return { error: "Состояние книги изменилось. Обновите страницу" };
+  await attributeLatestBookStatusChange(admin, book.id, user.id);
 
   refreshBook(book.id);
   return { success: parsed.data.decision === "approved" ? "Макет подтверждён и передан в печать" : "Запрос правок отправлен команде" };

@@ -647,14 +647,20 @@ export function BookPreviewGallery({ book, initialQuestionId }: { book: BookWith
         <span className="book-inline-editor__chapter">{editable.chapter.title} · {questionIndex + 1} из {questions.length}</span>
         <label>{editable.prompt}</label>
         <QuestionPromptEditor key={`prompt-editor-${editable.questionId}-${editable.prompt}`} bookId={book.id} questionId={editable.questionId} prompt={editable.prompt} />
-        <RichAnswerEditor key={`answer-${editable.questionId}-${answerEditorVersions[editable.questionId] ?? 0}`} value={editable.answer} format={editable.answerFormat} changeDelay={500} onChange={(answer, answerFormat) => { setAnswers(current => ({ ...current, [editable.questionId]: answer })); setFormats(current => ({ ...current, [editable.questionId]: answerFormat })); setSaveError(""); }} />
+        <RichAnswerEditor
+          key={`answer-${editable.questionId}-${answerEditorVersions[editable.questionId] ?? 0}`}
+          value={editable.answer}
+          format={editable.answerFormat}
+          changeDelay={500}
+          toolbarActions={<AnswerWritingAssistant value={editable.answer} writingStyle={book.writingStyle} onApply={(answer) => {
+            setAnswers(current => ({ ...current, [editable.questionId]: answer }));
+            setFormats(current => ({ ...current, [editable.questionId]: { version: 1, marks: [] } }));
+            setAnswerEditorVersions(current => ({ ...current, [editable.questionId]: (current[editable.questionId] ?? 0) + 1 }));
+            setSaveError("");
+          }} />}
+          onChange={(answer, answerFormat) => { setAnswers(current => ({ ...current, [editable.questionId]: answer })); setFormats(current => ({ ...current, [editable.questionId]: answerFormat })); setSaveError(""); }}
+        />
         <small>{editable.answer.length} символов</small>
-        <AnswerWritingAssistant value={editable.answer} onApply={(answer) => {
-          setAnswers(current => ({ ...current, [editable.questionId]: answer }));
-          setFormats(current => ({ ...current, [editable.questionId]: { version: 1, marks: [] } }));
-          setAnswerEditorVersions(current => ({ ...current, [editable.questionId]: (current[editable.questionId] ?? 0) + 1 }));
-          setSaveError("");
-        }} />
         <div className="book-inline-editor__navigation"><button type="button" disabled={questionIndex <= 0} onClick={() => setActivePageKey(questions[questionIndex - 1].key)}>Предыдущий вопрос</button><button type="button" disabled={questionIndex >= questions.length - 1} onClick={() => setActivePageKey(questions[questionIndex + 1].key)}>Следующий вопрос</button></div>
       </> : <p>Выберите вопрос или страницу с историей, чтобы начать писать. Начальные страницы, предисловие и содержание формируются автоматически.</p>}
     </aside>

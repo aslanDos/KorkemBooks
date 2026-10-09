@@ -22,7 +22,7 @@ new Function('require', 'module', 'exports', ts.transpileModule(
 function fixture({ missing = false } = {}) {
   const calls = [];
   const rows = {
-    books: missing ? null : { id: 'book', title: 'Book', round_photos: true, hide_photo_footers: true, page_background_style: 'burgundy', book_types: { name: 'Memoir' } },
+    books: missing ? null : { id: 'book', title: 'Book', author_gender: 'female', recipient_gender: 'male', back_cover_text: 'A lasting story', writing_style: 'literary_story', round_photos: true, hide_photo_footers: true, page_background_style: 'burgundy', book_types: { name: 'Memoir' } },
     chapters: [{ id: 'chapter', title: 'Childhood', position: 1 }],
     questions: [{ id: 'question', chapter_id: 'chapter', catalog_id: 'catalog', prompt: 'Home?', position: 1 }],
     answers: [{ question_id: 'question', answer_text: 'My home' }],
@@ -57,6 +57,8 @@ function fixture({ missing = false } = {}) {
     : name === './answer-format' ? { normalizeAnswerFormat: value => value ?? { version: 1, marks: [] } }
     : name === './progress' ? { getBookPageProgress: book => ({ progress: book.progress ?? 0 }) }
     : name === './catalog' ? { getExpectedChapterCount: slug => slug === 'boyfriend' ? 5 : 4 }
+    : name === './writing-style' ? { normalizeBookWritingStyle: value => ['live_story', 'warm_story', 'literary_story'].includes(value) ? value : 'warm_story' }
+    : name === './personalization' ? { normalizeBookGender: value => ['female', 'male'].includes(value) ? value : null }
     : name === './cover-palettes' ? {
       normalizePageBackground: value => ['black', 'gray', 'burgundy', 'olive', 'navy', 'terracotta'].includes(value) ? value : 'burgundy',
       normalizeCoverColor: value => ['black', 'gray', 'burgundy', 'olive', 'navy', 'terracotta'].includes(value) ? value : 'burgundy',
@@ -92,6 +94,10 @@ test('editor preserves answers and ordered images with duplicate storage paths',
   assert.deepEqual(question.images.map(image => [image.id, image.pageId, image.position, image.signedUrl, image.pageBackground, image.roundedCorners]), [['image1', 'page1', 1, 'signed:photo', 'burgundy', true], ['image2', 'page2', 4, 'signed:photo', 'burgundy', false]]);
   assert.equal(book.roundPhotos, true);
   assert.equal(book.hidePhotoFooters, true);
+  assert.equal(book.writingStyle, 'literary_story');
+  assert.equal(book.authorGender, 'female');
+  assert.equal(book.recipientGender, 'male');
+  assert.equal(book.backCoverText, 'A lasting story');
   assert.equal(question.images[0].collageLayout, 'two_columns');
   assert.deepEqual(question.images[0].collageImages.map(image => [image.id, image.slot, image.signedUrl, image.cropX, image.cropY, image.cropScale]), [['collage2', 2, 'signed:collage-photo', 4, -2, 1.2]]);
   assert.deepEqual(question.blankPages, [{ id: 'blank1', pageBackground: 'olive', placement: 'after', position: 2 }]);

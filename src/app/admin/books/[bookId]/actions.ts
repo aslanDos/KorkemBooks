@@ -5,91 +5,22 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { bookDeliverySchema, getDeliveryError, type BookDeliveryState } from "@/lib/books/delivery";
-export type RevisionImportPreview = {
-  questionId: string;
-  question: string;
-  originalAnswer: string;
-  editedAnswer: string;
-  changed: boolean;
-};
-export type RevisionImportState = { error?: string; success?: string; items?: RevisionImportPreview[]; json?: string };
-const revisionRowSchema = z.object({ questionId: z.uuid(), editedAnswer: z.string().max(50000, "Исправленный ответ слишком длинный") }).strict();
-const revisionImportSchema = z.array(revisionRowSchema).min(1, "Файл не содержит исправлений").max(1000, "В файле слишком много записей");
+import { isBookTypeReady } from "@/lib/books/catalog";
 
 export async function saveBookDeliveryAction(_: BookDeliveryState, formData: FormData): Promise<BookDeliveryState> {
   const user = await getCurrentUser();
   if (user?.role !== "admin") return { error: "Недостаточно прав" };
-  const pickup = formData.get("pickup") === "on";
-  const parsed = bookDeliverySchema.safeParse({ bookId: formData.get("bookId"), pickup, city: pickup ? "" : formData.get("city") ?? "", address: pickup ? "" : formData.get("address") ?? "" });
+  const parsed = bookDeliverySchema.safeParse({ bookId: formData.get("bookId"), city: formData.get("city") ?? "", address: formData.get("address") ?? "" });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Проверьте данные доставки" };
   const admin = createSupabaseAdminClient();
   if (!admin) return { error: "Supabase не настроен" };
   const { data: book, error: bookError } = await admin.from("books").select("id").eq("id", parsed.data.bookId).is("deleted_at", null).maybeSingle();
   if (bookError) return { error: "Не удалось проверить книгу" };
   if (!book) return { error: "Книга не найдена" };
-  const { error } = await admin.from("book_deliveries").upsert({ book_id: parsed.data.bookId, pickup, city: parsed.data.city, address: parsed.data.address }, { onConflict: "book_id" });
+  const { error } = await admin.from("book_deliveries").upsert({ book_id: parsed.data.bookId, city: parsed.data.city, address: parsed.data.address }, { onConflict: "book_id" });
   if (error) return { error: getDeliveryError(error) };
   revalidatePath(`/admin/books/${parsed.data.bookId}`);
-  return { success: true, delivery: { pickup, city: parsed.data.city, address: parsed.data.address } };
-}
-
-async function validateRevisionJson(bookIdValue: unknown, jsonValue: unknown): Promise<RevisionImportState> {
-  const user = await getCurrentUser();
-  if (user?.role !== "admin") return { error: "Недостаточно прав" };
-  const bookId = z.uuid().safeParse(bookIdValue);
-  if (!bookId.success || typeof jsonValue !== "string" || jsonValue.length > 50_000_000) return { error: "Некорректный файл импорта" };
-  let decoded: unknown;
-  try { decoded = JSON.parse(jsonValue); } catch { return { error: "Файл не является корректным JSON" }; }
-  const parsed = revisionImportSchema.safeParse(decoded);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Некорректная структура JSON" };
-  const ids = parsed.data.map((row) => row.questionId);
-  if (new Set(ids).size !== ids.length) return { error: "В файле есть повторяющиеся questionId" };
-  const admin = createSupabaseAdminClient();
-  if (!admin) return { error: "Supabase не настроен" };
-  const { data: book } = await admin.from("books").select("id, production_status").eq("id", bookId.data).is("deleted_at", null).maybeSingle();
-  if (!book) return { error: "Книга не найдена" };
-  if (book.production_status !== "editing") return { error: "Импорт доступен только на этапе редактуры" };
-  const { error: captureError } = await admin.rpc("capture_book_answer_originals", { target_book_id: book.id });
-  if (captureError) return { error: "Не удалось получить оригиналы. Примените последнюю миграцию базы данных" };
-  const [{ data: originals, error: originalsError }, { data: questions, error: questionsError }] = await Promise.all([
-    admin.from("book_answer_originals").select("question_id, original_answer").eq("book_id", book.id).in("question_id", ids),
-    admin.from("questions").select("id, prompt").eq("book_id", book.id).is("deleted_at", null).in("id", ids),
-  ]);
-  if (originalsError || questionsError) return { error: "Не удалось проверить исправления" };
-  const originalsById = new Map((originals ?? []).filter((row) => row.original_answer.trim().length > 0).map((row) => [row.question_id, row.original_answer]));
-  const promptsById = new Map((questions ?? []).map((row) => [row.id, row.prompt]));
-  const unknown = ids.filter((id) => !originalsById.has(id) || !promptsById.has(id));
-  if (unknown.length) return { error: `Файл содержит ${unknown.length} неизвестных questionId или ответы от другой книги` };
-  const items = parsed.data.map((row) => ({
-    ...row,
-    question: promptsById.get(row.questionId) ?? "",
-    originalAnswer: originalsById.get(row.questionId) ?? "",
-    changed: originalsById.get(row.questionId) !== row.editedAnswer,
-  }));
-  return { items, json: JSON.stringify(parsed.data) };
-}
-
-export async function validateRevisionImportAction(bookId: string, json: string): Promise<RevisionImportState> {
-  return validateRevisionJson(bookId, json);
-}
-
-export async function importAnswerRevisionsAction(bookId: string, json: string): Promise<RevisionImportState> {
-  const preview = await validateRevisionJson(bookId, json);
-  if (preview.error || !preview.items || !preview.json) return preview;
-  const changed = preview.items.filter((item) => item.changed);
-  if (!changed.length) return { error: "В файле нет изменений относительно оригинала", items: preview.items, json: preview.json };
-  const user = await getCurrentUser();
-  const admin = createSupabaseAdminClient();
-  if (!admin || user?.role !== "admin") return { error: "Недостаточно прав" };
-  const { data, error } = await admin.rpc("import_answer_revisions", {
-    target_book_id: bookId,
-    revision_rows: changed.map((item) => ({ question_id: item.questionId, edited_answer: item.editedAnswer })),
-    actor_id: user.id,
-  });
-  if (error) return { error: `Не удалось импортировать исправления: ${error.message}` };
-  revalidatePath(`/admin/books/${bookId}`, "layout");
-  revalidatePath(`/dashboard/books/${bookId}`, "layout");
-  return { success: `Импортировано исправлений: ${Number(data ?? changed.length)}` };
+  return { success: true, delivery: { city: parsed.data.city, address: parsed.data.address } };
 }
 
 export async function updateBookLanguageAction(bookIdValue: string, languageValue: string): Promise<{ error?: string }> {
@@ -111,6 +42,35 @@ export async function updateBookLanguageAction(bookIdValue: string, languageValu
 
   revalidatePath(`/admin/books/${bookId.data}`, "layout");
   revalidatePath(`/dashboard/books/${bookId.data}`, "layout");
+  return {};
+}
+
+export async function updateBookRecipientTypeAction(bookIdValue: string, bookTypeIdValue: string): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  if (user?.role !== "admin") return { error: "Недостаточно прав для смены типа получателя" };
+  const parsed = z.object({ bookId: z.uuid(), bookTypeId: z.uuid() }).safeParse({ bookId: bookIdValue, bookTypeId: bookTypeIdValue });
+  if (!parsed.success) return { error: "Некорректный тип получателя" };
+
+  const admin = createSupabaseAdminClient();
+  if (!admin) return { error: "Подключение к базе данных не настроено" };
+  const [{ data: currentBook }, { data: targetType, count: questionCount }] = await Promise.all([
+    admin.from("books").select("type_id, production_status").eq("id", parsed.data.bookId).is("deleted_at", null).maybeSingle(),
+    admin.from("book_types").select("id, slug", { count: "exact" }).eq("id", parsed.data.bookTypeId).eq("is_active", true).maybeSingle(),
+  ]);
+  if (!currentBook) return { error: "Книга не найдена" };
+  if (currentBook.type_id === parsed.data.bookTypeId) return {};
+  if (currentBook.production_status !== "writing" && currentBook.production_status !== "editing") return { error: "Тип получателя можно менять только во время подготовки книги" };
+  if (!targetType) return { error: "Выбранный тип получателя недоступен" };
+
+  const { count: catalogQuestionCount } = await admin.from("question_catalog").select("id", { count: "exact", head: true }).eq("book_type_id", targetType.id);
+  if (!isBookTypeReady({ slug: targetType.slug, questionCount: catalogQuestionCount ?? questionCount ?? 0 })) return { error: "Каталог выбранного типа пока не готов" };
+
+  const { data: updated, error } = await admin.rpc("set_book_recipient_type", { target_book_id: parsed.data.bookId, target_type_id: parsed.data.bookTypeId });
+  if (error) return { error: `Не удалось сменить тип получателя: ${error.message}` };
+  if (updated !== true) return { error: "Тип получателя не изменён. Проверьте этап книги и каталог вопросов" };
+
+  revalidatePath(`/admin/books/${parsed.data.bookId}`, "layout");
+  revalidatePath(`/dashboard/books/${parsed.data.bookId}`, "layout");
   return {};
 }
 
