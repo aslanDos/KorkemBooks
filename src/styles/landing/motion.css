@@ -1,7 +1,4 @@
-.landing {
-  --landing-motion-ease: cubic-bezier(.22, 1, .36, 1);
-  --hero-scroll: 0;
-}
+.landing { --landing-motion-ease: cubic-bezier(.22, 1, .36, 1); }
 
 .landing[data-motion="ready"] .landing-hero-title-line {
   display: block;
@@ -30,23 +27,34 @@
 .landing[data-motion="ready"] .landing-hero-copy { animation-delay: 260ms; }
 .landing[data-motion="ready"] .landing-hero-action { animation-delay: 360ms; }
 
-.landing[data-motion="ready"] .landing-hero-title {
-  opacity: calc(1 - var(--hero-scroll) * .55);
-  transform: translateY(calc(var(--hero-scroll) * -18px));
-}
-
 .landing[data-motion="ready"] [data-landing-reveal] {
   opacity: 0;
   transform: translate3d(0, 34px, 0);
-  transition: opacity .85s ease, transform 1.05s var(--landing-motion-ease), clip-path 1.15s var(--landing-motion-ease);
+  transition: opacity .65s ease, transform .75s var(--landing-motion-ease);
   transition-delay: var(--reveal-delay, 0ms);
 }
 
 .landing[data-motion="ready"] [data-landing-reveal="left"] { transform: translate3d(-34px, 22px, 0); }
 .landing[data-motion="ready"] [data-landing-reveal="right"] { transform: translate3d(34px, 22px, 0); }
 .landing[data-motion="ready"] [data-landing-reveal="scale"] { transform: translate3d(0, 24px, 0) scale(.965); }
+.landing[data-motion="ready"] [data-landing-reveal="video-card"] {
+  transform: translate3d(30px, 16px, 0) scale(.92) rotate(1.2deg);
+  transform-origin: center;
+  transition-duration: .8s, .95s;
+  transition-delay: 160ms;
+}
+.landing[data-motion="ready"] .landing-hero-video-card[data-landing-reveal="video-card"] video {
+  transform: scale(1.06);
+  transition: transform 1.15s var(--landing-motion-ease) 160ms;
+}
+.landing[data-motion="ready"] .landing-hero-video-card[data-landing-reveal="video-card"][data-visible] video {
+  transform: scale(1);
+}
+.landing[data-motion="ready"] [data-landing-reveal="card-center"] {
+  transform: scale(.92);
+  transform-origin: center;
+}
 .landing[data-motion="ready"] [data-landing-reveal="book"] {
-  clip-path: inset(9% 4% 9% 4% round 30px);
   transform: translate3d(0, 46px, 0) scale(.975);
 }
 .landing[data-motion="ready"] [data-landing-reveal="heading"] {
@@ -54,17 +62,22 @@
 }
 
 .landing[data-motion="ready"] [data-landing-reveal][data-visible] {
-  clip-path: inset(0 0 0 0 round 0);
   opacity: 1;
-  transform: translate3d(0, var(--motion-shift, 0px), 0) scale(1);
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .landing[data-motion="ready"] .landing-features > :nth-child(2) { --reveal-delay: 110ms; }
 .landing[data-motion="ready"] .landing-features > :nth-child(3) { --reveal-delay: 220ms; }
+.landing[data-motion="ready"] .landing-question-card-wrap:nth-child(2) { --reveal-delay: 80ms; }
+.landing[data-motion="ready"] .landing-question-card-wrap:nth-child(3) { --reveal-delay: 160ms; }
+.landing[data-motion="ready"] .landing-question-card-wrap:nth-child(4) { --reveal-delay: 240ms; }
+.landing[data-motion="ready"] .landing-question-card-wrap:nth-child(5) { --reveal-delay: 320ms; }
 .landing[data-motion="ready"] .landing-faq-column:nth-child(2) { transition-delay: 120ms; }
 
-.landing[data-motion="ready"] .landing-editor-demo[data-visible] .landing-editor-demo__page {
-  animation: landing-page-settle 1.35s var(--landing-motion-ease) 180ms both;
+.landing[data-motion="ready"] .landing-contact-hero[data-landing-reveal="contact-image"] {
+  opacity: 1;
+  transform: none;
+  transition: none;
 }
 
 .landing[data-motion="ready"] .landing-button svg { transition: transform .45s var(--landing-motion-ease); }
@@ -78,12 +91,14 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes landing-page-settle {
-  from { transform: translateY(22px) rotate(1.4deg) scale(.97); }
-  to { transform: translateY(0) rotate(0) scale(1); }
+@keyframes landing-caret-blink {
+  0%, 46% { opacity: 1; }
+  47%, 100% { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .landing .landing-typing-caret { display: none; }
+  .landing .landing-recipient-typewriter__caret { display: none; }
   .landing [data-landing-reveal],
   .landing .landing-hero-title,
   .landing .landing-hero-title-line > span,

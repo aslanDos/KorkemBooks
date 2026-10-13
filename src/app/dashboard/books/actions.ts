@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { refreshBookPageProgress } from "@/lib/books/queries";
-import { isAvailableBookLanguage, isBookLanguage } from "@/lib/books/language";
+import { isAvailableBookLanguage } from "@/lib/books/language";
 import { isRemovedBookTypeSlug } from "@/lib/books/catalog";
 import { BOOK_MINIMUM_SUBMISSION_PAGE_COUNT, BOOK_TARGET_PAGE_COUNT } from "@/lib/books/progress";
 
@@ -56,31 +56,39 @@ export async function createBookAction(_: CreateBookState, formData: FormData): 
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, book_type_id, book_language")
+    .select("role")
     .eq("id", user.id)
     .maybeSingle();
   if (!profile) return { error: "Профиль не найден" };
   const isAdmin = profile.role === "admin";
+
   if (!isAdmin) {
-    const { data: existingBook } = await supabase
-      .from("books")
-      .select("id")
-      .eq("owner_id", user.id)
-      .is("deleted_at", null)
-      .limit(1)
-      .maybeSingle();
-    if (existingBook) return { error: "Сейчас один пользователь может создать только одну книгу" };
+    const entitlementId = z.string().uuid().safeParse(formData.get("entitlementId"));
+    if (!entitlementId.success) return { error: "Выберите доступную книгу" };
+
+    const { data: bookId, error } = await supabase.rpc("create_book_from_entitlement", {
+      entitlement_id: entitlementId.data,
+      book_title: parsed.data.title,
+      book_author_name: parsed.data.authorName,
+      book_recipient_name: parsed.data.recipientName,
+      book_author_gender: parsed.data.authorGender === "neutral" ? null : parsed.data.authorGender,
+      book_recipient_gender: parsed.data.recipientGender === "neutral" ? null : parsed.data.recipientGender,
+      book_back_cover_text: parsed.data.backCoverText,
+      book_writing_style: parsed.data.writingStyle,
+    });
+
+    if (error || !bookId) {
+      return { error: error?.message.includes("not available") ? "Эта книга уже создана или больше недоступна" : "Не удалось создать книгу. Попробуйте ещё раз" };
+    }
+    redirect(`/dashboard/books/${bookId}`);
   }
 
-  const typeId = isAdmin ? z.string().uuid().safeParse(formData.get("typeId")) : null;
-  if (isAdmin && !typeId?.success) return { error: "Выберите тип получателя" };
-  const selectedTypeId = isAdmin ? (typeId?.success ? typeId.data : null) : profile.book_type_id;
-  if (!selectedTypeId) return { error: "Тип получателя не назначен. Обратитесь к администратору" };
+  const typeId = z.string().uuid().safeParse(formData.get("typeId"));
+  if (!typeId.success) return { error: "Выберите тип получателя" };
+  const selectedTypeId = typeId.data;
   const requestedLanguage = formData.get("language");
-  const selectedLanguage = isAdmin
-    ? (isAvailableBookLanguage(requestedLanguage) ? requestedLanguage : null)
-    : (isBookLanguage(profile.book_language) ? profile.book_language : null);
-  if (!selectedLanguage) return { error: isAdmin ? "Выберите язык книги" : "Язык книги не назначен. Обратитесь к администратору" };
+  const selectedLanguage = isAvailableBookLanguage(requestedLanguage) ? requestedLanguage : null;
+  if (!selectedLanguage) return { error: "Выберите язык книги" };
 
   const { data: bookType } = await supabase
     .from("book_types")
@@ -104,7 +112,7 @@ export async function createBookAction(_: CreateBookState, formData: FormData): 
     writing_style: parsed.data.writingStyle,
   }).select("id").single();
 
-  if (error || !book) return { error: !isAdmin && error?.code === "23505" ? "Сейчас один пользователь может создать только одну книгу" : "Не удалось создать книгу. Попробуйте ещё раз" };
+  if (error || !book) return { error: "Не удалось создать книгу. Попробуйте ещё раз" };
   redirect(`/dashboard/books/${book.id}`);
 }
 

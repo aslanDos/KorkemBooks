@@ -37,6 +37,14 @@ html:has(.landing) { scroll-behavior: smooth; scroll-padding-top: 112px; }
 .landing-desktop-nav { display: flex; align-items: center; gap: 32px; font-size: 14px; font-weight: 550; }
 .landing-desktop-nav a { padding-block: 12px; }
 .landing-desktop-nav a:hover, .landing-footer a:hover { color: var(--landing-accent); }
+.landing-header-actions { display: flex; flex-shrink: 0; align-items: center; gap: 10px; }
+.landing-header .language-toggle { height: 40px; }
+.landing-header .language-toggle__trigger { color: var(--landing-ink); background: transparent; border-color: transparent; box-shadow: none; }
+.landing-header .language-toggle__menu { color: var(--landing-ink); background: #fff; border-color: var(--landing-line); }
+.landing-header .language-toggle__menu button { color: var(--landing-muted); }
+.landing-header .language-toggle__menu button:hover, .landing-header .language-toggle__menu button:focus-visible { color: var(--landing-ink); background: color-mix(in srgb, var(--landing-primary) 9%, transparent); }
+.landing-header .language-toggle__menu button.is-selected { color: var(--landing-primary); background: color-mix(in srgb, var(--landing-primary) 11%, transparent); }
+.landing-header .language-toggle__menu button.is-selected svg { color: var(--landing-primary); }
 .landing-header .landing-header-login { min-width: 100px; min-height: 46px; padding: 10px 24px; font-size: 14px; }
 .landing-header.is-scrolled { background: var(--landing-header); -webkit-backdrop-filter: blur(18px) saturate(115%); backdrop-filter: blur(18px) saturate(115%); border-color: var(--landing-line); box-shadow: 0 4px 20px rgb(0 0 0 / 6%); }
 .landing-menu-toggle { display: none; width: 44px; height: 44px; place-items: center; padding: 0; background: transparent; border: 0; border-radius: 50%; color: inherit; cursor: pointer; }

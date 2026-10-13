@@ -6,6 +6,7 @@ export type AdminUser = {
   id: string;
   phone: string | null;
   hasBookType: boolean;
+  books: Array<{ typeName: string; bookId: string | null }>;
   activated: boolean;
   role: AppRole;
   createdAt: string;

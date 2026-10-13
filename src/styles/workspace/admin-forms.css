@@ -25,7 +25,12 @@
 .admin-sort-link svg { color: var(--muted); }
 .admin-user-cell { display: flex; min-width: 160px; align-items: center; }
 .admin-reset-form, .admin-reset-result { display: grid; gap: 6px; }
-.admin-access-actions { display: grid; justify-items: start; gap: 8px; }
+.admin-access-actions { display: flex; align-items: center; gap: 8px; }
+.admin-user-books { display: flex; min-width: 145px; max-width: 220px; flex-wrap: wrap; gap: 5px; }
+.admin-user-books > :is(a, span) { box-sizing: border-box; display: inline-flex; width: 88px; min-height: 28px; padding: 4px 8px; align-items: center; justify-content: center; color: var(--primary); text-align: center; background: var(--workspace-tint); border-radius: 999px; font-size: 9px; font-weight: 700; line-height: 1.25; text-decoration: none; white-space: nowrap; }
+.admin-user-books > a:hover { background: color-mix(in srgb, var(--workspace-tint) 72%, var(--primary)); }
+.admin-user-books > span.is-available { color: var(--muted); background: var(--background); }
+.admin-user-books--empty { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .admin-reset-form button, .admin-reset-result button { display: inline-flex; width: fit-content; min-height: 32px; padding: 0 10px; align-items: center; gap: 6px; color: var(--primary); background: var(--background); border: 1px solid var(--line); border-radius: 7px; cursor: pointer; font-size: 9px; font-weight: 800; white-space: nowrap; }
 .admin-reset-form button:disabled { opacity: .6; cursor: wait; }
 .admin-reset-form small { color: #9a3f3f !important; }
@@ -35,11 +40,11 @@
 .account-status { display: inline-flex; width: fit-content; padding: 6px 10px; border-radius: 999px; font-size: 10px; font-weight: 750; white-space: nowrap; }
 .account-status--active { color: #3f7d55; background: rgb(63 125 85 / 13%); }
 .account-status--inactive { color: #936c25; background: rgb(191 145 58 / 13%); }
-.admin-assigned-type { color: var(--ink); font-size: 10px; font-weight: 750; white-space: nowrap; }
-.admin-assign-type-form { display: grid; min-width: 150px; gap: 6px; }
-.admin-assign-type-form select { height: 32px; padding: 0 9px; color: var(--ink); background: var(--background); border: 1px solid var(--line); border-radius: 7px; font-size: 9px; }
-.admin-assign-type-form button { width: fit-content; min-height: 30px; padding: 0 10px; color: var(--primary); background: var(--background); border: 1px solid var(--line); border-radius: 7px; cursor: pointer; font-size: 9px; font-weight: 800; }
-.admin-assign-type-form small { color: #9a3f3f !important; font-size: 9px; }
+.admin-add-book-button { display: inline-grid; width: 32px; height: 32px; min-height: 32px; padding: 0; flex: 0 0 auto; place-items: center; color: var(--primary); background: var(--background); border: 1px solid var(--line); border-radius: 50%; cursor: pointer; }
+.admin-grant-book-form { display: grid; gap: 17px; }
+.admin-grant-book-form > label { display: grid; gap: 8px; color: var(--ink); font-size: 12px; font-weight: 700; }
+.admin-grant-book-form select { box-sizing: border-box; width: 100%; height: 46px; padding: 0 44px 0 16px; appearance: none; -webkit-appearance: none; color: var(--ink); background-color: var(--background); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23716d64' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; border: 1px solid var(--line); border-radius: 10px; outline: 0; font: inherit; font-size: 12px; line-height: 1; }
+.admin-grant-book-form select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus-ring); }
 .role-pill--admin { color: #75598e; background: rgb(117 89 142 / 13%); }
 .role-pill--manager { color: #936c25; background: rgb(191 145 58 / 13%); }
 .role-pill--user { color: #526c8f; background: rgb(82 108 143 / 12%); }

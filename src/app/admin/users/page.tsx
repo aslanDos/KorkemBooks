@@ -8,6 +8,7 @@ import { ResetPasswordButton } from "@/components/admin/reset-password-button";
 import { AssignBookTypeForm } from "@/components/admin/assign-book-type-form";
 import { formatPhone } from "@/lib/auth/phone";
 import { getBookTypes } from "@/lib/books/queries";
+import type { AdminUser } from "@/lib/admin/types";
 
 const PAGE_SIZE = 10;
 const roleNames: Record<AppRole, string> = { admin: "Администратор", manager: "Менеджер", user: "Пользователь" };
@@ -33,6 +34,15 @@ function usersHref(current: Required<Pick<UsersSearchParams, "role" | "status" |
 function sortIcon(column: SortKey, currentSort: SortKey, direction: SortDirection) {
   if (currentSort !== column) return <ArrowUpDown size={13} aria-hidden="true" />;
   return direction === "asc" ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />;
+}
+
+function UserBooks({ books }: { books: AdminUser["books"] }) {
+  if (books.length === 0) return <span className="admin-user-books--empty">Нет книг</span>;
+  return <div className="admin-user-books">
+    {books.map((book, index) => book.bookId
+      ? <Link href={`/admin/books/${book.bookId}`} title="Открыть книгу" key={book.bookId}>{book.typeName}</Link>
+      : <span className="is-available" title="Книга выдана и ещё не начата" key={`${book.typeName}-${index}`}>{book.typeName}</span>)}
+  </div>;
 }
 
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<UsersSearchParams> }) {
@@ -75,8 +85,9 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
           <th aria-sort={sort === "role" ? direction === "asc" ? "ascending" : "descending" : "none"}><Link className="admin-sort-link" href={sortHref("role")}>Роль {sortIcon("role", sort, direction)}</Link></th>
           <th aria-sort={sort === "created" ? direction === "asc" ? "ascending" : "descending" : "none"}><Link className="admin-sort-link" href={sortHref("created")}>Дата регистрации {sortIcon("created", sort, direction)}</Link></th>
           <th aria-sort={sort === "status" ? direction === "asc" ? "ascending" : "descending" : "none"}><Link className="admin-sort-link" href={sortHref("status")}>Статус аккаунта {sortIcon("status", sort, direction)}</Link></th>
+          <th>Книги</th>
           <th>Доступ</th>
-        </tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><div className="admin-user-cell"><b>{user.phone ? formatPhone(user.phone) : "Телефон не указан"}</b></div></td><td><span className={`role-pill role-pill--${user.role}`}>{roleNames[user.role]}</span></td><td>{new Date(user.createdAt).toLocaleDateString("ru-KZ", { day: "numeric", month: "long", year: "numeric" })}</td><td><span className={`account-status account-status--${user.activated ? "active" : "inactive"}`}>{user.activated ? "Активирован" : "Не активирован"}</span></td><td><div className="admin-access-actions">{user.activated ? <ResetPasswordButton userId={user.id} phone={user.phone} /> : <InvitationLinkButton userId={user.id} phone={user.phone} />}{user.role === "user" && !user.hasBookType && <AssignBookTypeForm userId={user.id} bookTypes={bookTypes} />}</div></td></tr>)}</tbody></table>
+        </tr></thead><tbody>{users.map((user) => <tr key={user.id}><td><div className="admin-user-cell"><b>{user.phone ? formatPhone(user.phone) : "Телефон не указан"}</b></div></td><td><span className={`role-pill role-pill--${user.role}`}>{roleNames[user.role]}</span></td><td>{new Date(user.createdAt).toLocaleDateString("ru-KZ", { day: "numeric", month: "long", year: "numeric" })}</td><td><span className={`account-status account-status--${user.activated ? "active" : "inactive"}`}>{user.activated ? "Активирован" : "Не активирован"}</span></td><td>{user.role === "user" ? <UserBooks books={user.books} /> : <span className="admin-user-books--empty">—</span>}</td><td><div className="admin-access-actions">{user.activated ? <ResetPasswordButton userId={user.id} phone={user.phone} /> : <InvitationLinkButton userId={user.id} phone={user.phone} />}{user.role === "user" && <AssignBookTypeForm userId={user.id} bookTypes={bookTypes} />}</div></td></tr>)}</tbody></table>
         {users.length === 0 && <p className="admin-empty">Ничего не найдено</p>}
       </div>
       {usersPage.total > 0 && <footer className="admin-pagination"><p>Показано {firstShown}–{lastShown} из {usersPage.total}</p><nav aria-label="Пагинация пользователей"><Link className={page === 1 ? "is-disabled" : ""} href={usersHref(current, { page: String(page - 1) })} aria-disabled={page === 1} tabIndex={page === 1 ? -1 : undefined}><ChevronLeft size={15} /><span className="visually-hidden">Предыдущая страница</span></Link>{paginationPages.map((value, index) => <span key={value}>{index > 0 && value - paginationPages[index - 1] > 1 && <i>…</i>}<Link className={value === page ? "is-active" : ""} href={usersHref(current, { page: String(value) })} aria-current={value === page ? "page" : undefined}>{value}</Link></span>)}<Link className={page === totalPages ? "is-disabled" : ""} href={usersHref(current, { page: String(page + 1) })} aria-disabled={page === totalPages} tabIndex={page === totalPages ? -1 : undefined}><ChevronRight size={15} /><span className="visually-hidden">Следующая страница</span></Link></nav></footer>}

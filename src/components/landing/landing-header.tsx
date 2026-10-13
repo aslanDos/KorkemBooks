@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { LanguageToggle } from "@/components/locale/locale-provider";
 
 const links = [
   { href: "#about", label: "О книге" },
@@ -67,7 +68,10 @@ export function LandingHeader({ isSignedIn }: { isSignedIn: boolean }) {
         <nav className="landing-desktop-nav" aria-label="Основная навигация">
           {links.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}
         </nav>
-        <Link href={isSignedIn ? "/dashboard" : "/login"} className="landing-button landing-header-login">{isSignedIn ? "Кабинет" : "Войти"}</Link>
+        <div className="landing-header-actions">
+          <LanguageToggle />
+          <Link href={isSignedIn ? "/dashboard" : "/login"} className="landing-button landing-header-login">{isSignedIn ? "Кабинет" : "Войти"}</Link>
+        </div>
         <button ref={toggleRef} type="button" className="landing-menu-toggle" aria-label={open ? "Закрыть меню" : "Открыть меню"} aria-expanded={open} aria-controls="landing-mobile-menu" onClick={() => setOpen(!open)}>
           {open ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
         </button>

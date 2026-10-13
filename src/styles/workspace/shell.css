@@ -96,8 +96,8 @@
 .workspace-info-dialog__panel li::marker { color: var(--accent); }
 .dashboard-shell .theme-controls { flex-shrink: 0; gap: 8px; }
 .dashboard-shell .theme-toggle { width: 36px; height: 36px; background: transparent; box-shadow: none; }
-.dashboard-shell .language-toggle { height: 36px; background: transparent; box-shadow: none; }
-.dashboard-shell .language-toggle button { font-size: 10px; font-weight: 600; }
+.dashboard-shell .language-toggle { height: 36px; }
+.dashboard-shell .language-toggle__trigger { background: transparent; box-shadow: none; font-size: 10px; font-weight: 600; }
 .dashboard-shell .dashboard-header { margin-bottom: 30px; }
 .dashboard-shell .dashboard-header h1 { font-family: var(--font-manrope), sans-serif; font-size: clamp(28px, 3vw, 40px); font-weight: 700; letter-spacing: -.045em; line-height: 1.2; }
 .dashboard-shell .dashboard-header p { max-width: 670px; margin-top: 12px; font-size: 14px; line-height: 1.75; }

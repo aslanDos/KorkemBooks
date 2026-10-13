@@ -5,10 +5,10 @@ import { getFinanceAnalytics } from "./finance";
 import type { AdminBook, AdminOrder, AdminOverview, AdminUser, BookProductionStatus, OrderStatus } from "./types";
 
 const demoUsers: AdminUser[] = [
-  { id: "1", phone: "+77011234567", hasBookType: true, activated: true, role: "user", createdAt: "2026-08-31T10:20:00Z" },
-  { id: "2", phone: "+77022345678", hasBookType: false, activated: true, role: "manager", createdAt: "2026-08-26T08:00:00Z" },
-  { id: "3", phone: "+77033456789", hasBookType: false, activated: true, role: "admin", createdAt: "2026-08-20T08:00:00Z" },
-  { id: "4", phone: "+77044567890", hasBookType: true, activated: true, role: "user", createdAt: "2026-08-18T08:00:00Z" },
+  { id: "1", phone: "+77011234567", hasBookType: true, books: [{ typeName: "Маме", bookId: "b1" }, { typeName: "Сестре", bookId: null }], activated: true, role: "user", createdAt: "2026-08-31T10:20:00Z" },
+  { id: "2", phone: "+77022345678", hasBookType: false, books: [], activated: true, role: "manager", createdAt: "2026-08-26T08:00:00Z" },
+  { id: "3", phone: "+77033456789", hasBookType: false, books: [], activated: true, role: "admin", createdAt: "2026-08-20T08:00:00Z" },
+  { id: "4", phone: "+77044567890", hasBookType: true, books: [{ typeName: "Папе", bookId: null }], activated: true, role: "user", createdAt: "2026-08-18T08:00:00Z" },
 ];
 
 const demoOrders: AdminOrder[] = [
@@ -29,7 +29,29 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
 
   const { data: profiles } = await admin.from("profiles").select("id, role, phone_e164, book_type_id, activated_at, created_at").order("created_at", { ascending: false });
   if (!profiles) return [];
-  return profiles.map((profile) => ({ id: profile.id, phone: profile.phone_e164, hasBookType: Boolean(profile.book_type_id), activated: Boolean(profile.activated_at), role: profile.role, createdAt: profile.created_at }));
+  return attachUserBooks(admin, profiles.map((profile) => ({ id: profile.id, phone: profile.phone_e164, hasBookType: Boolean(profile.book_type_id), books: [], activated: Boolean(profile.activated_at), role: profile.role, createdAt: profile.created_at })));
+}
+
+async function attachUserBooks(admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>, users: AdminUser[]): Promise<AdminUser[]> {
+  const userIds = users.filter((user) => user.role === "user").map((user) => user.id);
+  if (userIds.length === 0) return users;
+
+  const { data, error } = await admin
+    .from("book_entitlements")
+    .select("owner_id, book_id, created_at, book_types(name)")
+    .in("owner_id", userIds)
+    .is("revoked_at", null)
+    .order("created_at");
+  if (error) return users;
+
+  const booksByOwner = new Map<string, AdminUser["books"]>();
+  for (const entitlement of data ?? []) {
+    const bookType = Array.isArray(entitlement.book_types) ? entitlement.book_types[0] : entitlement.book_types;
+    const books = booksByOwner.get(entitlement.owner_id) ?? [];
+    books.push({ typeName: bookType?.name ?? "Книга", bookId: entitlement.book_id });
+    booksByOwner.set(entitlement.owner_id, books);
+  }
+  return users.map((user) => ({ ...user, books: booksByOwner.get(user.id) ?? [] }));
 }
 
 export type AdminUsersPageQuery = {
@@ -76,9 +98,10 @@ export async function getAdminUsersPage(input: AdminUsersPageQuery): Promise<{ u
     .order("id", { ascending: true })
     .range(offset, offset + input.pageSize - 1);
   if (error) return { users: [], total: 0 };
+  const users = (data ?? []).map((profile) => ({ id: profile.id, phone: profile.phone_e164, hasBookType: Boolean(profile.book_type_id), books: [], activated: Boolean(profile.activated_at), role: profile.role, createdAt: profile.created_at } satisfies AdminUser));
   return {
     total: count ?? 0,
-    users: (data ?? []).map((profile) => ({ id: profile.id, phone: profile.phone_e164, hasBookType: Boolean(profile.book_type_id), activated: Boolean(profile.activated_at), role: profile.role, createdAt: profile.created_at })),
+    users: await attachUserBooks(admin, users),
   };
 }
 

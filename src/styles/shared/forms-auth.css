@@ -27,10 +27,17 @@
 .theme-toggle:hover { color: var(--primary); transform: translateY(-1px); }
 .theme-toggle:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
 .theme-controls { display: flex; align-items: center; gap: 10px; }
-.language-toggle { display: inline-flex; height: 34px; padding: 3px; align-items: center; background: var(--surface-raised); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 5px 16px var(--shadow); }
-.language-toggle button { height: 26px; padding: 0 9px; color: var(--muted); background: transparent; border: 0; border-radius: 999px; cursor: pointer; font-size: 9px; font-weight: 850; }
-html[lang="ru"] .language-toggle button.locale-ru,
-html[lang="kk"] .language-toggle button.locale-kk { color: var(--primary-ink); background: var(--primary); }
+.language-toggle { position: relative; display: inline-flex; height: 34px; color: var(--ink); }
+.language-toggle__trigger { display: inline-flex; width: 66px; height: 100%; padding: 0 10px 0 13px; align-items: center; justify-content: space-between; gap: 7px; color: currentColor; background: var(--surface-raised); border: 1px solid var(--line); border-radius: 999px; box-shadow: 0 5px 16px var(--shadow); cursor: pointer; font: inherit; font-size: 10px; font-weight: 750; }
+.language-toggle__trigger svg { flex: 0 0 auto; color: var(--muted); transition: transform 150ms ease; }
+.language-toggle__trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+.language-toggle__trigger:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.language-toggle__menu { position: absolute; z-index: 50; top: calc(100% + 7px); right: 0; display: grid; width: 86px; padding: 5px; gap: 2px; color: var(--ink); background: var(--surface-raised); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgb(45 34 34 / 16%); }
+.language-toggle__menu button { display: flex; width: 100%; min-height: 30px; padding: 6px 8px; align-items: center; justify-content: space-between; color: var(--muted); background: transparent; border: 0; border-radius: 8px; cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.language-toggle__menu button:hover, .language-toggle__menu button:focus-visible { color: var(--ink); background: color-mix(in srgb, var(--primary) 9%, transparent); outline: 0; }
+.language-toggle__menu button svg { opacity: 0; color: var(--primary); }
+.language-toggle__menu button.is-selected { color: var(--primary); background: color-mix(in srgb, var(--primary) 11%, transparent); }
+.language-toggle__menu button.is-selected svg { opacity: 1; }
 .auth-panel__content { width: min(100%, 440px); }
 .auth-panel__mobile-brand { display: none; }
 .auth-heading { margin-bottom: 40px; }

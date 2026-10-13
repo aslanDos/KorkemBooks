@@ -12,6 +12,13 @@ export type BookType = {
 
 export type BookLanguage = "ru" | "kk" | "en";
 
+export type BookEntitlement = {
+  id: string;
+  typeId: string;
+  typeName: string;
+  language: BookLanguage;
+};
+
 export type CoverTemplate = {
   id: string;
   slug: string;

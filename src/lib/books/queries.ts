@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cache } from "react";
-import { BOOK_TEXT_PAGE_FONT_SIZES, DEFAULT_BOOK_PHOTO_TEXT, type BookAnswerTextSize, type BookBlankPage, type BookChapter, type BookChapterTitleSize, type BookCollageImage, type BookCover, type BookPageImage, type BookPhotoLayout, type BookPhotoText, type BookQuestion, type BookQuestionTextSize, type BookSummary, type BookTextPage, type BookTextPageFontSize, type BookTitlePageTitleSize, type BookType, type BookWithContent, type CoverTemplate } from "./types";
+import { BOOK_TEXT_PAGE_FONT_SIZES, DEFAULT_BOOK_PHOTO_TEXT, type BookAnswerTextSize, type BookBlankPage, type BookChapter, type BookChapterTitleSize, type BookCollageImage, type BookCover, type BookEntitlement, type BookPageImage, type BookPhotoLayout, type BookPhotoText, type BookQuestion, type BookQuestionTextSize, type BookSummary, type BookTextPage, type BookTextPageFontSize, type BookTitlePageTitleSize, type BookType, type BookWithContent, type CoverTemplate } from "./types";
 import { normalizeCoverColor, normalizePageBackground } from "./cover-palettes";
 import { normalizeAnswerFormat } from "./answer-format";
 import { isBookLanguage } from "./language";
@@ -46,6 +46,32 @@ export async function getBookTypes(): Promise<BookType[]> {
     questionCount: type.question_catalog?.[0]?.count ?? 0,
   }));
 }
+
+export const getAvailableBookEntitlements = cache(async (): Promise<BookEntitlement[]> => {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("book_entitlements")
+    .select("id, type_id, language, book_types(name, slug)")
+    .is("book_id", null)
+    .is("revoked_at", null)
+    .order("created_at");
+  if (error) return [];
+
+  return (data ?? []).flatMap((entitlement) => {
+    const bookType = Array.isArray(entitlement.book_types)
+      ? entitlement.book_types[0]
+      : entitlement.book_types;
+    if (!bookType || isRemovedBookTypeSlug(bookType.slug) || !isBookLanguage(entitlement.language)) return [];
+    return [{
+      id: entitlement.id,
+      typeId: entitlement.type_id,
+      typeName: bookType.name,
+      language: entitlement.language,
+    }];
+  });
+});
 
 export async function getBooks(limit?: number): Promise<BookSummary[]> {
   const supabase = await createSupabaseServerClient();

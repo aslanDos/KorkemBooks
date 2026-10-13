@@ -90,6 +90,18 @@ export async function createUserAction(_state: CreateUserState, formData: FormDa
     await admin.auth.admin.deleteUser(data.user.id);
     return { error: "Не удалось сохранить профиль пользователя" };
   }
+  if (parsed.data.role === "user" && bookTypeId && parsed.data.bookLanguage) {
+    const { error: entitlementError } = await admin.from("book_entitlements").insert({
+      owner_id: data.user.id,
+      type_id: bookTypeId,
+      language: parsed.data.bookLanguage,
+      granted_by: currentUser.id,
+    });
+    if (entitlementError) {
+      await admin.auth.admin.deleteUser(data.user.id);
+      return { error: "Не удалось выдать книгу. Проверьте миграции базы данных." };
+    }
+  }
 
   let invitation: PasswordLink;
   try {
@@ -153,30 +165,35 @@ export async function assignUserBookTypeAction(_state: AssignBookTypeState, form
   const currentUser = await getCurrentUser();
   if (currentUser?.role !== "admin") return { error: "Недостаточно прав" };
 
-  const parsed = z.object({ userId: z.uuid(), bookTypeId: z.uuid() }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Выберите тип получателя" };
+  const parsed = z.object({ userId: z.uuid(), bookTypeId: z.uuid(), bookLanguage: z.enum(["ru", "kk"]) }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Выберите тип получателя и язык" };
 
   const admin = createSupabaseAdminClient();
   if (!admin) return { error: "Добавьте SUPABASE_SERVICE_ROLE_KEY" };
   const [{ data: profile }, { data: bookType }, { count: questionCount }] = await Promise.all([
-    admin.from("profiles").select("role, book_type_id").eq("id", parsed.data.userId).maybeSingle(),
+    admin.from("profiles").select("role, book_type_id, book_language").eq("id", parsed.data.userId).maybeSingle(),
     admin.from("book_types").select("id, name, slug").eq("id", parsed.data.bookTypeId).eq("is_active", true).maybeSingle(),
     admin.from("question_catalog").select("id", { count: "exact", head: true }).eq("book_type_id", parsed.data.bookTypeId),
   ]);
 
-  if (!profile || profile.role !== "user") return { error: "Тип можно назначить только пользователю" };
-  if (profile.book_type_id) return { error: "Тип получателя уже назначен" };
+  if (!profile || profile.role !== "user") return { error: "Книгу можно выдать только пользователю" };
   if (!bookType || !isBookTypeReady({ slug: bookType.slug, questionCount: questionCount ?? 0 })) return { error: "Выбранный тип пока недоступен" };
 
-  const { data: updated, error } = await admin
-    .from("profiles")
-    .update({ book_type_id: bookType.id })
-    .eq("id", parsed.data.userId)
-    .is("book_type_id", null)
-    .select("id")
-    .maybeSingle();
-  if (error || !updated) return { error: "Не удалось назначить тип получателя" };
+  const { error } = await admin.from("book_entitlements").insert({
+    owner_id: parsed.data.userId,
+    type_id: bookType.id,
+    language: parsed.data.bookLanguage,
+    granted_by: currentUser.id,
+  });
+  if (error) return { error: "Не удалось выдать новую книгу" };
+
+  if (!profile.book_type_id || !profile.book_language) {
+    await admin.from("profiles").update({
+      book_type_id: profile.book_type_id ?? bookType.id,
+      book_language: profile.book_language ?? parsed.data.bookLanguage,
+    }).eq("id", parsed.data.userId);
+  }
 
   revalidatePath("/admin/users");
-  return { success: bookType.name };
+  return { success: `Книга «${bookType.name}» выдана` };
 }

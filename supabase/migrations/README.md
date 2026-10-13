@@ -110,3 +110,4 @@ SQL-файлы лежат в одном уровне, потому что Supaba
 | v78 | 09.10 | [add_chapter_catalog](202610090004_add_chapter_catalog.sql) |
 | v79 | 09.10 | [change_book_recipient_type](202610090005_change_book_recipient_type.sql) |
 | v80 | 10.10 | [add_book_personalization](202610100001_add_book_personalization.sql) |
+| v81 | 13.10 | [support_multiple_user_books](202610130001_support_multiple_user_books.sql) |

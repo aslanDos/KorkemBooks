@@ -59,9 +59,10 @@
 .book-finance-forms form { display: grid; align-content: start; gap: 16px; padding: 22px; border: 1px solid var(--line); border-radius: 14px; }
 .book-finance-forms h3, .book-finance-history h3 { margin: 0; font-size: 17px; }
 .book-finance-forms label { display: grid; min-width: 0; gap: 8px; font-size: 12px; font-weight: 650; }
-.book-finance-forms input, .book-finance-forms select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 9px 12px; color: var(--ink); background: var(--surface-raised); border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 14px; }
+.book-finance-forms input, .book-finance-forms select { box-sizing: border-box; width: 100%; min-width: 0; height: 48px; min-height: 48px; padding: 0 16px; color: var(--ink); background-color: var(--surface-raised); border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 14px; line-height: 1.2; }
+.book-finance-forms select { padding-right: 44px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23716d64' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; }
 .book-finance-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
-.book-finance-forms button { width: fit-content; min-height: 40px; padding: 9px 16px; color: var(--primary-ink); background: var(--primary); border: 0; border-radius: 999px; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.book-finance-forms button { display: inline-flex; width: fit-content; height: 42px; min-height: 42px; padding: 0 18px; align-items: center; justify-content: center; color: var(--primary-ink); background: var(--primary); border: 0; border-radius: 999px; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; line-height: 1; }
 .book-finance-forms button:disabled, .book-finance-history button:disabled { opacity: .5; cursor: not-allowed; }
 .book-finance-forms small { color: var(--muted); }
 .book-finance-message { min-height: 20px; margin: 0; color: #3f7d55; font-size: 12px; }

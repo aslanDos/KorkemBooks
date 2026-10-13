@@ -3,9 +3,6 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpen, ChevronDown, History, LayoutDashboard, Palette, Truck, WalletCards } from "lucide-react";
 import { BookStatusSelect } from "@/components/admin/book-status-select";
 import { BookStructureStats } from "@/components/books/book-structure-stats";
-import { getBookPageProgress } from "@/lib/books/progress";
-import { BookPrintStats } from "@/components/books/book-print-stats";
-import { getBookPrintLayout } from "@/lib/books/print-layout";
 import { getAdminBookWithContent } from "@/lib/books/queries";
 import { getAdminBookDelivery } from "@/lib/admin/book-delivery";
 import { BookDeliveryForm } from "@/components/admin/book-delivery-form";
@@ -20,6 +17,7 @@ import { PrintFormatButton } from "@/components/admin/print-format-button";
 import { BookStatusHistory } from "@/components/admin/book-status-history";
 import { getAdminBookStatusHistory } from "@/lib/admin/book-status-history";
 import { getBookGenderLabel } from "@/lib/books/personalization";
+import { formatPhone } from "@/lib/auth/phone";
 
 type AdminBookTab = "overview" | "finance" | "delivery" | "history" | "content";
 
@@ -36,18 +34,21 @@ export default async function AdminBookPage({ params, searchParams }: { params: 
     activeTab === "history" ? getAdminBookStatusHistory(bookId) : Promise.resolve(null),
   ]);
   const admin = activeTab === "overview" ? createSupabaseAdminClient() : null;
-  const { data: latestApproval } = admin
-    ? await admin.from("book_approval_requests").select("status, feedback, requested_at, decided_at").eq("book_id", bookId).order("requested_at", { ascending: false }).limit(1).maybeSingle()
-    : { data: null };
+  const [{ data: latestApproval }, { data: ownerData }] = admin
+    ? await Promise.all([
+      admin.from("book_approval_requests").select("status, feedback, requested_at, decided_at").eq("book_id", bookId).order("requested_at", { ascending: false }).limit(1).maybeSingle(),
+      admin.from("books").select("profiles!books_owner_id_fkey(phone_e164)").eq("id", bookId).maybeSingle(),
+    ])
+    : [{ data: null }, { data: null }];
+  const ownerProfile = ownerData ? (Array.isArray(ownerData.profiles) ? ownerData.profiles[0] : ownerData.profiles) : null;
+  const ownerPhone = ownerProfile?.phone_e164 ?? null;
   const questions = activeTab === "overview" || activeTab === "content" ? book.chapters.flatMap(chapter => chapter.questions) : [];
   const answered = questions.filter(question => question.answer.trim()).length;
-  const pageCount = activeTab === "overview" ? getBookPageProgress(book).totalPages : 0;
   const answeredChapters = activeTab === "content" ? book.chapters.map((chapter, index) => ({
     chapter,
     number: index + 1,
     questions: chapter.questions.filter((question) => question.answer.trim()),
   })).filter(({ questions: answeredQuestions }) => answeredQuestions.length > 0) : [];
-  const printLayout = activeTab === "overview" ? getBookPrintLayout(book) : null;
   const bookHref = `/admin/books/${book.id}`;
 
   return <div className="admin-book-workspace">
@@ -69,21 +70,25 @@ export default async function AdminBookPage({ params, searchParams }: { params: 
       <div className="book-summary-card book-summary-card--without-cover">
         <div className="book-summary-details">
           <h1>{book.title}</h1>
-          <dl className="book-summary-people">
-            <div><dt>Автор</dt><dd>{book.author_name}</dd></div>
-            {book.recipient_name && <div><dt>Получатель</dt><dd>{book.recipient_name}</dd></div>}
-            <div><dt>Тип получателя</dt><dd>{book.typeName}</dd></div>
-            <div><dt>Язык</dt><dd>{getBookLanguageLabel(book.language)}</dd></div>
-            <div><dt>Обращение к автору</dt><dd>{getBookGenderLabel(book.authorGender)}</dd></div>
-            <div><dt>Обращение к получателю</dt><dd>{getBookGenderLabel(book.recipientGender)}</dd></div>
-          </dl>
+          <div className="admin-book-client-contact"><span>Телефон клиента</span>{ownerPhone ? <a href={`https://wa.me/${ownerPhone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" title="Открыть чат в WhatsApp">{formatPhone(ownerPhone)}</a> : <strong>Не указан</strong>}</div>
+          <div className="book-summary-columns">
+            <dl className="book-summary-people">
+              {book.recipient_name && <div><dt>Получатель</dt><dd>{book.recipient_name}</dd></div>}
+              <div><dt>Автор</dt><dd>{book.author_name}</dd></div>
+              <div><dt>Язык</dt><dd>{getBookLanguageLabel(book.language)}</dd></div>
+            </dl>
+            <dl className="book-summary-people">
+              <div><dt>Тип получателя</dt><dd>{book.typeName}</dd></div>
+              <div><dt>Обращение к автору</dt><dd>{getBookGenderLabel(book.authorGender)}</dd></div>
+              <div><dt>Обращение к получателю</dt><dd>{getBookGenderLabel(book.recipientGender)}</dd></div>
+            </dl>
+          </div>
           <div className="admin-book-back-cover-text"><strong>Послание на задней стороне</strong><p>{book.backCoverText || "Не добавлено"}</p></div>
           <div className="admin-book-metadata"><span>Ответы: <b>{answered} из {questions.length}</b></span><span>Обновлена: <time dateTime={book.updated_at}>{new Date(book.updated_at).toLocaleDateString("ru-KZ")}</time></span></div>
         </div>
       </div>
-      <BookStructureStats key={`${book.chapters.length}:${questions.length}:${pageCount}`} chapterCount={book.chapters.length} questionCount={questions.length} pageCount={pageCount} progress={book.progress} />
+      <BookStructureStats key={`${book.chapters.length}:${questions.length}`} chapterCount={book.chapters.length} questionCount={questions.length} pageCount={0} progress={book.progress} showPageCount={false} />
     </section>
-    {printLayout && <BookPrintStats layout={printLayout} />}
     </>}
     {activeTab === "finance" && financial && <BookFinancePanel key={`${book.id}:${financial.finance?.price ?? "unset"}:${financial.finance?.entries.map((entry) => `${entry.id}:${entry.voidedAt}`).join(",")}`} bookId={book.id} finance={financial.finance} today={todayInAlmaty()} loadError={financial.error} />}
     {activeTab === "delivery" && delivery && <BookDeliveryForm key={JSON.stringify(delivery)} bookId={book.id} delivery={delivery.delivery} loadError={delivery.error} />}

@@ -14,10 +14,16 @@ const managerId = '33333333-3333-4333-8333-333333333333';
 const typeId = '44444444-4444-4444-8444-444444444444';
 const otherTypeId = '55555555-5555-4555-8555-555555555555';
 
-function bookActionFixture(role, existingBook = false) {
+function bookActionFixture(role) {
   let inserted = null;
+  let rpcArguments = null;
   const client = {
     auth: { getUser: async () => ({ data: { user: { id: role === 'admin' ? adminId : userId } } }) },
+    async rpc(name, arguments_) {
+      assert.equal(name, 'create_book_from_entitlement');
+      rpcArguments = arguments_;
+      return { data: '66666666-6666-4666-8666-666666666666', error: null };
+    },
     from(table) {
       let selectedId = null;
       const query = {
@@ -26,8 +32,7 @@ function bookActionFixture(role, existingBook = false) {
         is() { return query; },
         limit() { return query; },
         async maybeSingle() {
-          if (table === 'profiles') return { data: { role, book_type_id: otherTypeId, book_language: 'kk' } };
-          if (table === 'books') return { data: existingBook ? { id: 'existing' } : null };
+          if (table === 'profiles') return { data: { role } };
           return { data: { id: selectedId } };
         },
         insert(value) { inserted = value; return query; },
@@ -56,17 +61,17 @@ function bookActionFixture(role, existingBook = false) {
     },
   };
   new Function('require', 'module', 'exports', source)(name => mocks[name] ?? require(name), loaded, loaded.exports);
-  return { action: loaded.exports.createBookAction, getInserted: () => inserted };
+  return { action: loaded.exports.createBookAction, getInserted: () => inserted, getRpcArguments: () => rpcArguments };
 }
 
 function createForm(selectedType = typeId) {
   const form = new FormData();
-  for (const [key, value] of Object.entries({ title: 'Новая книга', authorName: 'Автор', recipientName: '', authorGender: 'female', recipientGender: 'male', backCoverText: 'С любовью', language: 'ru', typeId: selectedType, writingStyle: 'literary_story' })) form.set(key, value);
+  for (const [key, value] of Object.entries({ title: 'Новая книга', authorName: 'Автор', recipientName: '', authorGender: 'female', recipientGender: 'male', backCoverText: 'С любовью', language: 'ru', typeId: selectedType, entitlementId: otherTypeId, writingStyle: 'literary_story' })) form.set(key, value);
   return form;
 }
 
 test('admin book creation ignores the one-book guard and selects a type per book', async () => {
-  const admin = bookActionFixture('admin', true);
+  const admin = bookActionFixture('admin');
   await assert.rejects(admin.action({}, createForm()), /redirect:\/dashboard\/books\//);
   assert.equal(admin.getInserted().type_id, typeId);
   assert.equal(admin.getInserted().writing_style, 'literary_story');
@@ -75,15 +80,15 @@ test('admin book creation ignores the one-book guard and selects a type per book
   assert.equal(admin.getInserted().back_cover_text, 'С любовью');
   assert.equal((await admin.action({}, createForm('invalid'))).error, 'Выберите тип получателя');
 
-  const user = bookActionFixture('user', true);
-  assert.match((await user.action({}, createForm())).error, /только одну книгу/);
-  const newUser = bookActionFixture('user', false);
-  await assert.rejects(newUser.action({}, createForm()), /redirect:\/dashboard\/books\//);
-  assert.equal(newUser.getInserted().type_id, otherTypeId);
-  assert.equal(newUser.getInserted().language, 'kk');
+  const user = bookActionFixture('user');
+  await assert.rejects(user.action({}, createForm()), /redirect:\/dashboard\/books\//);
+  assert.equal(user.getInserted(), null);
+  assert.equal(user.getRpcArguments().entitlement_id, otherTypeId);
+  assert.equal(user.getRpcArguments().book_title, 'Новая книга');
+  assert.equal(user.getRpcArguments().book_writing_style, 'literary_story');
 });
 
-test('admins can create multiple active books while other roles remain limited to one', async () => {
+test('historical migration allowed unlimited admin books while other roles remained limited', async () => {
   const db = new PGlite();
   try {
     await db.exec(`create role anon; create role authenticated;

@@ -19,9 +19,17 @@
 .book-summary-type { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; font-weight: 600; }
 .dashboard-shell .book-summary-details h1 { margin: 8px 0 13px; font-size: clamp(23px, 2.1vw, 31px); }
 .book-summary-people { display: grid; gap: 14px; margin: 0 0 14px; }
+.admin-book-client-contact { display: flex; width: fit-content; margin-bottom: 22px; align-items: center; gap: 12px; }
+.admin-book-client-contact span { color: var(--muted); font-size: 10px; }
+.admin-book-client-contact a, .admin-book-client-contact strong { color: var(--primary); font-size: 14px; font-weight: 650; text-decoration: none; }
+.admin-book-client-contact a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.admin-book-workspace .book-summary-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(36px, 6vw, 90px); }
+.admin-book-workspace .book-summary-people { grid-template-columns: minmax(0, 1fr); align-content: start; row-gap: 18px; margin: 0; }
 .book-summary-people > div { min-width: 0; }
 .book-summary-people dt { margin-bottom: 3px; font-size: 10px; color: var(--muted); }
 .book-summary-people dd { margin: 0; font-size: 14px; font-weight: 550; overflow-wrap: anywhere; }
+.admin-book-workspace .book-summary-people a { color: var(--primary); text-decoration: none; }
+.admin-book-workspace .book-summary-people a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .book-summary-details .book-hero__edit { position: absolute; top: 22px; right: 22px; min-height: 36px; padding: 8px 14px; color: var(--ink); background: var(--background); border: 1px solid var(--line); font-size: 11px; }
 .admin-book-metadata { display: flex; flex-wrap: wrap; gap: 6px 20px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 .admin-book-metadata b { color: var(--ink); font-weight: 600; }
@@ -40,7 +48,7 @@
 .admin-book-workspace .admin-chapter h3 { margin-top: 3px; font-size: 18px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
 .admin-book-workspace .admin-chapter-count { flex: 0 0 auto; font-size: 11px; }
 .admin-book-workspace .admin-answer-form textarea { border-radius: var(--workspace-small-radius); }
-.admin-book-back-cover-text { display: grid; margin-top: 20px; padding: 16px; gap: 7px; background: var(--background); border: 1px solid var(--line); border-radius: var(--workspace-small-radius); }
+.admin-book-back-cover-text { display: grid; margin-top: 20px; padding: 20px 0 16px; gap: 7px; border-top: 1px solid var(--line); }
 .admin-book-back-cover-text strong { font-size: 12px; }
 .admin-book-back-cover-text p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
 .admin-book-empty { padding: 24px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: var(--workspace-radius); }
@@ -93,12 +101,17 @@
   .book-status-history time { text-align: left; }
 }
 @media (max-width: 600px) {
-  .admin-book-section-tabs { width: 100%; margin-bottom: 18px; border-radius: 16px; }
+  .admin-book-section-tabs { box-sizing: border-box; width: 100%; margin-bottom: 18px; border-radius: 16px; }
   .dashboard-shell .admin-book-workspace .book-summary-card { grid-template-columns: 58px minmax(0, 1fr); }
   .dashboard-shell .admin-book-workspace .book-summary-details h1 { white-space: normal; overflow-wrap: anywhere; }
   .admin-book-workspace .book-summary-people { grid-column: 2; }
   .admin-book-metadata { grid-column: 1 / -1; margin-top: 4px; gap: 4px 16px; }
-  .admin-book-workspace .book-workspace-header { flex-direction: row; align-items: center; gap: 12px; }
+  .admin-book-workspace .book-workspace-header { flex-direction: column; align-items: stretch; gap: 16px; }
+  .admin-book-workspace .book-workspace-header > a { align-self: flex-start; white-space: nowrap; }
+  .admin-book-workspace .book-workspace-header__controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .admin-book-workspace .book-workspace-header__controls :is(.print-format-control, .delete-book-control, .secondary-content-button, .delete-book-button) { width: 100%; min-width: 0; }
+  .admin-book-workspace .book-language-control { justify-self: start; }
+  .admin-book-workspace .book-status-wrapper { justify-self: end; }
   .admin-book-workspace .admin-chapter > summary { padding: 18px 14px; gap: 10px; flex-wrap: wrap; }
   .admin-book-workspace .admin-chapter > summary > div { flex-basis: calc(100% - 76px); }
   .admin-book-workspace .admin-chapter-count { order: 1; width: 100%; padding-left: 48px; }
@@ -125,7 +138,9 @@
   .book-summary-card--without-cover .book-summary-people { grid-column: 1 / 3; }
   .book-summary-card--without-cover .book-summary-details .book-hero__edit { grid-column: 2; }
   .dashboard-shell .admin-book-workspace .book-summary-card--without-cover { grid-template-columns: minmax(0, 1fr); }
-  .admin-book-workspace .book-summary-card--without-cover .book-summary-people { grid-column: 1; }
+  .admin-book-workspace .book-summary-card--without-cover .admin-book-client-contact, .admin-book-workspace .book-summary-card--without-cover .book-summary-columns, .admin-book-workspace .book-summary-card--without-cover .admin-book-back-cover-text, .admin-book-workspace .book-summary-card--without-cover .admin-book-metadata { grid-column: 1; }
+  .admin-book-workspace .book-summary-card--without-cover .book-summary-columns { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .admin-book-workspace .book-summary-card--without-cover .book-summary-people { grid-column: 1; grid-row: auto; grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .dashboard-shell .book-resume-card { grid-template-columns: minmax(0, 1fr); min-height: 0; margin: 16px 0 14px; padding: 16px; gap: 14px; }
   .dashboard-shell .book-resume-card p { font-size: 14px; }
   .dashboard-shell .book-resume-card__action { grid-column: 1; grid-row: 2; min-height: 36px; padding: 8px 14px; justify-self: start; }

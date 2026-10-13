@@ -43,6 +43,8 @@
 .book-language-control__message { position: absolute; z-index: 2; top: calc(100% + 6px); right: 0; min-width: 180px; max-width: 320px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); font-size: 12px; box-shadow: 0 6px 20px rgb(0 0 0 / 8%); }
 .book-language-control__message--error { color: #9b2929; }
 .book-workspace-header__controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.dashboard-shell .book-workspace-header__controls :is(.book-status-select, .secondary-content-button, .delete-book-button) { box-sizing: border-box; height: 42px; min-height: 42px; padding-top: 0; padding-bottom: 0; }
+.dashboard-shell .book-workspace-header__controls :is(.secondary-content-button, .delete-book-button) { padding-right: 16px; padding-left: 16px; }
 .delete-book-control { position: relative; }
 .delete-book-button { display: inline-flex; min-height: 42px; padding: 9px 16px; align-items: center; justify-content: center; gap: 7px; color: #9b2929; background: color-mix(in srgb, #9b2929 7%, var(--surface)); border: 1px solid color-mix(in srgb, #9b2929 28%, var(--line)); border-radius: var(--workspace-pill); cursor: pointer; font: inherit; font-size: 12px; font-weight: 650; }
 .delete-book-button:hover { background: color-mix(in srgb, #9b2929 12%, var(--surface)); }
@@ -56,7 +58,8 @@
 .dashboard-shell .book-status-select:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .dashboard-shell .admin-book-progress b { font-size: 12px !important; }
 .dashboard-shell .admin-book-progress i { background: var(--accent); }
-.dashboard-shell .admin-reset-form button, .dashboard-shell .admin-reset-result button { min-height: 38px; padding-inline: 13px; border-radius: var(--workspace-pill); font-size: 11px; font-weight: 600; }
+.dashboard-shell .admin-reset-form button, .dashboard-shell .admin-reset-result button, .dashboard-shell .admin-add-book-button { min-height: 38px; padding-inline: 13px; border-radius: var(--workspace-pill); font-size: 11px; font-weight: 600; }
+.dashboard-shell .admin-add-book-button { width: 38px; height: 38px; padding: 0; border-radius: 50%; }
 .dashboard-shell .admin-reset-result span, .dashboard-shell .admin-muted-action { font-size: 11px; }
 .dashboard-shell .account-status { padding: 6px 11px; font-size: 11px; font-weight: 600; }
 .dashboard-shell .admin-table-empty strong { font-family: inherit; font-size: 21px; font-weight: 600; }

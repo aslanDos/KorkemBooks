@@ -8,7 +8,6 @@
 .settings-list > div { position: relative; padding: 26px; border-bottom: 1px solid var(--line); }
 .settings-list > div:last-child { border-bottom: 0; }
 .settings-list p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
-.settings-list .status-pill { position: absolute; top: 26px; right: 26px; }
 .settings-password-form { display: grid; max-width: 440px; gap: 14px; margin-top: 20px; }
 .settings-password-form .primary-button { height: 48px; margin-top: 0; }
 
